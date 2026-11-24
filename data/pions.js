@@ -14,6 +14,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 1000,
+  "depart": {
+   "ao": 0,
+   "mco": 0,
+   "rh": 0
+  },
   "remarque": "Lisible. 6 pions identiques de 5x2."
  },
  {
@@ -30,6 +35,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 1000,
+  "depart": {
+   "ao": 0,
+   "mco": 0,
+   "rh": 0
+  },
   "remarque": "Lisible."
  },
  {
@@ -46,6 +56,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 1000,
+  "depart": {
+   "ao": 0,
+   "mco": 0,
+   "rh": 0
+  },
   "remarque": "Lisible."
  },
  {
@@ -62,6 +77,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 1000,
+  "depart": {
+   "ao": 0,
+   "mco": 0,
+   "rh": 0
+  },
   "remarque": "Lisible."
  },
  {
@@ -78,6 +98,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 1000,
+  "depart": {
+   "ao": 0,
+   "mco": 0,
+   "rh": 0
+  },
   "remarque": "Lisible."
  },
  {
@@ -94,6 +119,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 1000,
+  "depart": {
+   "ao": 0,
+   "mco": 0,
+   "rh": 0
+  },
   "remarque": "Lisible."
  },
  {
@@ -110,7 +140,12 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 1500,
-  "remarque": "Lisible. Taille comptée sur la grille."
+  "depart": {
+   "ao": 0,
+   "mco": 0,
+   "rh": 0
+  },
+  "remarque": "Lisible. Taille comptée sur la grille. En 2027, un second pion gris semble glissé dessous (texte visible entre Infrastructures et SGA) : à vérifier."
  },
  {
   "id": "P8",
@@ -126,6 +161,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 600,
+  "depart": {
+   "ao": 0,
+   "mco": 0,
+   "rh": 0
+  },
   "remarque": "Lisible."
  },
  {
@@ -142,6 +182,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 900,
+  "depart": {
+   "ao": 0,
+   "mco": 0,
+   "rh": 0
+  },
   "remarque": "Lisible."
  },
  {
@@ -158,6 +203,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 900,
+  "depart": {
+   "ao": 0,
+   "mco": 0,
+   "rh": 0
+  },
   "remarque": "Bandeau violet = investissement selon le guide, mais posé d'office : à traiter comme fixe ? À confirmer."
  },
  {
@@ -174,6 +224,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 2000,
+  "depart": {
+   "ao": 0,
+   "mco": 0,
+   "rh": 0
+  },
   "remarque": "Bandeau violet, pas de DORESE. Taille 5x4 comptée sur la grille (±1 rangée)."
  },
  {
@@ -190,6 +245,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 2500,
+  "depart": {
+   "ao": 0,
+   "mco": 0,
+   "rh": 0
+  },
   "remarque": "Montant écrit sur le pion (2,5 Md€ = 25 cases, cohérent)."
  },
  {
@@ -206,6 +266,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 1500,
+  "depart": {
+   "ao": 0,
+   "mco": 0,
+   "rh": 0
+  },
   "remarque": "Montant lu sur le Figuratif (1,5 Md€ = 15 cases, cohérent avec le pointillé 3x5)."
  },
  {
@@ -219,10 +284,15 @@ window.STRAT_PIONS = [
   "dorese": {
    "ao": 1,
    "mco": 1,
-   "rh": 0
+   "rh": 1
   },
-  "cout100": 500,
-  "remarque": "Lisible."
+  "cout100": 600,
+  "depart": {
+   "ao": 1,
+   "mco": 1,
+   "rh": 1
+  },
+  "remarque": "Lisible. Face verte 2027 : RH = 1 (0 sur la face rouge) ; c'est la valeur retenue."
  },
  {
   "id": "P15",
@@ -235,10 +305,15 @@ window.STRAT_PIONS = [
   "dorese": {
    "ao": 0,
    "mco": 0,
-   "rh": 0
+   "rh": 1
   },
-  "cout100": 300,
-  "remarque": "Lisible : 0/0/0, donc déjà à 100 % ?"
+  "cout100": 400,
+  "depart": {
+   "ao": 0,
+   "mco": 0,
+   "rh": 1
+  },
+  "remarque": "Lisible. Face rouge 0/0/0. Face verte 2027 : RH = 1 (0 sur la face rouge) ; c'est la valeur retenue."
  },
  {
   "id": "P16",
@@ -251,10 +326,15 @@ window.STRAT_PIONS = [
   "dorese": {
    "ao": 1,
    "mco": 0,
-   "rh": 0
+   "rh": 1
   },
-  "cout100": 400,
-  "remarque": "Lisible."
+  "cout100": 500,
+  "depart": {
+   "ao": 1,
+   "mco": 0,
+   "rh": 1
+  },
+  "remarque": "Lisible. Face verte 2027 : RH = 1 (0 sur la face rouge) ; c'est la valeur retenue."
  },
  {
   "id": "P17",
@@ -267,10 +347,15 @@ window.STRAT_PIONS = [
   "dorese": {
    "ao": 1,
    "mco": 0,
-   "rh": 0
+   "rh": 1
   },
-  "cout100": 400,
-  "remarque": "Lisible."
+  "cout100": 500,
+  "depart": {
+   "ao": 1,
+   "mco": 0,
+   "rh": 1
+  },
+  "remarque": "Lisible. Face verte 2027 : RH = 1 (0 sur la face rouge) ; c'est la valeur retenue."
  },
  {
   "id": "P18",
@@ -283,10 +368,15 @@ window.STRAT_PIONS = [
   "dorese": {
    "ao": 1,
    "mco": 0,
-   "rh": 0
+   "rh": 1
   },
-  "cout100": 400,
-  "remarque": "Lisible."
+  "cout100": 500,
+  "depart": {
+   "ao": 1,
+   "mco": 0,
+   "rh": 1
+  },
+  "remarque": "Lisible. Face verte 2027 : RH = 1 (0 sur la face rouge) ; c'est la valeur retenue."
  },
  {
   "id": "P19",
@@ -299,10 +389,15 @@ window.STRAT_PIONS = [
   "dorese": {
    "ao": 0,
    "mco": 0,
-   "rh": 0
+   "rh": 1
   },
-  "cout100": 300,
-  "remarque": "Lisible : 0/0/0. Le logo du pion ressemble à celui de l'Armée de l'Air : à vérifier."
+  "cout100": 400,
+  "depart": {
+   "ao": 0,
+   "mco": 0,
+   "rh": 1
+  },
+  "remarque": "Lisible. Face rouge 0/0/0. Face verte 2027 : RH = 1 (0 sur la face rouge) ; c'est la valeur retenue."
  },
  {
   "id": "P20",
@@ -315,10 +410,15 @@ window.STRAT_PIONS = [
   "dorese": {
    "ao": 1,
    "mco": 1,
-   "rh": 0
+   "rh": 1
   },
-  "cout100": 500,
-  "remarque": "Lisible. Identique à l'exemple du guide."
+  "cout100": 600,
+  "depart": {
+   "ao": 1,
+   "mco": 1,
+   "rh": 1
+  },
+  "remarque": "Lisible. Identique à l'exemple du guide. Face verte 2027 : RH = 1 (0 sur la face rouge) ; c'est la valeur retenue."
  },
  {
   "id": "P21",
@@ -331,10 +431,15 @@ window.STRAT_PIONS = [
   "dorese": {
    "ao": 1,
    "mco": 1,
-   "rh": 0
+   "rh": 1
   },
-  "cout100": 500,
-  "remarque": "Lisible."
+  "cout100": 600,
+  "depart": {
+   "ao": 1,
+   "mco": 1,
+   "rh": 1
+  },
+  "remarque": "Lisible. Face verte 2027 : RH = 1 (0 sur la face rouge) ; c'est la valeur retenue."
  },
  {
   "id": "P22",
@@ -347,10 +452,15 @@ window.STRAT_PIONS = [
   "dorese": {
    "ao": 1,
    "mco": 1,
-   "rh": 0
+   "rh": 1
   },
-  "cout100": 500,
-  "remarque": "Lisible."
+  "cout100": 600,
+  "depart": {
+   "ao": 1,
+   "mco": 1,
+   "rh": 1
+  },
+  "remarque": "Lisible. Face verte 2027 : RH = 1 (0 sur la face rouge) ; c'est la valeur retenue."
  },
  {
   "id": "P23",
@@ -363,10 +473,15 @@ window.STRAT_PIONS = [
   "dorese": {
    "ao": 1,
    "mco": 1,
-   "rh": 0
+   "rh": 1
   },
-  "cout100": 500,
-  "remarque": "Lisible."
+  "cout100": 600,
+  "depart": {
+   "ao": 1,
+   "mco": 1,
+   "rh": 1
+  },
+  "remarque": "Lisible. Face verte 2027 : RH = 1 (0 sur la face rouge) ; c'est la valeur retenue."
  },
  {
   "id": "P24",
@@ -379,10 +494,15 @@ window.STRAT_PIONS = [
   "dorese": {
    "ao": 1,
    "mco": 1,
-   "rh": 0
+   "rh": 1
   },
-  "cout100": 500,
-  "remarque": "Lisible."
+  "cout100": 600,
+  "depart": {
+   "ao": 1,
+   "mco": 1,
+   "rh": 1
+  },
+  "remarque": "Lisible. Face verte 2027 : RH = 1 (0 sur la face rouge) ; c'est la valeur retenue."
  },
  {
   "id": "P25",
@@ -395,10 +515,15 @@ window.STRAT_PIONS = [
   "dorese": {
    "ao": 1,
    "mco": 1,
-   "rh": 0
+   "rh": 1
   },
-  "cout100": 500,
-  "remarque": "Lisible."
+  "cout100": 600,
+  "depart": {
+   "ao": 1,
+   "mco": 1,
+   "rh": 1
+  },
+  "remarque": "Lisible. Face verte 2027 : RH = 1 (0 sur la face rouge) ; c'est la valeur retenue."
  },
  {
   "id": "P26",
@@ -411,10 +536,15 @@ window.STRAT_PIONS = [
   "dorese": {
    "ao": 1,
    "mco": 1,
-   "rh": 0
+   "rh": 1
   },
-  "cout100": 600,
-  "remarque": "Lisible. Porte le logo Armée de l'Air et de l'Espace : armée de rattachement à confirmer."
+  "cout100": 700,
+  "depart": {
+   "ao": 1,
+   "mco": 1,
+   "rh": 1
+  },
+  "remarque": "Lisible. Face verte : logo Armée de Terre. Face verte 2027 : RH = 1 (0 sur la face rouge) ; c'est la valeur retenue."
  },
  {
   "id": "P27",
@@ -430,7 +560,12 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 600,
-  "remarque": "Lisible."
+  "depart": {
+   "ao": 0,
+   "mco": 2,
+   "rh": 0
+  },
+  "remarque": "Lisible. En 2027 : resté sur la face rouge, il manque 1 DORESE activité. Les 2 MCO posés en surplus dans la zone Air lui sont attribués."
  },
  {
   "id": "P28",
@@ -446,6 +581,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 300,
+  "depart": {
+   "ao": 0,
+   "mco": 1,
+   "rh": 0
+  },
   "remarque": "Lisible."
  },
  {
@@ -462,6 +602,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 300,
+  "depart": {
+   "ao": 0,
+   "mco": 1,
+   "rh": 0
+  },
   "remarque": "Lisible."
  },
  {
@@ -478,6 +623,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 300,
+  "depart": {
+   "ao": 0,
+   "mco": 1,
+   "rh": 0
+  },
   "remarque": "Lisible."
  },
  {
@@ -494,6 +644,11 @@ window.STRAT_PIONS = [
    "rh": 1
   },
   "cout100": 400,
+  "depart": {
+   "ao": 1,
+   "mco": 1,
+   "rh": 1
+  },
   "remarque": "Petits chiffres : lisibles mais pictogramme MCO différent (clé). Vérifier sur le pion."
  },
  {
@@ -510,6 +665,11 @@ window.STRAT_PIONS = [
    "rh": 2
   },
   "cout100": 1000,
+  "depart": {
+   "ao": 0,
+   "mco": 0,
+   "rh": 2
+  },
   "remarque": "Lisible."
  },
  {
@@ -526,6 +686,11 @@ window.STRAT_PIONS = [
    "rh": 1
   },
   "cout100": 1300,
+  "depart": {
+   "ao": 1,
+   "mco": 3,
+   "rh": 1
+  },
   "remarque": "Lisible."
  },
  {
@@ -542,6 +707,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 300,
+  "depart": {
+   "ao": 0,
+   "mco": 1,
+   "rh": 0
+  },
   "remarque": "Lisible."
  },
  {
@@ -558,6 +728,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 500,
+  "depart": {
+   "ao": 0,
+   "mco": 2,
+   "rh": 0
+  },
   "remarque": "Lisible."
  },
  {
@@ -574,6 +749,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 300,
+  "depart": {
+   "ao": 0,
+   "mco": 1,
+   "rh": 0
+  },
   "remarque": "Lisible."
  },
  {
@@ -590,6 +770,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 300,
+  "depart": {
+   "ao": 0,
+   "mco": 1,
+   "rh": 0
+  },
   "remarque": "Lisible."
  },
  {
@@ -606,6 +791,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 400,
+  "depart": {
+   "ao": 0,
+   "mco": 2,
+   "rh": 0
+  },
   "remarque": "Lisible."
  },
  {
@@ -622,6 +812,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 300,
+  "depart": {
+   "ao": 0,
+   "mco": 1,
+   "rh": 0
+  },
   "remarque": "Lisible."
  },
  {
@@ -638,6 +833,11 @@ window.STRAT_PIONS = [
    "rh": 1
   },
   "cout100": 800,
+  "depart": {
+   "ao": 1,
+   "mco": 2,
+   "rh": 1
+  },
   "remarque": "Lisible."
  },
  {
@@ -654,6 +854,11 @@ window.STRAT_PIONS = [
    "rh": 1
   },
   "cout100": 800,
+  "depart": {
+   "ao": 1,
+   "mco": 2,
+   "rh": 1
+  },
   "remarque": "Lisible."
  },
  {
@@ -670,6 +875,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 600,
+  "depart": {
+   "ao": 1,
+   "mco": 1,
+   "rh": 0
+  },
   "remarque": "Lisible."
  },
  {
@@ -686,7 +896,12 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 100,
-  "remarque": "Petit pion, lisible au zoom : 0/0/0."
+  "depart": {
+   "ao": 0,
+   "mco": 0,
+   "rh": 0
+  },
+  "remarque": "Petit pion, lisible au zoom : 0/0/0 sur les deux faces (aucun DORESE requis)."
  },
  {
   "id": "P44",
@@ -702,6 +917,11 @@ window.STRAT_PIONS = [
    "rh": 1
   },
   "cout100": 200,
+  "depart": {
+   "ao": 0,
+   "mco": 0,
+   "rh": 1
+  },
   "remarque": "Petit pion, lisible au zoom."
  },
  {
@@ -718,6 +938,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 200,
+  "depart": {
+   "ao": 0,
+   "mco": 1,
+   "rh": 0
+  },
   "remarque": "Petit pion, lisible au zoom."
  },
  {
@@ -734,6 +959,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 200,
+  "depart": {
+   "ao": 0,
+   "mco": 1,
+   "rh": 0
+  },
   "remarque": "Petit pion, lisible au zoom."
  },
  {
@@ -750,6 +980,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 200,
+  "depart": {
+   "ao": 0,
+   "mco": 1,
+   "rh": 0
+  },
   "remarque": "Petit pion, lisible au zoom."
  },
  {
@@ -766,6 +1001,11 @@ window.STRAT_PIONS = [
    "rh": 1
   },
   "cout100": 400,
+  "depart": {
+   "ao": 0,
+   "mco": 1,
+   "rh": 1
+  },
   "remarque": "Lisible."
  },
  {
@@ -782,6 +1022,11 @@ window.STRAT_PIONS = [
    "rh": 1
   },
   "cout100": 700,
+  "depart": {
+   "ao": 1,
+   "mco": 1,
+   "rh": 1
+  },
   "remarque": "Lisible."
  },
  {
@@ -798,6 +1043,11 @@ window.STRAT_PIONS = [
    "rh": 2
   },
   "cout100": 800,
+  "depart": {
+   "ao": 0,
+   "mco": 0,
+   "rh": 2
+  },
   "remarque": "Lisible."
  },
  {
@@ -814,6 +1064,11 @@ window.STRAT_PIONS = [
    "rh": 2
   },
   "cout100": 1600,
+  "depart": {
+   "ao": 0,
+   "mco": 2,
+   "rh": 2
+  },
   "remarque": "Lisible. Valeurs identiques à l'exemple du guide."
  },
  {
@@ -830,6 +1085,32 @@ window.STRAT_PIONS = [
    "rh": 3
   },
   "cout100": 3000,
+  "depart": {
+   "ao": 0,
+   "mco": 3,
+   "rh": 3
+  },
   "remarque": "Lisible."
+ },
+ {
+  "id": "P53",
+  "armee": "Marine",
+  "nom": "PA-NG (tranche 1/6)",
+  "type": "violet",
+  "l": 2,
+  "h": 5,
+  "cout50": 1000,
+  "dorese": {
+   "ao": 0,
+   "mco": 0,
+   "rh": 0
+  },
+  "cout100": 1000,
+  "depart": {
+   "ao": 0,
+   "mco": 0,
+   "rh": 0
+  },
+  "remarque": "Investissement étalé : tranche N1 sur 6, posée en 2027. Absent des premières photos. Taille 2x5 comptée sur la grille."
  }
 ];

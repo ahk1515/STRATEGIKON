@@ -17,9 +17,10 @@ def lire(chemin):
 
 def assembler():
     page = lire("index.html")
-    page = page.replace(
-        '<link rel="stylesheet" href="css/style.css">',
-        "<style>\n" + lire("css/style.css") + "\n</style>",
+    page = re.sub(
+        r'<link rel="stylesheet" href="(css/[^"]+)">',
+        lambda m: "<style>\n" + lire(m.group(1)) + "\n</style>",
+        page,
     )
 
     def script(m):

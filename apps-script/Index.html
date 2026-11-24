@@ -6,7 +6,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600;700&family=Stardos+Stencil:wght@700&display=swap">
 <style>
 /* Style de cabinet ministériel : papier, bleu marine, filet tricolore discret.
    Les chiffres en colonnes alignées, comme un rapport annexé à la loi. */
@@ -315,154 +315,274 @@ body { border-top: 4px solid transparent; border-image: linear-gradient(90deg, #
 .plateau .fond { background: var(--case-vide); }
 
 </style>
+<style>
+/* Conception « table d'abord » : s'ajoute à css/style.css (mêmes jetons, style ministériel). */
+
+/* ---------- Accueil épuré ---------- */
+.seuil { min-height: 100vh; display: grid; place-content: center; justify-items: center; gap: 1rem; padding: 2rem max(16px, env(safe-area-inset-left, 0px)); }
+.seuil-carte {
+  width: min(100%, 420px); background: var(--panneau); border: 1px solid var(--trait); border-top: 3px solid var(--laiton);
+  border-radius: 2px; padding: 2rem 1.75rem 1.5rem; box-shadow: 0 1px 3px rgba(22, 27, 46, .06); display: grid; gap: 1.2rem; text-align: center;
+}
+.seuil .logo { font-size: clamp(2rem, 8vw, 2.6rem); }
+.seuil .surtitre::after { margin-top: .7rem; }
+.seuil-form { display: grid; gap: .35rem; text-align: left; }
+.seuil-form label { font-size: .82rem; color: var(--sourdine); margin-top: .35rem; }
+.seuil-form .btn-laiton { margin-top: .9rem; }
+.seuil-form .btn-lien { justify-self: center; font-size: .85rem; }
+.seuil-q { font-family: var(--f-titre); font-size: 1.1rem; }
+.liste-roles { display: grid; gap: .3rem; max-height: 55vh; overflow-y: auto; text-align: left; margin: .5rem 0 .75rem; }
+.role-ligne {
+  cursor: pointer; display: grid; grid-template-columns: 6rem 1fr; gap: .6rem; align-items: baseline; text-align: left;
+  background: var(--panneau); border: 1px solid var(--trait); border-left: 3px solid var(--c); border-radius: 2px; padding: .5rem .7rem;
+}
+.role-ligne:hover, .role-ligne:focus-visible { border-color: var(--laiton); border-left-color: var(--c); background: var(--panneau-haut); }
+.role-ligne b { font-family: var(--f-titre); color: var(--laiton); font-size: 1.05rem; }
+.role-ligne span { color: var(--sourdine); font-size: .85rem; }
+
+/* ---------- Bandeau ---------- */
+.bandeau { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: rgba(255, 255, 255, .97); border-bottom: 1px solid var(--trait); }
+.bandeau-in, .annees-jauges, .atelier { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.bandeau-in { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem 1.1rem; padding-block: .55rem .35rem; }
+.annees-jauges { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0; }
+.an-jauge {
+  cursor: pointer; background: none; border: 0; border-bottom: 3px solid transparent; padding: .35rem .6rem .5rem; display: grid; gap: .25rem; text-align: left; min-width: 0;
+}
+.an-jauge[aria-selected="true"] { border-bottom-color: var(--laiton); background: var(--accent-doux); }
+.an-jauge-an { font-family: var(--f-titre); font-weight: 600; font-size: 1.1rem; color: var(--texte); }
+.an-jauge[aria-selected="true"] .an-jauge-an { color: var(--laiton); }
+.an-jauge-val { font-size: .74rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mini-barre { position: relative; display: block; height: 5px; background: var(--case-vide); }
+.mini-barre span { position: absolute; inset: 0 auto 0 0; background: var(--laiton); }
+.mini-barre span.trop { background: var(--alerte); }
+.mini-barre i { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--texte); }
+
+/* ---------- Atelier : table et volet ---------- */
+.atelier { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 380px); gap: 1.25rem; align-items: start; max-width: 1560px; margin: 0 auto; padding-block: 1rem 3rem; }
+.zone-table { background: var(--panneau); border: 1px solid var(--trait); border-radius: 2px; padding: 1rem; min-width: 0; }
+.zone-table-tete { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .75rem; align-items: flex-end; }
+.zone-table .table-releve { margin-bottom: 0; }
+.consigne { color: var(--sourdine); font-size: .88rem; margin: .7rem 0 .8rem; }
+.bascule button { font-family: var(--f-texte); font-size: .82rem; padding: .3rem .7rem; }
+.plateau { --case: 1.75rem; }
+button.pion { border: 0; font: inherit; font-size: .66rem; font-weight: 600; color: #fff; }
+button.pion-case { font-size: .55rem; }
+.pion-clic { cursor: pointer; }
+.pion-clic:hover { filter: brightness(1.08); }
+.pion-choisi { outline: 3px solid var(--texte); outline-offset: 1px; z-index: 3; }
+.pion-estompe { opacity: .16; filter: grayscale(1); }
+.pion-estompe.pion-choisi { opacity: .6; }
+.fond-clic { cursor: copy; }
+.fond-clic:hover { background: var(--accent-doux); outline: 1px dashed var(--laiton); outline-offset: -1px; }
+.bascules { display: flex; flex-wrap: wrap; gap: .5rem; }
+.hors-table { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; margin-top: .6rem; font-size: .82rem; }
+.hors-titre { color: var(--sourdine); }
+.hors-pion { cursor: pointer; background: var(--panneau); border: 1px dashed var(--alerte); border-radius: 2px; padding: .15rem .5rem; font-size: .8rem; color: var(--texte); }
+.pion-neuf { animation: pose .6s ease-out; }
+@keyframes pose { from { transform: scale(.6); opacity: .2; } to { transform: none; opacity: 1; } }
+
+.volet { position: sticky; top: 8.6rem; background: var(--panneau); border: 1px solid var(--trait); border-radius: 2px; max-height: calc(100vh - 9.6rem); display: flex; flex-direction: column; min-width: 0; }
+.volet-onglets { display: flex; flex-wrap: wrap; border-bottom: 1px solid var(--trait); background: var(--panneau-haut); }
+.volet-onglets button { cursor: pointer; background: none; border: 0; border-bottom: 2px solid transparent; padding: .55rem .7rem; font-size: .85rem; font-weight: 600; color: var(--sourdine); }
+.volet-onglets button[aria-selected="true"] { color: var(--laiton); border-bottom-color: var(--laiton); background: var(--panneau); }
+.volet-corps { overflow-y: auto; padding: 1rem; display: grid; gap: .75rem; align-content: start; }
+.volet-titre { font-size: 1.3rem; line-height: 1.2; }
+.volet-sur { font-size: .72rem; text-transform: uppercase; letter-spacing: .1em; color: var(--sourdine); font-weight: 600; margin-bottom: -.5rem; }
+.volet-corps h3 { margin: .5rem 0 0; }
+.volet-corps input[type=search] { width: 100%; }
+
+.portee-bloc { display: grid; gap: .25rem; }
+.portee-bloc small { font-size: .72rem; text-transform: uppercase; letter-spacing: .1em; color: var(--sourdine); font-weight: 600; }
+.portee { display: flex; border: 1px solid var(--trait); border-radius: 2px; overflow: hidden; }
+.portee button { flex: 1; cursor: pointer; background: none; border: 0; padding: .4rem .5rem; font-size: .85rem; color: var(--sourdine); }
+.portee button + button { border-left: 1px solid var(--trait); }
+.portee button[aria-pressed="true"] { background: var(--laiton); color: #fff; font-weight: 600; }
+
+.liste-poser { display: grid; gap: .4rem; }
+.carte-poser { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: .6rem; align-items: center; border: 1px solid var(--trait); border-radius: 2px; padding: .5rem .55rem; }
+.carte-poser .forme i { width: 7px; height: 7px; }
+.carte-poser-nom { display: grid; font-weight: 600; font-size: .88rem; line-height: 1.25; min-width: 0; }
+.carte-poser-nom small { font-weight: 400; color: var(--sourdine); font-size: .74rem; }
+.poser-boutons { display: flex; gap: .25rem; }
+.btn-poser { cursor: pointer; display: grid; justify-items: center; background: var(--panneau); border: 1px solid var(--trait); border-radius: 2px; padding: .2rem .45rem; font-size: .78rem; font-weight: 600; color: var(--laiton); line-height: 1.2; }
+.btn-poser small { font-weight: 400; font-size: .68rem; color: var(--sourdine); }
+.btn-poser.plein { background: var(--laiton); border-color: var(--laiton); color: #fff; }
+.btn-poser.plein small { color: rgba(255, 255, 255, .8); }
+.btn-poser:hover { border-color: var(--laiton); }
+.form-mesure { display: grid; gap: .45rem; }
+.form-mesure label, .champ { display: grid; gap: .25rem; font-size: .82rem; color: var(--sourdine); }
+.form-mesure .btn-laiton { margin-top: .4rem; }
+
+.etat-pion { display: grid; grid-template-columns: auto 1fr; gap: .25rem .9rem; margin: 0; font-size: .88rem; }
+.etat-pion dt { color: var(--sourdine); }
+.etat-pion dd { margin: 0; font-variant-numeric: tabular-nums; }
+.badges { display: flex; flex-wrap: wrap; gap: .35rem; }
+.actions-pion { display: grid; gap: .4rem; }
+.action { cursor: pointer; text-align: left; display: grid; grid-template-columns: 1fr auto; gap: .1rem .75rem; background: var(--panneau); border: 1px solid var(--trait); border-left: 3px solid var(--laiton); border-radius: 2px; padding: .6rem .75rem; }
+.action:hover { background: var(--accent-doux); }
+.action b { font-size: .95rem; }
+.action span { grid-column: 1; font-size: .8rem; color: var(--sourdine); }
+.action em { grid-column: 2; grid-row: 1 / span 2; align-self: center; font-style: normal; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.action-retrait { border-left-color: var(--alerte); }
+.cal { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: .25rem; }
+.cal-an { cursor: pointer; display: grid; justify-items: center; background: var(--panneau); border: 1px solid var(--trait); border-radius: 2px; padding: .25rem 0; }
+.cal-an small { font-size: .7rem; color: var(--sourdine); }
+.cal-an.actif { border-color: var(--laiton); background: var(--accent-doux); }
+.cal-an.actif b { color: var(--laiton); }
+.actions-bas { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; justify-content: space-between; }
+.citation { margin: 0; border-left: 3px solid var(--trait); padding: .2rem .7rem; color: var(--sourdine); font-style: italic; }
+.petit { font-size: .8rem; color: var(--sourdine); }
+.total-demande b { font-family: var(--f-titre); font-size: 1.6rem; }
+.liste-demande { list-style: none; margin: 0; padding: 0; display: grid; gap: .3rem; }
+.liste-demande button { cursor: pointer; width: 100%; display: flex; justify-content: space-between; gap: .6rem; text-align: left; background: var(--panneau); border: 1px solid var(--trait); border-left: 3px solid var(--c); border-radius: 2px; padding: .45rem .6rem; }
+.liste-demande button:hover { background: var(--panneau-haut); }
+.liste-demande b { display: block; font-size: .88rem; }
+.liste-demande small { color: var(--sourdine); font-size: .74rem; }
+.liste-demande .num { display: grid; justify-items: end; gap: .15rem; font-size: .85rem; }
+.mini-tableau { font-size: .82rem; }
+.mini-tableau th, .mini-tableau td { padding: .3rem .4rem; }
+.par-armee { list-style: none; margin: 0; padding: 0; display: grid; gap: .25rem; font-size: .88rem; }
+.par-armee li { display: flex; align-items: center; gap: .3rem; }
+.par-armee b { margin-left: auto; font-weight: 600; }
+.form-reglages { display: grid; gap: .6rem; }
+.form-reglages .plafonds { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.form-reglages .plafonds label { display: grid; font-size: .8rem; color: var(--sourdine); }
+
+@media (max-width: 1000px) {
+  .atelier { grid-template-columns: 1fr; }
+  .volet { position: static; max-height: none; }
+}
+@media (max-width: 640px) {
+  .annees-jauges { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .plateau { --case: 1.05rem; }
+  .an-jauge-val { font-size: .66rem; }
+}
+
+/* ---------- Figuratifs : la table comme sur les photos ---------- */
+:root { --carte: #f6f4ee; --gris-carte: #5d6168; --orange-carte: #e6a52a; --trait-table: #1d1d1f; }
+.plateau { --case: 1.9rem; background: var(--trait-table); gap: 2px; padding: 2px; }
+.plateau .fond { background: #fff; border-radius: 0; }
+.plateau .fond-hors { background: #f7dede; }
+.plateau .fond-horstable { background: repeating-linear-gradient(135deg, #f1d3d3 0 4px, #fff 4px 8px); }
+.fig {
+  --picto: #141414; position: relative; padding: 0; border-radius: 1px; color: var(--picto); background: var(--carte) !important;
+  box-shadow: inset 0 0 0 2px #1a1a1a, 0 1px 2px rgba(0, 0, 0, .35); display: grid; overflow: hidden;
+}
+.fig-h { grid-template-rows: auto 1fr; }
+.fig-v { grid-template-columns: 1fr auto; }
+.fig-bande { background: var(--bande); color: #fff; display: flex; align-items: center; justify-content: center; padding: 1px 3px; min-width: 0; min-height: 0; }
+.fig-v .fig-bande { grid-column: 2; grid-row: 1; writing-mode: vertical-rl; padding: 3px 1px; }
+.fig-v .fig-picto { grid-column: 1; grid-row: 1; }
+.fig-rouge .fig-bande { background: var(--rouge); }
+.fig-titre {
+  font-family: "Stardos Stencil", "Source Serif 4", Georgia, serif; font-weight: 700; text-transform: uppercase; letter-spacing: .02em;
+  font-size: .62rem; line-height: 1.05; text-align: center; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; text-shadow: none;
+}
+.fig-picto { display: grid; place-items: center; min-height: 0; min-width: 0; padding: 3px; }
+.fig-picto svg { width: 100%; height: 100%; max-width: 3.4rem; max-height: 3.4rem; }
+.fig-coins { position: absolute; right: 3px; bottom: 3px; display: flex; gap: 2px; }
+.fig-v .fig-coins { right: auto; left: 3px; flex-direction: column; }
+.fig-coin { display: flex; align-items: center; gap: 1px; background: #d9d9d9; border: 1px solid #555; padding: 0 2px; font-size: .55rem; color: #111; line-height: 1.2; }
+.fig-coin svg { width: .7rem; height: .7rem; }
+.fig-mini { grid-template-rows: none; grid-template-columns: auto 1fr; }
+.fig-mini .fig-bande { grid-row: 1; grid-column: 1 / span 2; writing-mode: horizontal-tb; }
+.fig-mini .fig-picto { display: none; }
+.fig-mini .fig-titre { font-size: .55rem; -webkit-line-clamp: 2; }
+.fig-alea { background: var(--orange-carte) !important; background-image: linear-gradient(90deg, rgba(0,0,0,.25) 1px, transparent 1px), linear-gradient(rgba(0,0,0,.25) 1px, transparent 1px) !important; background-size: calc(var(--case) + 2px) calc(var(--case) + 2px) !important; }
+.fig-alea .fig-bande { background: transparent; }
+.fig-alea .fig-titre { font-size: .75rem; }
+.jeton {
+  background: var(--bande) !important; color: #121212; border-radius: 2px !important; padding: 2px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .55), 0 1px 1px rgba(0, 0, 0, .3); display: grid; place-items: center;
+}
+.jeton svg, .jeton-option svg { width: 100%; height: 100%; }
+.jeton-option { background: var(--carte) !important; color: #222; box-shadow: inset 0 0 0 2px var(--bande); padding: 3px; display: grid; place-items: center; }
+.jeton-legende { display: inline-grid !important; place-items: center; background: var(--bande); color: #111; padding: 1px; }
+.jeton-legende svg { width: 100%; height: 100%; }
+.fig.pion-mien { box-shadow: inset 0 0 0 2px #1a1a1a, 0 0 0 3px var(--laiton); }
+.pion-choisi { outline: 3px solid var(--rouge); outline-offset: 1px; }
+@media (max-width: 640px) { .plateau { --case: 1.1rem; } .fig-titre { display: none; } .fig-coins { display: none; } }
+button.fig .fig-picto, button.jeton { color: #141414; }
+button.jeton-option { color: #222; }
+
+</style>
 </head>
 <body>
 
-<!-- ===== Accueil ===== -->
-<section id="ecran-accueil" class="accueil">
-  <div class="accueil-fond" aria-hidden="true"></div>
-  <div class="accueil-in">
-    <p class="surtitre">École de guerre · Loi de programmation militaire 2027-2032</p>
+<!-- ===== Accueil : partie, rôle, table ===== -->
+<section id="ecran-accueil" class="seuil">
+  <div class="seuil-carte">
+    <p class="surtitre">École de guerre · LPM 2027-2032</p>
     <h1 class="logo">STRATEGIKON</h1>
-    <p class="accroche">Construire la programmation 2027-2032 sous plafond : chaque pôle présente ses besoins, le CEMA arbitre.</p>
 
-    <div class="etapes-accueil" id="etape-partie">
-      <div class="carte-acces">
-        <h2>Rejoindre une partie</h2>
-        <form id="form-rejoindre" autocomplete="off">
-          <label for="rej-partie">Partie</label>
-          <select id="rej-partie" required></select>
-          <label for="rej-mdp">Mot de passe</label>
-          <input id="rej-mdp" type="password" required>
-          <button class="btn-laiton" type="submit">Entrer</button>
-          <p class="erreur" id="rej-erreur" role="alert"></p>
-        </form>
-      </div>
-      <div class="carte-acces carte-discrete">
-        <h2>Ouvrir une nouvelle partie</h2>
-        <form id="form-creer" autocomplete="off">
-          <label for="cre-nom">Nom de la partie</label>
-          <input id="cre-nom" placeholder="Bageia 5" maxlength="80" required>
-          <div class="deux">
-            <div><label for="cre-mdp">Mot de passe</label><input id="cre-mdp" type="password" minlength="4" required></div>
-            <div><label for="cre-mdp2">Confirmation</label><input id="cre-mdp2" type="password" minlength="4" required></div>
-          </div>
-          <button class="btn-contour" type="submit">Ouvrir la partie</button>
-          <p class="erreur" id="cre-erreur" role="alert"></p>
-        </form>
-      </div>
-    </div>
+    <form id="form-rejoindre" class="seuil-form" autocomplete="off">
+      <label for="rej-partie">Partie</label>
+      <select id="rej-partie" required></select>
+      <label for="rej-mdp">Mot de passe</label>
+      <input id="rej-mdp" type="password" required>
+      <button class="btn-laiton" type="submit">Entrer</button>
+      <p class="erreur" id="rej-erreur" role="alert"></p>
+      <button class="btn-lien" id="btn-montrer-creer" type="button">Ouvrir une nouvelle partie</button>
+    </form>
+
+    <form id="form-creer" class="seuil-form" autocomplete="off" hidden>
+      <label for="cre-nom">Nom de la nouvelle partie</label>
+      <input id="cre-nom" placeholder="Bageia 5" maxlength="80" required>
+      <label for="cre-mdp">Mot de passe</label>
+      <input id="cre-mdp" type="password" minlength="4" required>
+      <label for="cre-mdp2">Confirmation</label>
+      <input id="cre-mdp2" type="password" minlength="4" required>
+      <button class="btn-laiton" type="submit">Ouvrir la partie</button>
+      <p class="erreur" id="cre-erreur" role="alert"></p>
+      <button class="btn-lien" id="btn-montrer-rejoindre" type="button">Revenir à la liste des parties</button>
+    </form>
 
     <div id="etape-role" hidden>
-      <h2 class="titre-roles">Quel pôle incarnez-vous dans <span id="nom-partie-role"></span> ?</h2>
-      <div class="roles" id="grille-roles"></div>
-      <button class="btn-lien" id="btn-retour-partie" type="button">Choisir une autre partie</button>
+      <p class="seuil-q">Votre rôle dans <b id="nom-partie-role"></b></p>
+      <div class="liste-roles" id="grille-roles"></div>
+      <button class="btn-lien" id="btn-retour-partie" type="button">Changer de partie</button>
     </div>
-    <p class="note-mode" id="note-mode"></p>
   </div>
+  <p class="note-mode" id="note-mode"></p>
 </section>
 
-<!-- ===== Partie ===== -->
+<!-- ===== La table ===== -->
 <section id="ecran-partie" hidden>
-  <header class="poste">
-    <div class="poste-in">
+  <header class="bandeau">
+    <div class="bandeau-in">
       <span class="logo-petit">STRATEGIKON</span>
       <span class="poste-partie" id="poste-partie"></span>
-      <button class="insigne" id="btn-role" type="button" title="Changer de pôle"><span id="insigne-code"></span><small id="insigne-nom"></small></button>
-      <span class="mode" id="mode"></span>
+      <button class="insigne" id="btn-role" type="button" title="Changer de rôle"><span id="insigne-code"></span><small id="insigne-nom"></small></button>
       <button class="btn-lien" id="btn-quitter" type="button">Quitter</button>
     </div>
-    <div class="jauges" id="jauges" aria-label="Budget par année"></div>
+    <div class="annees-jauges" id="jauges" role="tablist" aria-label="Année"></div>
   </header>
 
-  <nav class="parcours" role="tablist">
-    <button role="tab" data-onglet="composer" aria-selected="true"><b>1</b> Composer ma demande</button>
-    <button role="tab" data-onglet="table" aria-selected="false"><b>2</b> La table</button>
-    <button role="tab" data-onglet="arbitrage" aria-selected="false"><b>3</b> Arbitrage</button>
-    <button role="tab" data-onglet="bilan" aria-selected="false">Bilan</button>
-    <button role="tab" data-onglet="reglages" aria-selected="false" id="onglet-reglages">Réglages</button>
-  </nav>
-
-  <main class="scene">
-    <!-- 1. Composer -->
-    <div class="vue vue-composer" id="vue-composer">
-      <aside class="arsenal">
-        <div class="arsenal-tete">
-          <h2>Catalogue</h2>
-          <input id="recherche" type="search" placeholder="Chercher un pion, une option…" aria-label="Chercher">
-          <div class="filtres" id="filtres" role="group" aria-label="Filtrer"></div>
-        </div>
-        <div class="cartes-pions" id="arsenal"></div>
-      </aside>
-      <section class="dossier">
-        <div class="dossier-tete">
-          <div>
-            <h2 id="titre-dossier">Ma demande</h2>
-            <p class="aide">Chaque fiche se pose sur la table les années cochées. Tout est enregistré au fil de l'eau.</p>
-          </div>
-          <div class="dossier-total" id="dossier-total"></div>
-        </div>
-        <div id="fiches"></div>
-      </section>
-    </div>
-
-    <!-- 2. Table -->
-    <div class="vue" id="vue-table" hidden>
-      <div class="table-tete">
-        <div class="annees" id="annees-table" role="group" aria-label="Année"></div>
-        <div class="bascule" role="group" aria-label="Vue">
-          <button type="button" data-vue="demandes" aria-pressed="true">Toutes les demandes</button>
-          <button type="button" data-vue="arbitrage" aria-pressed="false">Après arbitrage</button>
-        </div>
-      </div>
-      <div class="table-cadre">
+  <main class="atelier">
+    <section class="zone-table" aria-label="Table budgétaire">
+      <div class="zone-table-tete">
         <div class="table-releve" id="table-releve"></div>
-        <div class="defile"><div class="plateau" id="plateau"></div></div>
-        <div class="legende" id="legende"></div>
-      </div>
-    </div>
-
-    <!-- 3. Arbitrage -->
-    <div class="vue" id="vue-arbitrage" hidden>
-      <div class="arb-tete">
-        <div>
-          <h2>Arbitrage du CEMA</h2>
-          <p class="aide" id="aide-arbitrage"></p>
+        <div class="bascules">
+          <div class="bascule" role="group" aria-label="Pions affichés">
+            <button type="button" data-filtre="mien" aria-pressed="true">Ma demande</button>
+            <button type="button" data-filtre="tout" aria-pressed="false">Toute la table</button>
+          </div>
+          <div class="bascule" role="group" aria-label="Vue">
+            <button type="button" data-vue="demandes" aria-pressed="true">Demandes</button>
+            <button type="button" data-vue="arbitrage" aria-pressed="false">Après arbitrage</button>
+          </div>
         </div>
       </div>
-      <div class="arb-annees" id="arb-annees"></div>
-      <div class="arb-colonnes">
-        <div><h3>Demandes</h3><div id="arb-lignes"></div></div>
-        <div><h3>Renoncements</h3><div id="arb-renoncements"></div></div>
-      </div>
-    </div>
+      <p class="consigne" id="consigne"></p>
+      <div class="defile"><div class="plateau" id="plateau"></div></div>
+      <div class="hors-table" id="hors-table"></div>
+      <div class="legende" id="legende"></div>
+    </section>
 
-    <!-- Bilan -->
-    <div class="vue" id="vue-bilan" hidden>
-      <div class="arb-tete">
-        <div><h2>Bilan de la partie</h2><p class="aide" id="note-vue"></p></div>
-        <div class="actions">
-          <button class="btn-contour" id="btn-copier-csv" type="button">Copier en CSV</button>
-          <button class="btn-contour" id="btn-telecharger-csv" type="button">Télécharger le CSV</button>
-        </div>
-      </div>
-      <div class="trajectoire" id="trajectoire"></div>
-      <div class="defile cadre"><table class="tableau" id="table-synthese"></table></div>
-      <h3>Toutes les lignes visibles</h3>
-      <div class="defile cadre"><table class="tableau" id="table-toutes"></table></div>
-    </div>
-
-    <!-- Réglages -->
-    <div class="vue" id="vue-reglages" hidden>
-      <h2>Réglages de la partie</h2>
-      <p class="aide" id="aide-parametres"></p>
-      <form id="form-parametres" class="reglages">
-        <fieldset><legend>Plafond annuel (cases de 100 M€)</legend><div class="plafonds" id="plafonds"></div></fieldset>
-        <fieldset><legend>Pions de scénario posés sur la table</legend><div id="aleas"></div></fieldset>
-        <button class="btn-laiton" type="submit" id="btn-parametres">Enregistrer</button>
-        <p class="note-mode" id="param-etat" role="status"></p>
-      </form>
-    </div>
+    <aside class="volet" aria-label="Panneau">
+      <nav class="volet-onglets" id="volet-onglets" role="tablist"></nav>
+      <div class="volet-corps" id="volet"></div>
+    </aside>
   </main>
 </section>
 
@@ -5752,6 +5872,7 @@ window.STRAT_CATALOGUE_ROLES = [
     dorese: "Passer à 100 % (ajout des DORESE)",
     ajout: "Ajouter un pion",
     retrait: "Retirer un pion du socle",
+    degrade: "Repasser une capacité à 50 % (retirer ses DORESE)",
     libre: "Option du catalogue ou pion sur mesure"
   };
 
@@ -5817,6 +5938,10 @@ window.STRAT_CATALOGUE_ROLES = [
         if (!pion) return vide;
         if (Number(ligne.niveau) === 100) return { cout: pion.cout100, dorese: copie(pion.dorese) };
         return { cout: pion.cout50, dorese: { ao: 0, mco: 0, rh: 0 } };
+      case "degrade":
+        if (!pion) return vide;
+        var dd = doreseDepart(pion);
+        return { cout: -nbDepart(pion) * CASE, dorese: { ao: -dd.ao, mco: -dd.mco, rh: -dd.rh } };
       case "retrait":
         if (!pion) return vide;
         return { cout: -coutSocle(pion), dorese: { ao: 0, mco: 0, rh: 0 } };
@@ -5839,7 +5964,7 @@ window.STRAT_CATALOGUE_ROLES = [
   function quantite(ligne, annee) {
     var q = Number((ligne.qte || {})[annee]) || 0;
     // Un pion du socle n'existe qu'en un exemplaire : on plafonne à 1.
-    if (ligne.type === "dorese" || ligne.type === "retrait") q = Math.max(0, Math.min(1, q));
+    if (ligne.type === "dorese" || ligne.type === "retrait" || ligne.type === "degrade") q = Math.max(0, Math.min(1, q));
     return Math.max(0, q);
   }
 
@@ -5920,12 +6045,13 @@ window.STRAT_CATALOGUE_ROLES = [
     var idx = indexPions(pions);
     var blocs = [];
     var retires = {};
-    var passes100 = {};
+    var passes100 = {}, degrades = {};
     lignes.forEach(function (l) {
       var q = quantite(l, annee);
       if (!q) return;
       if (l.type === "retrait") retires[l.pion] = true;
       if (l.type === "dorese") passes100[l.pion] = l;
+      if (l.type === "degrade") degrades[l.pion] = l;
     });
     var ordreType = { gris: 0, violet: 1, orange: 2, capacite: 3 };
     var socle = pions.filter(function (p) { return estDansSocle(p, annee, params) && !retires[p.id]; });
@@ -5938,9 +6064,10 @@ window.STRAT_CATALOGUE_ROLES = [
       return ordreType[a.type] - ordreType[b.type];
     });
     socle.forEach(function (p) {
-      var plein = p.type === "capacite" && nbManquantes(p) === 0;
+      var dg = !!degrades[p.id] && !passes100[p.id];
+      var plein = p.type === "capacite" && nbManquantes(p) === 0 && !dg;
       blocs.push({ armee: p.armee, nature: p.type, libelle: p.nom, cases: p.cout50 / CASE, niveau: plein || passes100[p.id] ? 100 : 50 });
-      if (nbDepart(p)) blocs.push({ armee: p.armee, nature: "dorese", libelle: "DORESE " + p.nom, cases: nbDepart(p) });
+      if (nbDepart(p) && !dg) blocs.push({ armee: p.armee, nature: "dorese", libelle: "DORESE " + p.nom, cases: nbDepart(p) });
       if (passes100[p.id] && nbManquantes(p)) {
         blocs[blocs.length - 1 - (nbDepart(p) ? 1 : 0)].niveau = 100;
         blocs.push({ armee: armeeDeLigne(passes100[p.id], idx), nature: "dorese", libelle: "DORESE " + p.nom, cases: nbManquantes(p) });
@@ -5948,7 +6075,7 @@ window.STRAT_CATALOGUE_ROLES = [
     });
     lignes.forEach(function (l) {
       var q = quantite(l, annee);
-      if (!q || l.type === "dorese" || l.type === "retrait") return;
+      if (!q || l.type === "dorese" || l.type === "retrait" || l.type === "degrade") return;
       var arm = armeeDeLigne(l, idx);
       if (l.type === "ajout") {
         var p = idx[l.pion];
@@ -6022,11 +6149,12 @@ window.STRAT_CATALOGUE_ROLES = [
     var tableCases = Number(params.table) || 600;
     var plateau = new Plateau(Math.ceil(tableCases / LARGEUR));
     var pieces = [];
-    var retires = {}, passes100 = {};
+    var retires = {}, passes100 = {}, degrades = {};
     lignes.forEach(function (l) {
       if (!quantite(l, annee)) return;
       if (l.type === "retrait") retires[l.pion] = true;
       if (l.type === "dorese") passes100[l.pion] = l;
+      if (l.type === "degrade") degrades[l.pion] = l;
     });
 
     // Constitution des groupes.
@@ -6037,14 +6165,16 @@ window.STRAT_CATALOGUE_ROLES = [
       if (!estDansSocle(p, annee, params) || retires[p.id]) return;
       var l100 = passes100[p.id] && nbManquantes(p) ? passes100[p.id] : null;
       var g = p.type === "gris" ? "Fixes" : (l100 ? armeeDeLigne(l100, idx) : p.armee);
-      var types = typesDorese(doreseDepart(p)).concat(l100 ? typesDorese(doreseManquantes(p)) : []);
+      var dg = degrades[p.id] && !passes100[p.id] ? degrades[p.id] : null;
+      var types = (dg ? [] : typesDorese(doreseDepart(p))).concat(l100 ? typesDorese(doreseManquantes(p)) : []);
       var plein = types.length >= nbDorese(p);
       groupe(g).rigides.push({ pion: p, w: p.l || 1, h: p.h || 1, armee: g === "Fixes" ? p.armee : g, nature: p.type,
-        libelle: p.nom, niveau: plein ? 100 : 50, dorese: types.length, types: types, socle: true });
+        libelle: p.nom, niveau: plein ? 100 : 50, dorese: types.length, types: types, socle: true,
+        nDepart: dg ? 0 : nbDepart(p), ligneDorese: l100 ? l100.id : null, roleDorese: l100 ? l100.role : null, degrade: dg ? dg.id : null });
     });
     lignes.forEach(function (l) {
       var q = quantite(l, annee);
-      if (!q || l.type === "dorese" || l.type === "retrait") return;
+      if (!q || l.type === "dorese" || l.type === "retrait" || l.type === "degrade") return;
       var arm = armeeDeLigne(l, idx);
       if (l.type === "ajout") {
         var p = idx[l.pion];
@@ -6084,30 +6214,38 @@ window.STRAT_CATALOGUE_ROLES = [
         }
         plateau.marquer(pos.r, pos.c, pos.w, pos.h, id);
         pieces.push({ r: pos.r, c: pos.c, w: pos.w, h: pos.h, armee: it.armee, nature: it.nature, libelle: it.libelle,
+          pion: it.pion ? it.pion.id : null, ligne: it.ligne || null, socle: !!it.socle, ligneDorese: it.ligneDorese || null, degrade: it.degrade || null,
           niveau: it.nature === "capacite" ? it.niveau : null, role: it.role || null, groupe: nomG, cases: pos.w * pos.h });
         // DORESE au contact : cases libres voisines de la capacité (ou de ses DORESE déjà posées).
         var types = it.types || typesDorese(it.detailDorese || {});
         var amas = [{ r: pos.r, c: pos.c, w: pos.w, h: pos.h }];
-        types.slice(0, it.dorese).forEach(function (t) {
+        types.slice(0, it.dorese).forEach(function (t, n) {
+          var ajoutee = it.socle && n >= (it.nDepart || 0);
           var cand = voisinLibre(plateau, amas);
           if (!cand) { var p2 = plateau.chercher(1, 1, r0); cand = { r: p2.r, c: p2.c, loin: true }; }
           plateau.marquer(cand.r, cand.c, 1, 1, "d" + id);
           amas.push({ r: cand.r, c: cand.c, w: 1, h: 1 });
-          cellules.push({ r: cand.r, c: cand.c, armee: it.armee, nature: "dorese", type: t, libelle: "DORESE " + t.toUpperCase() + " · " + it.libelle, role: it.role || null, loin: !!cand.loin });
+          cellules.push({ r: cand.r, c: cand.c, armee: it.armee, nature: "dorese", type: t, libelle: "DORESE " + t.toUpperCase() + " · " + it.libelle,
+            role: ajoutee ? it.roleDorese : (it.role || null), loin: !!cand.loin, parent: id, ligne: ajoutee ? it.ligneDorese : (it.ligne || null) });
         });
       });
-      // Montants sécables : on comble les trous du groupe, dans l'ordre de lecture.
+      // Montants sécables : premier trou libre du groupe, puis cases voisines pour garder le bloc d'un seul tenant.
       g.secables.forEach(function (it) {
-        var reste = it.cases;
-        var k = r0 * plateau.l;
-        while (reste > 0) {
-          if (k >= plateau.occ.length) plateau.agrandir(1);
-          if (plateau.occ[k] === null) {
-            plateau.occ[k] = "s";
-            cellules.push({ r: Math.floor(k / plateau.l), c: k % plateau.l, armee: it.armee, nature: "libre", libelle: it.libelle, role: it.role, horsCatalogue: it.horsCatalogue });
-            reste--;
+        var amas = [];
+        for (var n = 0; n < it.cases; n++) {
+          var cand = amas.length ? voisinLibre(plateau, amas) : null;
+          if (!cand) {
+            var k = r0 * plateau.l;
+            while (true) {
+              if (k >= plateau.occ.length) plateau.agrandir(1);
+              if (plateau.occ[k] === null) break;
+              k++;
+            }
+            cand = { r: Math.floor(k / plateau.l), c: k % plateau.l };
           }
-          k++;
+          plateau.marquer(cand.r, cand.c, 1, 1, "s");
+          amas.push({ r: cand.r, c: cand.c, w: 1, h: 1 });
+          cellules.push({ r: cand.r, c: cand.c, armee: it.armee, nature: "libre", libelle: it.libelle, role: it.role, horsCatalogue: it.horsCatalogue, ligne: it.ligne });
         }
       });
     });
@@ -6386,8 +6524,71 @@ window.STRAT_CATALOGUE_ROLES = [
 
 </script>
 <script>
-// STRATEGIKON, interface « salle d'état-major ».
-// Même moteur (js/moteur.js), même stockage (js/stockage.js), mêmes données que la version en ligne.
+// Figuratifs des pions : pictogrammes noirs, dessinés pour l'outil (viewBox 24 x 24).
+(function () {
+  "use strict";
+  var T = 'stroke="currentColor" fill="none" stroke-linecap="round"';
+  var I = {
+    char: '<path d="M2 15.5h20l-2.4 4H4.4z"/><path d="M5 11.6h11.5l2.4 3.2H4z"/><rect x="7.5" y="8.6" width="6.5" height="3.4" rx="1"/><path d="M13.5 9.4l9-1.3v1.5l-9 1z"/>',
+    helico: '<path d="M2 5.4h20v1.3H2z"/><rect x="11.3" y="6.5" width="1.4" height="3"/><path d="M5.5 9.5h8.5c3 0 4.5 2 4.5 4.2v.8H8.5C6.6 14.5 5 13 5 11.2z"/><path d="M17.5 11.4h5.5v1.6h-5.5z"/><path d="M21.6 9.4h1v5h-1z"/><path d="M6 17.6h11.5v1.2H6z"/><path d="M8 14.2h1v3.6H8zM14.5 14.2h1v3.6h-1z"/>',
+    avion: '<path d="M12 1.5l1.5 6.2 7.5 5.1v2.1l-7.5-2.1-.5 5.2 2.6 2v1.5L12 20.4l-3.6 1.1V20l2.6-2-.5-5.2L3 14.9v-2.1l7.5-5.1z"/>',
+    transport: '<path d="M10.8 2h2.4l.6 6.8L23 11.6v2.2l-9.2-1.6-.4 5.9 3.3 1.6v1.6L12 20.4l-4.7.9v-1.6l3.3-1.6-.4-5.9L1 13.8v-2.2l9.2-2.8z"/>',
+    drone: '<path d="M11.2 5h1.6l.5 5.4 9.7 1.4v1.5l-9.7-.4-.4 4.8 2.6 1.6V21L12 20l-3.5 1v-1.6l2.6-1.6-.4-4.8-9.7.4v-1.5l9.7-1.4z"/><circle cx="12" cy="4" r="1.6"/>',
+    navire: '<path d="M1 14.6h22l-3.2 5.2H4.4z"/><path d="M5.5 10.6h12v4H5.5z"/><path d="M8.5 6.8h5v3.8h-5z"/><path d="M10.5 2.5h1.2v4.3h-1.2z"/><path d="M15 8.6h4v2h-4z"/>',
+    porteavions: '<path d="M1 13.4h22l-2.6 5.6H4z"/><path d="M15.2 8.2h4v5.2h-4z"/><path d="M16.8 5h1v3.2h-1z"/><path d="M4 12.2l3-.6 1 .6-1 .6z"/>',
+    sousmarin: '<path d="M2 14.6c0-2.1 2.2-3.6 5.2-3.6h11.1c2.5 0 4.2 1.5 4.2 3.6s-1.7 3.6-4.2 3.6H7.2c-3 0-5.2-1.5-5.2-3.6z"/><path d="M9.5 7.2h4.2v4H9.5z"/><path d="M11 4.2h1v3h-1z"/>',
+    parachute: '<path d="M2.5 10.5a9.5 7.5 0 0 1 19 0z"/><path d="M3 11l8 7.2M21 11l-8 7.2M12 11v7" ' + T + ' stroke-width="1.2"/><circle cx="12" cy="20" r="1.9"/>',
+    reseau: '<circle cx="12" cy="12" r="3.3"/><circle cx="4" cy="4.5" r="2.2"/><circle cx="20" cy="4.5" r="2.2"/><circle cx="4" cy="19.5" r="2.2"/><circle cx="20" cy="19.5" r="2.2"/><path d="M5.5 6l5 4.4M18.5 6l-5 4.4M5.5 18l5-4.4M18.5 18l-5-4.4" ' + T + ' stroke-width="1.6"/>',
+    antenne: '<path d="M4 3.5a9 9 0 0 0 11.5 11.5z"/><path d="M9.5 9l6.5-6.5" ' + T + ' stroke-width="1.6"/><circle cx="16.6" cy="2.6" r="1.4"/><path d="M10.5 14.5l-3.5 8h10l-3.5-8z"/>',
+    caisse: '<rect x="2.5" y="11" width="9" height="9"/><rect x="12.5" y="11" width="9" height="9"/><rect x="7.5" y="2.5" width="9" height="7.5"/><path d="M5 15.5h4M15 15.5h4M10 6.2h4" stroke="#fff" stroke-width="1.2"/>',
+    cle: '<path d="M15 2.5a5.2 5.2 0 0 0-4.8 7.3L2.6 17.4l3.6 3.6 7.6-7.6A5.2 5.2 0 0 0 21 8.6l-3.2 3.1-3.1-.5-.5-3.1 3.1-3.1A5.2 5.2 0 0 0 15 2.5z"/>',
+    sante: '<path d="M9 2.5h6v6.5h6.5v6H15v6.5H9V15H2.5V9H9z"/>',
+    batiment: '<path d="M2 20.2h20v1.6H2z"/><path d="M12 2.5l9.5 5.3H2.5z"/><path d="M4 9h2.4v10.4H4zM8.4 9h2.4v10.4H8.4zM13.2 9h2.4v10.4h-2.4zM17.6 9H20v10.4h-2.4z"/>',
+    globe: '<circle cx="12" cy="12" r="9.2" ' + T + ' stroke-width="1.7"/><path d="M7.5 5.5c2 1 .6 3 2.8 4s1.2 3.2-.9 4.1-.9 3.3.2 4.6M15.5 4.4c-1.2 2 .9 3 2.1 4s3 .9 3.2 2.3M13.6 14c1.2.9 3.3.8 3.1 3.4" ' + T + ' stroke-width="1.5"/>',
+    missile: '<path d="M12 1c2.1 2.1 3.1 5 3.1 8v8.2H8.9V9c0-3 1-5.9 3.1-8z"/><path d="M8.9 12.6L5.6 17v3.4l3.3-1.4zM15.1 12.6l3.3 4.4v3.4l-3.3-1.4z"/><path d="M10.2 18h3.6l-.9 4.2h-1.8z"/>',
+    puce: '<rect x="7" y="7" width="10" height="10" rx="1.2"/><path d="M9.5 3v4M12 3v4M14.5 3v4M9.5 17v4M12 17v4M14.5 17v4M3 9.5h4M3 12h4M3 14.5h4M17 9.5h4M17 12h4M17 14.5h4" ' + T + ' stroke-width="1.5"/>',
+    soldat: '<circle cx="12" cy="8.2" r="3.9"/><path d="M7.4 6.4c.6-3.4 8.6-3.4 9.2 0v.8H7.4z"/><path d="M3.2 21.5c0-5 3.9-8 8.8-8s8.8 3 8.8 8z"/>',
+    document: '<path d="M5.5 2h9.5l4 4v16H5.5z"/><path d="M8.5 10h7.5M8.5 13.2h7.5M8.5 16.4h5" stroke="#fff" stroke-width="1.3"/>',
+    obus: '<path d="M5.5 22V10.5c0-3.2 2.2-6.5 2.2-6.5s2.3 3.3 2.3 6.5V22z"/><path d="M14 22V10.5c0-3.2 2.2-6.5 2.2-6.5s2.3 3.3 2.3 6.5V22z"/>',
+    oeil: '<path d="M1.5 12S5.5 5.5 12 5.5 22.5 12 22.5 12 18.5 18.5 12 18.5 1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3.3" fill="#fff"/><circle cx="12" cy="12" r="1.5"/>',
+    etoile: '<path d="M12 1.8l2.9 6.6 7.1.6-5.4 4.7 1.6 7-6.2-3.7-6.2 3.7 1.6-7L2 9l7.1-.6z"/>',
+    // DORESE
+    botte: '<path d="M6.5 1.8h8v9.8l5.8 2.7c1.6.8 2.2 2.1 2.2 3.6v3.3H4.5V12z"/><path d="M4.5 18.5h18" stroke="#fff" stroke-width="1"/>',
+    camion: '<path d="M1 5.5h13.5v10H1z"/><path d="M14.5 8.8h5.2l3.3 3.6v3.1h-8.5z"/><circle cx="5.2" cy="17.6" r="2.3"/><circle cx="18.3" cy="17.6" r="2.3"/><path d="M5 10.5h5.5" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/><circle cx="4.6" cy="10.5" r="1.2" fill="#fff"/>'
+  };
+  I.buste = I.soldat;
+
+  var REGLES = [
+    [/Dissuasion/i, "missile"], [/Infrastructure/i, "batiment"], [/OPEX/i, "globe"], [/Secr[ée]tariat|SGA/i, "document"],
+    [/R&D/i, "puce"], [/Cyber/i, "puce"], [/SIC/i, "reseau"], [/Renseign/i, "antenne"], [/sant[ée]/i, "sante"],
+    [/Soutien|logistique/i, "caisse"], [/maintenance/i, "cle"], [/Planification/i, "etoile"], [/forces sp[ée]ciales|FUSCO/i, "parachute"],
+    [/Socle Terre|Service militaire|SMV/i, "soldat"], [/Leclerc|Scorpion|Serval/i, "char"], [/a[ée]romobile/i, "helico"],
+    [/porte-h[ée]licopt/i, "navire"], [/h[ée]licopt/i, "helico"], [/Rafale|Socle Air/i, "avion"], [/A400M|C130|MRTT|Atlantique/i, "transport"],
+    [/drones? MALE|drone/i, "drone"], [/SNA|sous-marin/i, "sousmarin"], [/porte-avions|PA-NG/i, "porteavions"],
+    [/surveillance|souverainet/i, "oeil"], [/FREMM|FDI|FDA|ravitaillement|HIL|fr[ée]gate|patrouill/i, "navire"],
+    [/Munition|missile|obus/i, "obus"], [/IA |num[ée]rique|spatial|satellite/i, "puce"]
+  ];
+  function pictoDe(nom) {
+    for (var i = 0; i < REGLES.length; i++) if (REGLES[i][0].test(nom || "")) return REGLES[i][1];
+    return null;
+  }
+  function svg(nom) {
+    var c = I[nom];
+    if (!c) return null;
+    var n = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    n.setAttribute("viewBox", "0 0 24 24");
+    n.setAttribute("aria-hidden", "true");
+    n.setAttribute("fill", "currentColor");
+    n.innerHTML = c;
+    return n;
+  }
+  window.STRAT_FIGURATIFS = { svg: svg, pictoDe: pictoDe, DORESE: { ao: "botte", mco: "camion", rh: "buste" } };
+})();
+
+</script>
+<script>
+// STRATEGIKON, conception « table d'abord » : le joueur agit sur la table de l'année,
+// les lignes de la base sont écrites en arrière-plan.
 (function () {
   "use strict";
 
@@ -6399,15 +6600,12 @@ window.STRAT_CATALOGUE_ROLES = [
   var ROLES_REGLAGES = ["Animateur", "SC-Plans", "CEMA"];
   var ROLES_ARBITRAGE = ["CEMA", "Animateur"];
   var ROLES_VUE_COMPLETE = ["CEMA", "Animateur", "SC-Plans"];
-  var MISSIONS = {
-    EMAT: "Défend les capacités Terre", EMM: "Défend les capacités Marine", EMAAE: "Défend les capacités Air et Espace",
-    COCA: "Porte les besoins opérationnels", "SC-Plans": "Tient la table budgétaire", CEMA: "Arbitre",
-    DGRIS: "Porte les partenariats", DGA: "Porte les programmes", SGA: "Porte l'humain et l'infrastructure",
-    MINARM: "Porte l'ambition politique", MEFR: "Tient les finances publiques", MEAE: "Porte la diplomatie",
-    Animateur: "Règle la partie"
-  };
+  var CLE_SESSION = "strategikon.table";
 
-  var etat = { partie: null, mdp: "", role: "", lignes: [], onglet: "composer", annee: M.ANNEES[0], vueTable: "demandes", filtre: "renforcer", recherche: "", ouverte: null };
+  var etat = {
+    partie: null, mdp: "", role: "", lignes: [], annee: M.ANNEES[0], vue: "demandes",
+    volet: "poser", filtre: "capacites", portee: "suite", recherche: "", selection: null, neuf: null, maTable: true
+  };
   var enAttente = {};
   var signature = "";
 
@@ -6432,43 +6630,58 @@ window.STRAT_CATALOGUE_ROLES = [
     if (m >= 1000) return signe + (m / 1000).toLocaleString("fr-FR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " Md€";
     return signe + m.toLocaleString("fr-FR") + " M€";
   }
-  function nCases(m) { var n = Math.round(m / M.CASE); return n + (Math.abs(n) > 1 ? " cases" : " case"); }
   function couleur(a) { return { "Terre": "var(--terre)", "Marine": "var(--marine)", "Air et Espace": "var(--air)", "Interarmées": "var(--inter)" }[a] || "var(--inter)"; }
   function nouvelId() { return window.crypto && crypto.randomUUID ? crypto.randomUUID() : "l-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
   function role(code) { return M.ROLES.filter(function (r) { return r.code === code; })[0] || M.ROLES[0]; }
   function vueComplete() { return ROLES_VUE_COMPLETE.indexOf(etat.role) !== -1; }
+  function arbitre() { return ROLES_ARBITRAGE.indexOf(etat.role) !== -1; }
   function visible(l) { return vueComplete() || l.role === etat.role; }
   function params() { return (etat.partie && etat.partie.params && etat.partie.params.plafonds) ? etat.partie.params : M.parametresParDefaut(); }
   function optionDe(code) { return code ? CATALOGUE.filter(function (o) { return o.code === code; })[0] || null : null; }
+  function ligneDe(id) { return id ? etat.lignes.filter(function (l) { return l.id === id; })[0] || null : null; }
+  function armeeDuRole() { return role(etat.role).armee; }
+  function dansMonPerimetre(p) {
+    if (vueComplete()) return true;
+    var a = armeeDuRole();
+    return a === "Interarmées" ? true : p.armee === a;
+  }
   function fourchette(o) {
     var u = o.annuel ? "/an" : "";
     if (o.cout === null || o.cout === undefined) return o.statut_cout === "a_definir" ? "coût à définir" : "non chiffré";
     if (o.cout_max && o.cout_max !== o.cout) return o.cout + " à " + o.cout_max + " M€" + u;
     return o.cout + " M€" + u;
   }
-  var minuteur;
-  function toast(msg) { var t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(minuteur); minuteur = setTimeout(function () { t.hidden = true; }, 2600); }
-  function memoriser() {
-    try {
-      if (etat.partie) sessionStorage.setItem("strategikon.v2", JSON.stringify({ nom: etat.partie.nom, mdp: etat.mdp, role: etat.role, onglet: etat.onglet }));
-      else sessionStorage.removeItem("strategikon.v2");
-    } catch (e) { /* rien */ }
-  }
   function libelleLigne(l) {
     if (l.type === "libre") return l.libelle || "Pion sur mesure";
     var p = IDX[l.pion];
     return p ? p.nom : l.pion;
   }
-  var ACTIONS = {
-    dorese: "Renforcer à 100 %",
-    ajout: "Créer",
-    retrait: "Dissoudre",
-    libre: "Option"
-  };
   function natureLigne(l) {
-    if (l.type === "ajout") return "Créer à " + (Number(l.niveau) === 100 ? "100 %" : "50 %");
-    if (l.type === "libre") return l.modele ? "Option de la fiche " + (optionDe(l.modele) || {}).role : "Pion sur mesure";
-    return ACTIONS[l.type];
+    if (l.type === "ajout") return "Nouvel exemplaire à " + (Number(l.niveau) === 100 ? "100 %" : "50 %");
+    if (l.type === "dorese") return "Renforcement à 100 %";
+    if (l.type === "retrait") return "Dissolution";
+    if (l.type === "degrade") return "Repassage à 50 %";
+    return l.modele ? "Option de la fiche " + ((optionDe(l.modele) || {}).role || "") : "Pion sur mesure";
+  }
+  function anneesDe(l) {
+    var a = M.ANNEES.filter(function (x) { return M.quantite(l, x) > 0; });
+    if (!a.length) return "aucune année";
+    var suite = a.length > 1 && a[a.length - 1] - a[0] === a.length - 1;
+    return suite ? a[0] + "–" + a[a.length - 1] : a.join(", ");
+  }
+  function anneesPortee() {
+    return etat.portee === "annee" ? [etat.annee] : M.ANNEES.filter(function (a) { return a >= etat.annee; });
+  }
+  function textePortee() {
+    return etat.portee === "annee" ? "en " + etat.annee : etat.annee === M.ANNEES[M.ANNEES.length - 1] ? "en " + etat.annee : "de " + etat.annee + " à " + M.ANNEES[M.ANNEES.length - 1];
+  }
+  var minuteur;
+  function toast(msg) { var t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(minuteur); minuteur = setTimeout(function () { t.hidden = true; }, 2600); }
+  function memoriser() {
+    try {
+      if (etat.partie && etat.role) sessionStorage.setItem(CLE_SESSION, JSON.stringify({ nom: etat.partie.nom, mdp: etat.mdp, role: etat.role, annee: etat.annee }));
+      else sessionStorage.removeItem(CLE_SESSION);
+    } catch (e) { /* rien */ }
   }
 
   // ---------- Accueil ----------
@@ -6480,45 +6693,44 @@ window.STRAT_CATALOGUE_ROLES = [
       liste.forEach(function (p) { sel.appendChild(el("option", { value: p.nom, texte: p.nom })); });
     }).catch(function (e) { sel.appendChild(el("option", { value: "", texte: "Liste indisponible" })); $("rej-erreur").textContent = e.message; });
   }
-
+  function etapeAccueil(nom) {
+    $("form-rejoindre").hidden = nom !== "rejoindre";
+    $("form-creer").hidden = nom !== "creer";
+    $("etape-role").hidden = nom !== "role";
+  }
   function montrerRoles(partie, mdp) {
     etat.partie = partie; etat.mdp = mdp;
-    $("etape-partie").hidden = true;
-    $("etape-role").hidden = false;
+    $("ecran-partie").hidden = true; $("ecran-accueil").hidden = false;
+    etapeAccueil("role");
     $("nom-partie-role").textContent = partie.nom;
     var g = $("grille-roles");
     vider(g);
     M.ROLES.forEach(function (r) {
-      g.appendChild(el("button", { classe: "role-tuile", type: "button", style: "--couleur:" + couleur(r.armee), onclick: function () { entrer(r.code); } }, [
-        el("span", { classe: "role-mission", texte: MISSIONS[r.code] || "" }),
-        el("b", { texte: r.code }),
-        el("small", { texte: r.nom })
+      g.appendChild(el("button", { classe: "role-ligne", type: "button", style: "--c:" + couleur(r.armee), onclick: function () { entrer(r.code); } }, [
+        el("b", { texte: r.code }), el("span", { texte: r.nom })
       ]));
     });
   }
-
-  function entrer(codeRole) {
-    etat.role = codeRole;
+  function entrer(code) {
+    etat.role = code;
+    etat.selection = null;
+    etat.maTable = !vueComplete();
+    etat.volet = "poser";
+    etat.filtre = role(code).armee === "Interarmées" && CATALOGUE.some(function (o) { return o.role === code; }) ? "options" : "capacites";
     $("ecran-accueil").hidden = true;
     $("ecran-partie").hidden = false;
     $("poste-partie").textContent = etat.partie.nom;
-    var r = role(codeRole);
-    $("insigne-code").textContent = r.code;
-    $("insigne-nom").textContent = r.nom;
-    $("onglet-reglages").hidden = ROLES_REGLAGES.indexOf(codeRole) === -1;
-    etat.filtre = r.armee === "Interarmées" && CATALOGUE.some(function (o) { return o.role === codeRole; }) ? "options" : "renforcer";
+    $("insigne-code").textContent = code;
+    $("insigne-nom").textContent = role(code).nom;
     memoriser();
     signature = "";
     return recharger(true);
   }
-
   function quitter() {
-    etat.partie = null; etat.mdp = ""; etat.lignes = []; signature = "";
+    etat.partie = null; etat.mdp = ""; etat.role = ""; etat.lignes = []; signature = "";
     memoriser();
-    $("ecran-partie").hidden = true;
-    $("ecran-accueil").hidden = false;
-    $("etape-partie").hidden = false;
-    $("etape-role").hidden = true;
+    $("ecran-partie").hidden = true; $("ecran-accueil").hidden = false;
+    etapeAccueil("rejoindre");
     chargerParties();
   }
 
@@ -6529,7 +6741,7 @@ window.STRAT_CATALOGUE_ROLES = [
     return S.lireEtat(nom, etat.mdp).then(function (e) {
       if (!etat.partie || etat.partie.nom !== nom) return;
       var lignes = e.lignes.slice().sort(function (a, b) { return (a.cree_le || "") < (b.cree_le || "") ? -1 : 1; });
-      lignes = lignes.map(function (l) { return enAttente[l.id] ? (etat.lignes.filter(function (x) { return x.id === l.id; })[0] || l) : l; });
+      lignes = lignes.map(function (l) { return enAttente[l.id] ? (ligneDe(l.id) || l) : l; });
       etat.lignes.forEach(function (l) { if (enAttente[l.id] && !lignes.some(function (x) { return x.id === l.id; })) lignes.push(l); });
       var sig = JSON.stringify(lignes) + JSON.stringify(e.partie.params);
       etat.partie.params = e.partie.params;
@@ -6537,15 +6749,18 @@ window.STRAT_CATALOGUE_ROLES = [
       if (forcer || sig !== signature) { signature = sig; rendre(forcer); }
     }).catch(function (e) { toast(e.message); });
   }
-
   function enregistrer(l) {
     clearTimeout(enAttente[l.id]);
     enAttente[l.id] = setTimeout(function () {
       S.ecrireLigne(etat.partie.nom, etat.mdp, l).then(function () { delete enAttente[l.id]; })
         .catch(function (e) { delete enAttente[l.id]; toast("Non enregistré : " + e.message); });
-    }, 400);
+    }, 350);
   }
-
+  function supprimer(l) {
+    clearTimeout(enAttente[l.id]); delete enAttente[l.id];
+    etat.lignes = etat.lignes.filter(function (x) { return x.id !== l.id; });
+    S.supprimerLigne(etat.partie.nom, etat.mdp, l.id).catch(function (e) { toast(e.message); });
+  }
   var fileParams = Promise.resolve();
   function modifierParams(fn) {
     fileParams = fileParams.then(function () {
@@ -6558,359 +6773,200 @@ window.STRAT_CATALOGUE_ROLES = [
     return fileParams;
   }
 
-  // ---------- Rendu ----------
-  function rendre(complet) {
-    var actif = document.activeElement;
-    rendreJauges();
-    if (etat.onglet === "composer") {
-      rendreArsenal();
-      if (complet || !$("fiches").contains(actif)) rendreFiches(); else rendreTotalDossier();
-    }
-    if (etat.onglet === "table") rendreTable();
-    if (etat.onglet === "arbitrage") rendreArbitrage();
-    if (etat.onglet === "bilan") rendreBilan();
-    if (etat.onglet === "reglages" && (complet || !$("form-parametres").contains(actif))) rendreReglages();
+  // ---------- Gestes sur la table : ils écrivent les lignes ----------
+  function memeGeste(l, g) {
+    if (l.role !== etat.role || l.type !== g.type) return false;
+    if (g.type === "ajout") return l.pion === g.pion && Number(l.niveau) === Number(g.niveau);
+    if (g.type === "dorese" || g.type === "retrait" || g.type === "degrade") return l.pion === g.pion;
+    if (g.type === "libre") return !!g.modele && l.modele === g.modele;
+    return false;
   }
-
-  function changerOnglet(nom) {
-    etat.onglet = nom;
-    document.querySelectorAll(".parcours button").forEach(function (b) { b.setAttribute("aria-selected", b.getAttribute("data-onglet") === nom ? "true" : "false"); });
-    ["composer", "table", "arbitrage", "bilan", "reglages"].forEach(function (v) { $("vue-" + v).hidden = v !== nom; });
-    memoriser();
+  // Pose un pion (ou un renforcement, une dissolution) sur les années de la portée.
+  function poser(g) {
+    var ans = anneesPortee();
+    var l = etat.lignes.filter(function (x) { return memeGeste(x, g); })[0];
+    if (!l) {
+      var r = role(etat.role);
+      l = { id: nouvelId(), role: etat.role, type: g.type, qte: {}, justification: "", cree_le: new Date().toISOString() };
+      M.ANNEES.forEach(function (a) { l.qte[a] = 0; });
+      if (g.type === "libre") {
+        var o = optionDe(g.modele);
+        l.modele = o ? o.code : null;
+        l.libelle = g.libelle || (o ? o.libelle : "");
+        l.armee = g.armee || (o ? o.armee : r.armee);
+        l.source = o ? o.source : null;
+        l.cout_unitaire = g.cout !== undefined ? M.arrondiCase(g.cout) : (o && o.cout ? M.arrondiCase(o.cout) : 0);
+        l.dorese = o && o.dorese ? { ao: o.dorese.ao || 0, mco: o.dorese.mco || 0, rh: o.dorese.rh || 0 } : { ao: 0, mco: 0, rh: 0 };
+      } else {
+        var p = IDX[g.pion];
+        l.pion = p.id;
+        l.niveau = g.niveau || 100;
+        l.armee = r.armee !== "Interarmées" ? r.armee : p.armee;
+      }
+      etat.lignes.push(l);
+    }
+    ans.forEach(function (a) {
+      var q = Number(l.qte[a]) || 0;
+      l.qte[a] = g.type === "ajout" || (g.type === "libre" && !g.modele) ? q + 1 : 1;
+    });
+    enregistrer(l);
+    etat.selection = { ligne: l.id, pion: l.pion || null };
+    etat.neuf = l.id;
+    etat.volet = "selection";
+    rendre(true);
+    toast(natureLigne(l) + " · " + libelleLigne(l) + " · " + textePortee());
+    return l;
+  }
+  // Retire le geste sur les années de la portée ; la ligne disparaît quand plus rien n'est posé.
+  function enlever(l) {
+    anneesPortee().forEach(function (a) {
+      var q = Number(l.qte[a]) || 0;
+      l.qte[a] = l.type === "ajout" || l.type === "libre" ? Math.max(0, q - 1) : 0;
+    });
+    if (!M.ANNEES.some(function (a) { return M.quantite(l, a) > 0; })) { supprimer(l); etat.selection = null; etat.volet = "poser"; }
+    else enregistrer(l);
     rendre(true);
   }
 
-  // Jauges : une par année, toujours visibles.
+  // ---------- Rendu ----------
+  function rendre(complet) {
+    rendreJauges();
+    rendreTable();
+    var actif = document.activeElement;
+    var saisie = actif && /^(INPUT|TEXTAREA|SELECT)$/.test(actif.tagName) && $("volet").contains(actif);
+    if (complet || !saisie) rendreVolet();
+  }
+
   function rendreJauges() {
     var j = $("jauges");
     vider(j);
-    var syn = M.synthese(PIONS, etat.lignes, params());
-    var max = Math.max.apply(null, M.ANNEES.map(function (a) { return Math.max(syn[a].total, syn[a].table); }));
+    var p = params();
+    var lignes = etat.vue === "arbitrage" ? M.lignesApresArbitrage(etat.lignes, p) : etat.lignes;
+    var syn = M.synthese(PIONS, lignes, p);
     M.ANNEES.forEach(function (a) {
       var s = syn[a];
-      var barre = el("div", { classe: "jauge-barre" });
-      barre.appendChild(el("span", { style: "width:" + (100 * s.totalSocle / max) + "%;background:var(--gris)" }));
-      M.ARMEES.forEach(function (arm) { var v = Math.max(0, s.demandes[arm]); if (v) barre.appendChild(el("span", { style: "width:" + (100 * v / max) + "%;background:" + couleur(arm) })); });
-      barre.appendChild(el("span", { classe: "jauge-plafond", style: "left:" + (100 * s.plafond / max) + "%" }));
-      j.appendChild(el("button", { classe: "jauge", type: "button", "aria-pressed": a === etat.annee ? "true" : "false", title: "Voir la table " + a,
-        onclick: function () { etat.annee = a; changerOnglet("table"); } }, [
-        el("div", { classe: "jauge-tete" }, [el("span", { classe: "jauge-an", texte: String(a) }), el("span", { classe: "jauge-val", texte: md(s.total) + " / " + md(s.plafond) })]),
+      var tableMax = Math.max(s.table, s.total);
+      var barre = el("span", { classe: "mini-barre" }, [
+        el("span", { style: "width:" + (100 * Math.min(s.total, tableMax) / tableMax) + "%", classe: s.marge < 0 ? "trop" : "" }),
+        el("i", { style: "left:" + (100 * s.plafond / tableMax) + "%" })
+      ]);
+      j.appendChild(el("button", { classe: "an-jauge", type: "button", role: "tab", "aria-selected": a === etat.annee ? "true" : "false",
+        onclick: function () { etat.annee = a; memoriser(); rendre(true); } }, [
+        el("span", { classe: "an-jauge-an", texte: String(a) }),
         barre,
-        el("span", { classe: "jauge-etat " + (s.marge >= 0 ? "pos" : "neg"), texte: s.marge >= 0 ? "Marge " + md(s.marge) : "Dépassement " + md(-s.marge) })
+        el("span", { classe: "an-jauge-val " + (s.marge < 0 ? "neg" : "pos"), texte: s.marge < 0 ? "dépasse de " + md(-s.marge) : "marge " + md(s.marge) })
       ]));
     });
   }
 
-  // ---------- 1. Composer : l'arsenal ----------
-  var FILTRES = [
-    ["renforcer", "Renforcer"],
-    ["creer", "Créer une capacité"],
-    ["options", "Options de ma fiche"],
-    ["dissoudre", "Dissoudre"],
-    ["mesure", "Sur mesure"]
-  ];
-
-  function armeeDuRole() { return role(etat.role).armee; }
-  function pionDeMonPerimetre(p) {
-    if (vueComplete()) return true;
-    var a = armeeDuRole();
-    return a === "Interarmées" ? true : p.armee === a;
+  function selectionCorrespond(x) {
+    var s = etat.selection;
+    if (!s) return false;
+    if (s.ligne && x.ligne === s.ligne) return true;
+    return !s.ligne && s.pion && x.socle && x.pion === s.pion;
   }
 
-  function forme(p) {
-    var f = el("span", { classe: "forme", style: "grid-template-columns:repeat(" + Math.min(p.l || 1, 6) + ",8px);--c:" + (p.type === "violet" ? "var(--violet)" : p.type === "gris" ? "var(--gris)" : couleur(p.armee)) });
-    for (var i = 0; i < Math.min((p.l || 1) * (p.h || 1), 24); i++) f.appendChild(el("i"));
-    return f;
-  }
-  function pips(n) { var s = el("span", { classe: "pips", title: n + " DORESE" }); for (var i = 0; i < n; i++) s.appendChild(el("i")); return s; }
-
-  function rendreArsenal() {
-    var f = $("filtres");
-    vider(f);
-    FILTRES.forEach(function (x) {
-      f.appendChild(el("button", { classe: "filtre", type: "button", "aria-pressed": etat.filtre === x[0] ? "true" : "false", texte: x[1], onclick: function () { etat.filtre = x[0]; rendreArsenal(); } }));
-    });
-    var a = $("arsenal");
-    vider(a);
-    var q = etat.recherche.trim().toLowerCase();
-    function correspond(txt) { return !q || txt.toLowerCase().indexOf(q) !== -1; }
-    var cartes = [];
-
-    if (etat.filtre === "renforcer") {
-      PIONS.filter(function (p) { return p.type === "capacite" && M.nbManquantes(p) > 0 && pionDeMonPerimetre(p) && correspond(p.nom); }).forEach(function (p) {
-        var deja = etat.lignes.some(function (l) { return l.type === "dorese" && l.pion === p.id && l.role === etat.role; });
-        var mq = M.doreseManquantes(p);
-        cartes.push(carte(p, p.nom, [md(M.nbManquantes(p) * M.CASE) + " par an", pips(M.nbManquantes(p)), "manque " + mq.ao + " AO · " + mq.mco + " MCO · " + mq.rh + " RH"],
-          deja ? "✓" : "+", function () { ajouter({ type: "dorese", pion: p.id, toutes: true }); }, "Passer " + p.nom + " de 50 % à 100 % en ajoutant ses DORESE"));
-      });
-    } else if (etat.filtre === "creer") {
-      PIONS.filter(function (p) { return (p.type === "capacite" || p.type === "violet") && pionDeMonPerimetre(p) && correspond(p.nom); }).forEach(function (p) {
-        var info = p.type === "capacite" && M.nbDorese(p)
-          ? ["À 50 % : " + md(p.cout50), "À 100 % : " + md(p.cout100)]
-          : [md(p.cout50) + " par an"];
-        cartes.push(carte(p, p.nom.replace(/ \d$/, ""), info, "+", function () { ajouter({ type: "ajout", pion: p.id, niveau: p.type === "capacite" && M.nbDorese(p) ? 100 : 50 }); }, "Créer un nouvel exemplaire de " + p.nom));
-      });
-    } else if (etat.filtre === "dissoudre") {
-      PIONS.filter(function (p) { return (p.type === "capacite" || p.type === "violet") && pionDeMonPerimetre(p) && correspond(p.nom); }).forEach(function (p) {
-        cartes.push(carte(p, p.nom, ["Libère " + md(M.coutSocle(p)) + " par an"], "−", function () { ajouter({ type: "retrait", pion: p.id }); }, "Dissoudre " + p.nom));
-      });
-    } else if (etat.filtre === "options") {
-      var opts = CATALOGUE.filter(function (o) { return (vueComplete() || o.role === etat.role) && correspond(o.libelle + " " + (o.categorie || "")); });
-      opts.forEach(function (o) {
-        var p = { l: 2, h: 1, armee: o.armee, type: /Violet/.test(o.type_pion || "") ? "violet" : "capacite" };
-        cartes.push(carte(p, o.libelle, [fourchette(o), vueComplete() ? "Fiche " + o.role : (o.categorie || "")], "+", function () { ajouter({ type: "libre", modele: o.code }); }, o.description || o.libelle));
-      });
-      if (!opts.length) a.appendChild(el("p", { classe: "vide-arsenal", texte: "Votre fiche ne propose pas d'option chiffrée. Utilisez « Sur mesure » pour créer un pion." }));
-    } else if (etat.filtre === "mesure") {
-      a.appendChild(el("div", { classe: "dossier-vide" }, [
-        el("b", { texte: "Un besoin hors catalogue ?" }),
-        el("p", { texte: "Créez votre propre pion : intitulé, prix, années, DORESE. Il restera « à valider » jusqu'à l'accord de l'animateur." }),
-        el("button", { classe: "btn-laiton", type: "button", texte: "Créer un pion sur mesure", onclick: function () { ajouter({ type: "libre" }); } })
-      ]));
-    }
-    cartes.forEach(function (c) { a.appendChild(c); });
-    if (!cartes.length && etat.filtre !== "mesure" && etat.filtre !== "options") a.appendChild(el("p", { classe: "vide-arsenal", texte: etat.filtre === "renforcer" && !etat.recherche ? "Toutes vos capacités sont déjà à 100 % dans la situation de départ." : "Aucun pion ne correspond." }));
-  }
-
-  function carte(p, nom, infos, signe, action, titre) {
-    return el("button", { classe: "carte-pion", type: "button", title: titre, onclick: action }, [
-      forme(p),
-      el("span", null, [el("span", { classe: "carte-pion-nom", texte: nom }), el("span", { classe: "carte-pion-info" }, infos.map(function (i) { return typeof i === "string" ? el("span", { texte: i }) : i; }))]),
-      el("span", { classe: "plus", "aria-hidden": "true", texte: signe })
-    ]);
-  }
-
-  function ajouter(o) {
-    var r = role(etat.role);
-    var l = { id: nouvelId(), role: etat.role, type: o.type, qte: {}, justification: "", cree_le: new Date().toISOString() };
-    if (o.type === "libre") {
-      var opt = optionDe(o.modele);
-      l.modele = opt ? opt.code : null;
-      l.libelle = opt ? opt.libelle : "";
-      l.armee = opt ? opt.armee : r.armee;
-      l.source = opt ? opt.source : null;
-      l.cout_unitaire = opt && opt.cout ? M.arrondiCase(opt.cout) : 0;
-      l.dorese = opt && opt.dorese ? { ao: opt.dorese.ao || 0, mco: opt.dorese.mco || 0, rh: opt.dorese.rh || 0 } : { ao: 0, mco: 0, rh: 0 };
-      M.ANNEES.forEach(function (a) { l.qte[a] = opt && opt.annuel ? 1 : 0; });
-      if (!opt || !opt.annuel) l.qte[M.ANNEES[0]] = 1;
-    } else {
-      var p = IDX[o.pion];
-      l.pion = p.id;
-      l.niveau = o.niveau || 100;
-      l.armee = r.armee !== "Interarmées" ? r.armee : p.armee;
-      M.ANNEES.forEach(function (a) { l.qte[a] = 1; });
-    }
-    etat.lignes.push(l);
-    etat.ouverte = l.id;
-    enregistrer(l);
-    rendreFiches();
-    rendreJauges();
-    var f = document.querySelector('[data-fiche="' + l.id + '"]');
-    if (f) f.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    toast(natureLigne(l) === libelleLigne(l) ? "Fiche ajoutée : " + libelleLigne(l) : natureLigne(l) + " : " + libelleLigne(l));
-  }
-
-  // ---------- 1. Composer : les fiches ----------
-  function rendreTotalDossier() {
-    var mien = M.synthese(PIONS, etat.lignes, params(), function (l) { return l.role === etat.role; });
-    var tot = 0, dor = 0;
-    M.ANNEES.forEach(function (a) { tot += mien[a].totalDemandes; dor += mien[a].dorese.ao + mien[a].dorese.mco + mien[a].dorese.rh; });
-    var t = $("dossier-total");
-    vider(t);
-    t.appendChild(el("div", null, [el("b", { texte: md(tot) }), el("small", { texte: "Ma demande sur 6 ans" })]));
-    t.appendChild(el("div", null, [el("b", { texte: String(dor) }), el("small", { texte: "DORESE" })]));
-  }
-
-  function rendreFiches() {
-    var r = role(etat.role);
-    $("titre-dossier").textContent = "Demande " + r.code;
-    rendreTotalDossier();
-    var f = $("fiches");
-    vider(f);
-    var miennes = etat.lignes.filter(function (l) { return l.role === etat.role; });
-    if (!miennes.length) {
-      f.appendChild(el("div", { classe: "dossier-vide" }, [
-        el("b", { texte: "Votre dossier est vide" }),
-        el("p", { texte: "Choisissez dans le catalogue : renforcez une capacité existante, créez-en une, retenez une option de votre fiche ou dissolvez ce qui ne sert plus." })
-      ]));
-      return;
-    }
-    miennes.slice().reverse().forEach(function (l) { f.appendChild(fiche(l)); });
-  }
-
-  function fiche(l) {
-    var p = IDX[l.pion];
-    var o = optionDe(l.modele);
-    var armee = M.armeeDeLigne(l, IDX);
-    var boite = el("article", { classe: "fiche", "data-fiche": l.id, style: "--c:" + couleur(armee) });
-    var cout = el("div", { classe: "fiche-cout" });
-    var calendrier = el("div", { classe: "calendrier" });
-    var notePrix = el("div", { classe: "alerte-texte" });
-
-    function majCout() {
-      var c = M.coutLigne(l, IDX);
-      var u = M.unitaire(l, IDX);
-      vider(cout);
-      cout.appendChild(el("b", { texte: md(c.total) }));
-      cout.appendChild(el("small", { texte: (u.cout ? md(u.cout) + " par an posé" : "prix à fixer") + (c.totalDorese ? " · " + c.totalDorese + " DORESE" : "") }));
-      rendreTotalDossier();
-      rendreJauges();
-    }
-    function changer() { majCout(); enregistrer(l); }
-
-    // En-tête
-    var titre = el("div", { classe: "fiche-titre" }, [el("span", { classe: "fiche-type", texte: natureLigne(l) })]);
-    if (l.type === "libre" && !o) {
-      var lib = el("input", { value: l.libelle || "", placeholder: "Intitulé du pion", "aria-label": "Intitulé" });
-      lib.addEventListener("input", function () { l.libelle = lib.value; enregistrer(l); });
-      titre.appendChild(el("div", { classe: "fiche-nom" }, [lib]));
-    } else {
-      titre.appendChild(el("div", { classe: "fiche-nom", texte: libelleLigne(l) }));
-    }
-    var sous = [];
-    if (p && l.type === "dorese") { var mq2 = M.doreseManquantes(p); sous.push("Ajoute les " + M.nbManquantes(p) + " DORESE qui manquent (" + mq2.ao + " AO, " + mq2.mco + " MCO, " + mq2.rh + " RH) pour passer la capacité à 100 %"); }
-    if (p && l.type === "retrait") sous.push("Retire la capacité de la table les années cochées");
-    if (p && l.type === "ajout") sous.push("Nouvel exemplaire, en plus du socle");
-    if (o) sous.push("Fiche : " + fourchette(o) + (o.periodicite ? " · " + o.periodicite : ""));
-    if (sous.length) titre.appendChild(el("div", { classe: "fiche-sous", texte: sous.join(" · ") }));
-    if (l.type === "libre" && !o) {
-      var val = (params().validations || {})[l.id];
-      titre.appendChild(el("span", null, [el("span", { classe: "badge " + (val ? "badge-ok" : "badge-attente"), texte: val ? "Validé par l'animateur" : "À valider par l'animateur" })]));
-    }
-    var arb = M.arbitrageDe(l, params());
-    if (arb.statut !== "attente") titre.appendChild(el("span", null, [el("span", { classe: "badge " + (arb.statut === "retenu" ? "badge-ok" : arb.statut === "renonce" ? "badge-alerte" : "badge-attente"), texte: "CEMA : " + M.STATUTS[arb.statut] + (arb.statut === "differe" ? " de " + arb.decalage + " an" + (arb.decalage > 1 ? "s" : "") : "") })]));
-
-    var suppr = el("button", { classe: "suppr", type: "button", texte: "Retirer de ma demande" });
-    suppr.addEventListener("click", function () {
-      if (suppr.dataset.arme !== "1") { suppr.dataset.arme = "1"; suppr.textContent = "Confirmer le retrait"; setTimeout(function () { suppr.dataset.arme = ""; suppr.textContent = "Retirer de ma demande"; }, 3000); return; }
-      clearTimeout(enAttente[l.id]); delete enAttente[l.id];
-      etat.lignes = etat.lignes.filter(function (x) { return x.id !== l.id; });
-      S.supprimerLigne(etat.partie.nom, etat.mdp, l.id).then(function () { toast("Fiche retirée"); }).catch(function (e) { toast(e.message); });
-      rendreFiches(); rendreJauges(); rendreArsenal();
-    });
-    boite.appendChild(el("div", { classe: "fiche-tete" }, [titre, cout, suppr]));
-
-    // Réglages
-    var reg = el("div", { classe: "fiche-reglages" });
-    if (l.type === "ajout" && p && p.type === "capacite" && M.nbDorese(p)) {
-      var seg = el("div", { classe: "segment", role: "group", "aria-label": "Niveau" });
-      [[50, "À 50 % · " + md(p.cout50)], [100, "À 100 % · " + md(p.cout100)]].forEach(function (x) {
-        seg.appendChild(el("button", { type: "button", "aria-pressed": Number(l.niveau) === x[0] ? "true" : "false", texte: x[1], onclick: function () { l.niveau = x[0]; changer(); rendreFiches(); } }));
-      });
-      reg.appendChild(seg);
-    }
-    if (l.type === "libre") {
-      var prix = el("input", { classe: "prix", type: "number", min: 0, step: 100, value: l.cout_unitaire || "", placeholder: "0", "aria-label": "Prix fixé en M€" });
-      function majNote(brut) {
-        var t = [];
-        if (!l.cout_unitaire) t.push("Fixez le prix : la fiche ne compte pas tant qu'il est vide.");
-        else if (brut !== undefined && Number(brut) !== l.cout_unitaire) t.push("Arrondi à la case : " + md(l.cout_unitaire) + ".");
-        else if (brut === undefined && o && o.cout && o.cout % M.CASE) t.push("Prix de la fiche " + md(o.cout) + ", arrondi à " + md(l.cout_unitaire) + " : à confirmer.");
-        if (o && o.cout && l.cout_unitaire && (l.cout_unitaire < M.arrondiCase(o.cout) || l.cout_unitaire > Math.max(M.arrondiCase(o.cout_max || o.cout), o.cout_max || o.cout))) t.push("Hors fourchette de la fiche (" + fourchette(o) + ").");
-        notePrix.textContent = t.join(" ");
-      }
-      prix.addEventListener("input", function () { l.cout_unitaire = M.arrondiCase(prix.value); changer(); majNote(prix.value); });
-      prix.addEventListener("change", function () { prix.value = l.cout_unitaire || ""; majNote(); });
-      reg.appendChild(el("label", null, ["Prix fixé, M€ par an posé", prix]));
-      var d = l.dorese || { ao: 0, mco: 0, rh: 0 };
-      ["ao", "mco", "rh"].forEach(function (k) {
-        var i = el("input", { classe: "dor", type: "number", min: 0, step: 1, value: d[k] || 0, "aria-label": "DORESE " + k.toUpperCase() });
-        i.addEventListener("input", function () { l.dorese = l.dorese || {}; l.dorese[k] = Number(i.value) || 0; changer(); });
-        reg.appendChild(el("label", null, ["DORESE " + k.toUpperCase(), i]));
-      });
-      majNote();
-    }
-    var arm = el("select", { "aria-label": "Armée qui porte le projet" });
-    M.ARMEES.forEach(function (a) { arm.appendChild(el("option", { value: a, texte: a })); });
-    arm.value = armee;
-    arm.addEventListener("change", function () { l.armee = arm.value; boite.style.setProperty("--c", couleur(arm.value)); changer(); });
-    reg.appendChild(el("label", null, ["Imputé à", arm]));
-    boite.appendChild(reg);
-    if (l.type === "libre") boite.appendChild(notePrix);
-
-    // Calendrier
-    var unique = l.type === "dorese" || l.type === "retrait";
-    M.ANNEES.forEach(function (a) {
-      var q = M.quantite(l, a);
-      var c = el("div", { classe: "an-case" + (q ? " actif" : "") }, [el("small", { texte: String(a) })]);
-      if (unique) {
-        c.appendChild(el("button", { classe: "coche", type: "button", "aria-pressed": q ? "true" : "false", texte: q ? (l.type === "retrait" ? "Retiré" : "À 100 %") : "—",
-          onclick: function () { l.qte[a] = q ? 0 : 1; changer(); remplacer(); } }));
-      } else {
-        var out = el("output", { texte: String(q) });
-        c.appendChild(el("div", { classe: "pas" }, [
-          el("button", { type: "button", "aria-label": "Moins en " + a, texte: "−", onclick: function () { l.qte[a] = Math.max(0, q - 1); changer(); remplacer(); } }),
-          out,
-          el("button", { type: "button", "aria-label": "Plus en " + a, texte: "+", onclick: function () { l.qte[a] = q + 1; changer(); remplacer(); } })
-        ]));
-      }
-      calendrier.appendChild(c);
-    });
-    boite.appendChild(calendrier);
-    function remplacer() { var n = fiche(l); boite.replaceWith(n); }
-
-    // Justification et conditions
-    var just = el("textarea", { placeholder: "Pourquoi ce besoin ? Votre argument pour l'arbitrage.", "aria-label": "Justification" });
-    just.value = l.justification || "";
-    just.addEventListener("input", function () { l.justification = just.value; enregistrer(l); });
-    boite.appendChild(just);
-    if (o && (o.conditions || o.alerte)) {
-      boite.appendChild(el("details", null, [el("summary", { texte: "Ce que dit la fiche" }),
-        o.alerte ? el("p", { classe: "alerte-texte", texte: o.alerte }) : null,
-        o.conditions ? el("p", { texte: o.conditions }) : null,
-        el("p", { texte: [o.source, o.edition].filter(Boolean).join(" · ") })]));
-    }
-    majCout();
-    return boite;
-  }
-
-  // ---------- 2. La table ----------
   function rendreTable() {
-    var ans = $("annees-table");
-    vider(ans);
-    M.ANNEES.forEach(function (a) { ans.appendChild(el("button", { type: "button", "aria-pressed": a === etat.annee ? "true" : "false", texte: String(a), onclick: function () { etat.annee = a; rendreTable(); rendreJauges(); } })); });
-    document.querySelectorAll(".bascule button").forEach(function (b) { b.setAttribute("aria-pressed", b.getAttribute("data-vue") === etat.vueTable ? "true" : "false"); });
     var p = params();
-    var lignes = etat.vueTable === "arbitrage" ? M.lignesApresArbitrage(etat.lignes, p) : etat.lignes;
+    var lignes = etat.vue === "arbitrage" ? M.lignesApresArbitrage(etat.lignes, p) : etat.lignes;
     var t = M.placerAnnee(PIONS, lignes, p, etat.annee);
     var syn = M.synthese(PIONS, lignes, p)[etat.annee];
+    document.querySelectorAll(".bascule button[data-vue]").forEach(function (b) { b.setAttribute("aria-pressed", b.getAttribute("data-vue") === etat.vue ? "true" : "false"); });
+    document.querySelectorAll(".bascule button[data-filtre]").forEach(function (b) { b.setAttribute("aria-pressed", (b.getAttribute("data-filtre") === "mien") === etat.maTable ? "true" : "false"); });
 
     var rel = $("table-releve");
     vider(rel);
-    [["Année", String(etat.annee), ""], ["Cases posées", t.occupees + " / " + t.plafond, ""], ["Montant", md(syn.total), ""], [syn.marge >= 0 ? "Marge" : "Dépassement", md(Math.abs(syn.marge)), syn.marge >= 0 ? "pos" : "neg"]].forEach(function (x) {
+    [["Table " + etat.annee, t.occupees + " / " + t.plafond + " cases", ""], ["Montant", md(syn.total), ""], ["Plafond", md(syn.plafond), ""],
+      [syn.marge >= 0 ? "Marge" : "Dépassement", md(Math.abs(syn.marge)), syn.marge >= 0 ? "pos" : "neg"]].forEach(function (x) {
       rel.appendChild(el("div", { classe: "releve" }, [el("small", { texte: x[0] }), el("b", { classe: x[2], texte: x[1] })]));
     });
+    $("consigne").textContent = arbitre()
+      ? "Cliquez sur une demande posée sur la table pour la retenir, la différer ou y renoncer."
+      : "Les pions en place sont votre point de départ. Cliquez sur un pion pour le modifier, sur une case vide pour en poser un nouveau.";
 
     var pl = $("plateau");
     vider(pl);
     pl.style.gridTemplateRows = "repeat(" + t.hauteur + ", var(--case))";
     for (var k = 0; k < t.hauteur * t.largeur; k++) {
-      pl.appendChild(el("div", { classe: "fond" + (k >= t.table ? " fond-horstable" : k >= t.plafond ? " fond-hors" : ""), style: "grid-row:" + (Math.floor(k / t.largeur) + 1) + ";grid-column:" + (k % t.largeur + 1) }));
+      pl.appendChild(el("div", { classe: "fond fond-clic" + (k >= t.table ? " fond-horstable" : k >= t.plafond ? " fond-hors" : ""), title: "Poser un nouveau pion en " + etat.annee, style: "grid-row:" + (Math.floor(k / t.largeur) + 1) + ";grid-column:" + (k % t.largeur + 1),
+        onclick: function () { etat.selection = null; etat.volet = "poser"; rendre(true); toast("Choisissez à droite le pion à poser en " + etat.annee); } }));
     }
     function depasse(r, c, w, h) { for (var i = r; i < r + h; i++) for (var j = c; j < c + w; j++) if (i * t.largeur + j >= t.plafond) return true; return false; }
     function masque(x) { return x.role && !vueComplete() && x.role !== etat.role; }
+    // « Ma demande » : mes pions posés et les pions en place de mon armée.
+    function aMoi(x) {
+      if (x.role) return x.role === etat.role;
+      var p = x.pion && IDX[x.pion];
+      if (!x.socle || !p || p.type === "gris" || p.type === "orange" || vueComplete()) return false;
+      return p.armee === armeeDuRole();
+    }
+    function estompe(x) { return etat.maTable && !aMoi(x); }
+    function choisir(x) {
+      return function () {
+        etat.selection = { ligne: x.ligne || null, pion: x.pion || null, socle: !!x.socle && !x.ligne };
+        etat.volet = "selection";
+        rendre(true);
+      };
+    }
+    var F = window.STRAT_FIGURATIFS;
+    function court(nom) { return nom.replace(/^Capacité /, "").replace(/^Brigade /, "Bde ").replace(/^\+ Capacité /, "+ "); }
     t.pieces.forEach(function (x) {
-      var c = x.groupe === "Fixes" ? "var(--gris)" : x.nature === "violet" ? "var(--violet)" : couleur(x.armee);
-      var cl = ["pion"];
-      if (x.niveau === 50) cl.push("pion-50");
+      var bande = x.groupe === "Fixes" ? "var(--gris-carte)" : x.nature === "violet" ? "var(--violet)" : x.nature === "orange" ? "var(--orange-carte)" : couleur(x.armee);
+      var cl = ["pion", "pion-clic", "fig"];
+      var aire = x.w * x.h, petit = Math.min(x.w, x.h) === 1 && Math.max(x.w, x.h) <= 3;
+      cl.push(x.w >= x.h ? "fig-h" : "fig-v");
+      if (petit) cl.push("fig-mini");
+      if (x.nature === "orange") cl.push("fig-alea");
+      if (x.niveau === 50) cl.push("fig-rouge");
       if (depasse(x.r, x.c, x.w, x.h)) cl.push("pion-debord");
-      if (x.w * x.h <= 2) cl.push("pion-petit");
       if (x.role && x.role === etat.role) cl.push("pion-mien");
-      var nom = masque(x) ? "Demande " + x.armee : x.libelle;
-      pl.appendChild(el("div", { classe: cl.join(" "), title: nom + " · " + x.cases + " case" + (x.cases > 1 ? "s" : "") + (x.niveau ? " · " + x.niveau + " %" : "") + (x.role && !masque(x) ? " · " + x.role : ""),
-        style: "grid-row:" + (x.r + 1) + " / span " + x.h + ";grid-column:" + (x.c + 1) + " / span " + x.w + ";background:" + c }, [
-        el("span", { texte: nom.replace(/^Capacité /, "").replace(/^Brigade /, "Bde ") })]));
+      if (selectionCorrespond(x)) cl.push("pion-choisi");
+      if (x.ligne && x.ligne === etat.neuf) cl.push("pion-neuf");
+      if (estompe(x)) cl.push("pion-estompe");
+      var cache = masque(x);
+      var nom = cache ? "Demande " + x.armee : x.libelle;
+      var pion = x.pion ? IDX[x.pion] : null;
+      var picto = cache ? null : F.svg(F.pictoDe(x.libelle) || "puce");
+      var enfants = [el("span", { classe: "fig-bande" }, [el("span", { classe: "fig-titre", texte: court(nom) })])];
+      if (picto) enfants.push(el("span", { classe: "fig-picto" }, [picto]));
+      if (pion && pion.type === "capacite" && M.nbDorese(pion) && !petit && aire >= 4) {
+        var co = el("span", { classe: "fig-coins" });
+        ["ao", "mco", "rh"].forEach(function (k) {
+          var ic = F.svg(F.DORESE[k]);
+          co.appendChild(el("span", { classe: "fig-coin", title: "DORESE " + k.toUpperCase() + " requises" }, [ic, el("b", { texte: String(pion.dorese[k]) })]));
+        });
+        enfants.push(co);
+      }
+      pl.appendChild(el("button", { type: "button", classe: cl.join(" "), title: nom + (x.niveau ? " · " + (x.niveau === 50 ? "face rouge (dégradée)" : "à 100 %") : "") + (x.role && !cache ? " · " + x.role : ""),
+        style: "grid-row:" + (x.r + 1) + " / span " + x.h + ";grid-column:" + (x.c + 1) + " / span " + x.w + ";--bande:" + bande, onclick: choisir(x) }, enfants));
     });
     t.cellules.forEach(function (x) {
-      var cl = ["pion", "pion-case"];
-      if (x.nature === "dorese") cl.push("pion-dorese");
+      var cl = ["pion", "pion-case", "pion-clic"];
+      cl.push(x.nature === "dorese" ? "jeton" : "jeton-option");
       if (x.horsCatalogue) cl.push("pion-mesure");
       if (x.r * t.largeur + x.c >= t.plafond) cl.push("pion-debord");
       if (x.role && x.role === etat.role) cl.push("pion-mien");
+      var cible = x.nature === "dorese" && x.parent !== undefined ? t.pieces[x.parent] : x;
+      if (x.ligne && x.ligne === etat.neuf) cl.push("pion-neuf");
+      if (selectionCorrespond(cible) || (x.ligne && etat.selection && etat.selection.ligne === x.ligne)) cl.push("pion-choisi");
+      if (x.nature === "dorese" ? estompe(cible) && estompe(x) : estompe(x)) cl.push("pion-estompe");
       var nom = masque(x) ? (x.nature === "dorese" ? "DORESE" : "Demande " + x.armee) : x.libelle;
-      pl.appendChild(el("div", { classe: cl.join(" "), title: nom, style: "grid-row:" + (x.r + 1) + ";grid-column:" + (x.c + 1) + ";background:" + couleur(x.armee) }, [
-        el("span", { texte: x.nature === "dorese" ? { ao: "AO", mco: "M", rh: "RH" }[x.type] : "" })]));
+      var ic = x.nature === "dorese" ? F.svg(F.DORESE[x.type]) : F.svg(masque(x) ? "document" : (F.pictoDe(x.libelle) || "document"));
+      pl.appendChild(el("button", { type: "button", classe: cl.join(" "), title: nom, style: "grid-row:" + (x.r + 1) + ";grid-column:" + (x.c + 1) + ";--bande:" + couleur(x.armee),
+        onclick: x.ligne && x.nature !== "dorese" ? choisir(x) : x.ligne ? choisir({ ligne: x.ligne, pion: cible.pion }) : choisir(cible) }, [ic]));
     });
+    etat.neuf = null;
+
+    var hors = $("hors-table");
+    vider(hors);
+    var absents = lignes.filter(function (l) { return (l.type === "retrait" || l.type === "degrade") && M.quantite(l, etat.annee) && visible(l); });
+    if (absents.length) {
+      hors.appendChild(el("span", { classe: "hors-titre", texte: "Retiré de la table en " + etat.annee + " :" }));
+      absents.forEach(function (l) {
+        hors.appendChild(el("button", { type: "button", classe: "hors-pion", onclick: function () { etat.selection = { ligne: l.id, pion: l.pion }; etat.volet = "selection"; rendre(true); } },
+          [libelleLigne(l) + (l.type === "degrade" ? " (DORESE rendues)" : "") + " · " + l.role]));
+      });
+    }
 
     var lg = $("legende");
     vider(lg);
@@ -6918,130 +6974,379 @@ window.STRAT_CATALOGUE_ROLES = [
     lg.appendChild(puce("background:var(--gris)", "", "Dépense fixe"));
     lg.appendChild(puce("background:var(--violet)", "", "Investissement"));
     M.ARMEES.forEach(function (a) { lg.appendChild(puce("background:" + couleur(a), "", a)); });
-    lg.appendChild(puce("background:var(--terre)", "pion-50", "Capacité à 50 %"));
-    lg.appendChild(puce("background:var(--terre)", "pion-dorese", "DORESE"));
-    lg.appendChild(puce("background:var(--terre)", "pion-mien", "Ma demande"));
+    lg.appendChild(puce("background:var(--rouge)", "", "Face rouge : capacité dégradée"));
+    ["ao", "mco", "rh"].forEach(function (k) {
+      lg.appendChild(el("span", null, [el("span", { classe: "puce-legende jeton-legende", style: "--bande:var(--marine)" }, [F.svg(F.DORESE[k])]), { ao: "DORESE activité", mco: "DORESE MCO", rh: "DORESE RH" }[k]]));
+    });
+    lg.appendChild(puce("background:var(--case-vide)", "pion-mien", "Ma demande"));
     lg.appendChild(puce("background:var(--hors)", "", "Au-delà du plafond"));
   }
 
-  // ---------- 3. Arbitrage ----------
-  function rendreArbitrage() {
-    var p = params();
-    var edit = ROLES_ARBITRAGE.indexOf(etat.role) !== -1;
-    $("aide-arbitrage").textContent = edit
-      ? "Pour chaque demande : retenir, différer d'une à trois années, ou renoncer. Un différé qui dépasse 2032 sort de la LPM."
-      : "Le CEMA et l'animateur tranchent. Vous voyez ici les décisions sur vos demandes.";
-    var dem = M.synthese(PIONS, etat.lignes, p);
-    var arb = M.synthese(PIONS, M.lignesApresArbitrage(etat.lignes, p), p);
-    var ra = $("arb-annees");
-    vider(ra);
-    M.ANNEES.forEach(function (a) {
-      ra.appendChild(el("div", { classe: "arb-an" }, [
-        el("span", { classe: "an", texte: String(a) }),
-        el("span", { classe: "l" }, ["Demandé", el("b", { texte: md(dem[a].total) })]),
-        el("span", { classe: "l" }, ["Retenu", el("b", { texte: md(arb[a].total) })]),
-        el("span", { classe: "l" }, ["Plafond", el("b", { texte: md(arb[a].plafond) })]),
-        el("span", { classe: "l " + (arb[a].marge >= 0 ? "pos" : "neg") }, [arb[a].marge >= 0 ? "Marge" : "Dépassement", el("b", { classe: arb[a].marge >= 0 ? "pos" : "neg", texte: md(Math.abs(arb[a].marge)) })])
-      ]));
+  // ---------- Volet ----------
+  function onglets() {
+    var o = [["poser", "Poser"], ["selection", "Sélection"], ["demande", "Ma demande"]];
+    if (arbitre() || vueComplete()) o.push(["arbitrage", "Arbitrage"]);
+    o.push(["bilan", "Bilan"]);
+    if (ROLES_REGLAGES.indexOf(etat.role) !== -1) o.push(["reglages", "Réglages"]);
+    return o;
+  }
+  function rendreVolet() {
+    var nav = $("volet-onglets");
+    vider(nav);
+    onglets().forEach(function (o) {
+      nav.appendChild(el("button", { type: "button", role: "tab", "aria-selected": etat.volet === o[0] ? "true" : "false", texte: o[1],
+        onclick: function () { etat.volet = o[0]; rendreVolet(); } }));
     });
-
-    var zl = $("arb-lignes");
-    vider(zl);
-    var lignes = etat.lignes.filter(visible);
-    if (!lignes.length) zl.appendChild(el("p", { classe: "vide", texte: "Aucune demande pour l'instant." }));
-    lignes.forEach(function (l) {
-      var a = M.arbitrageDe(l, p);
-      var avant = M.coutLigne(l, IDX).total;
-      var la = M.ligneArbitree(l, p);
-      var apres = la ? M.coutLigne(la, IDX).total : 0;
-      var report = M.reportHorsLpm(l, p, IDX);
-      var choix = el("div", { classe: "choix" });
-      Object.keys(M.STATUTS).forEach(function (k) {
-        choix.appendChild(el("button", { type: "button", "data-statut": k, "aria-pressed": a.statut === k ? "true" : "false", disabled: edit ? null : "disabled", texte: M.STATUTS[k],
-          onclick: function () { modifierParams(function (pp) { pp.arbitrages = pp.arbitrages || {}; pp.arbitrages[l.id] = { statut: k, decalage: k === "differe" ? (a.decalage || 1) : 0 }; }); } }));
-      });
-      if (a.statut === "differe") {
-        var dec = el("select", { "aria-label": "Décalage", disabled: edit ? null : "disabled" });
-        [1, 2, 3].forEach(function (n) { dec.appendChild(el("option", { value: n, texte: "de " + n + " an" + (n > 1 ? "s" : "") })); });
-        dec.value = String(a.decalage || 1);
-        dec.addEventListener("change", function () { modifierParams(function (pp) { pp.arbitrages = pp.arbitrages || {}; pp.arbitrages[l.id] = { statut: "differe", decalage: Number(dec.value) }; }); });
-        choix.appendChild(dec);
-      }
-      if (l.type === "libre" && !l.modele && edit) {
-        var cb = el("input", { type: "checkbox", id: "val-" + l.id });
-        cb.checked = !!(p.validations || {})[l.id];
-        cb.addEventListener("change", function () { modifierParams(function (pp) { pp.validations = pp.validations || {}; pp.validations[l.id] = cb.checked; }); });
-        choix.appendChild(el("label", { for: cb.id, style: "font-size:.8rem;color:var(--sourdine);margin-left:.5rem" }, [cb, " pion sur mesure validé"]));
-      }
-      zl.appendChild(el("div", { classe: "decision", style: "--c:" + couleur(M.armeeDeLigne(l, IDX)) }, [
-        el("div", { classe: "decision-tete" }, [
-          el("span", { classe: "decision-nom" }, [libelleLigne(l), el("small", { texte: l.role + " · " + natureLigne(l) + " · " + M.armeeDeLigne(l, IDX) + (l.justification ? " · « " + l.justification + " »" : "") })]),
-          el("span", { classe: "num" }, [md(avant), apres !== avant ? el("small", { classe: "fiche-sous", texte: " → " + md(apres) + (report ? " (+" + md(report) + " après 2032)" : "") }) : null])
-        ]),
-        choix
-      ]));
-    });
-
-    var zr = $("arb-renoncements");
-    vider(zr);
-    var ren = etat.lignes.filter(function (l) { return visible(l) && M.arbitrageDe(l, p).statut === "renonce"; });
-    if (!ren.length) zr.appendChild(el("p", { classe: "vide", texte: "Aucun renoncement." }));
-    var tot = 0;
-    ren.forEach(function (l) {
-      var v = M.coutLigne(l, IDX).total; tot += v;
-      zr.appendChild(el("div", { classe: "renonce" }, [el("div", { texte: libelleLigne(l) }), el("small", { classe: "fiche-sous", texte: l.role + " · " }), el("b", { texte: md(v) })]));
-    });
-    if (ren.length) zr.appendChild(el("p", { classe: "fiche-sous", texte: "Total renoncé sur la période : " + md(tot) }));
+    var v = $("volet");
+    vider(v);
+    ({ poser: voletPoser, selection: voletSelection, demande: voletDemande, arbitrage: voletArbitrage, bilan: voletBilan, reglages: voletReglages }[etat.volet] || voletPoser)(v);
   }
 
-  // ---------- Bilan ----------
-  function rendreBilan() {
+  function choixPortee() {
+    var g = el("div", { classe: "portee", role: "group", "aria-label": "Années concernées" });
+    var dernier = etat.annee === M.ANNEES[M.ANNEES.length - 1];
+    [["suite", dernier ? String(etat.annee) : etat.annee + " → " + M.ANNEES[M.ANNEES.length - 1]], ["annee", etat.annee + " seulement"]].forEach(function (x) {
+      if (dernier && x[0] === "annee") return;
+      g.appendChild(el("button", { type: "button", "aria-pressed": etat.portee === x[0] || dernier ? "true" : "false", texte: x[1],
+        onclick: function () { etat.portee = x[0]; rendreVolet(); } }));
+    });
+    return el("div", { classe: "portee-bloc" }, [el("small", { texte: "S'applique" }), g]);
+  }
+
+  function forme(p) {
+    var f = el("span", { classe: "forme", style: "grid-template-columns:repeat(" + Math.min(p.l || 1, 6) + ",7px);--c:" + (p.type === "violet" ? "var(--violet)" : p.type === "gris" ? "var(--gris)" : couleur(p.armee)) });
+    for (var i = 0; i < Math.min((p.l || 1) * (p.h || 1), 24); i++) f.appendChild(el("i"));
+    return f;
+  }
+
+  function voletPoser(v) {
+    v.appendChild(el("h2", { classe: "volet-titre", texte: "Poser un pion sur la table" }));
+    v.appendChild(choixPortee());
+    var f = el("div", { classe: "filtres", role: "group" });
+    [["capacites", "Capacités"], ["options", "Options de ma fiche"], ["mesure", "Sur mesure"]].forEach(function (x) {
+      f.appendChild(el("button", { classe: "filtre", type: "button", "aria-pressed": etat.filtre === x[0] ? "true" : "false", texte: x[1], onclick: function () { etat.filtre = x[0]; rendreVolet(); } }));
+    });
+    v.appendChild(f);
+    if (etat.filtre !== "mesure") {
+      var rech = el("input", { type: "search", placeholder: "Chercher…", "aria-label": "Chercher", value: etat.recherche });
+      rech.addEventListener("input", function () { etat.recherche = rech.value; var l = $("liste-poser"); vider(l); remplir(l); });
+      v.appendChild(rech);
+    }
+    var liste = el("div", { classe: "liste-poser", id: "liste-poser" });
+    v.appendChild(liste);
+    remplir(liste);
+
+    function remplir(liste) {
+      var q = etat.recherche.trim().toLowerCase();
+      function ok(t) { return !q || t.toLowerCase().indexOf(q) !== -1; }
+      if (etat.filtre === "capacites") {
+        var vus = {};
+        PIONS.filter(function (p) { return (p.type === "capacite" || p.type === "violet") && dansMonPerimetre(p) && ok(p.nom); }).forEach(function (p) {
+          var cle = p.nom.replace(/ \d$/, "");
+          if (vus[cle]) return; vus[cle] = true;
+          var boutons = el("span", { classe: "poser-boutons" });
+          if (p.type === "capacite" && M.nbDorese(p)) {
+            boutons.appendChild(el("button", { type: "button", classe: "btn-poser", title: "Version dégradée, sans DORESE", onclick: function () { poser({ type: "ajout", pion: p.id, niveau: 50 }); } }, ["50 %", el("small", { texte: md(p.cout50) })]));
+            boutons.appendChild(el("button", { type: "button", classe: "btn-poser plein", title: "Avec ses " + M.nbDorese(p) + " DORESE", onclick: function () { poser({ type: "ajout", pion: p.id, niveau: 100 }); } }, ["100 %", el("small", { texte: md(p.cout100) })]));
+          } else {
+            boutons.appendChild(el("button", { type: "button", classe: "btn-poser plein", onclick: function () { poser({ type: "ajout", pion: p.id, niveau: 50 }); } }, ["Poser", el("small", { texte: md(p.cout50) })]));
+          }
+          liste.appendChild(el("div", { classe: "carte-poser" }, [forme(p), el("span", { classe: "carte-poser-nom" }, [cle, el("small", { texte: p.armee + " · " + (p.l * p.h) + " cases" + (M.nbDorese(p) ? " + " + M.nbDorese(p) + " DORESE" : "") })]), boutons]));
+        });
+      } else if (etat.filtre === "options") {
+        var opts = CATALOGUE.filter(function (o) { return (vueComplete() || o.role === etat.role) && ok(o.libelle + " " + (o.categorie || "")); });
+        if (!opts.length) liste.appendChild(el("p", { classe: "vide", texte: "Votre fiche ne propose pas d'option. Utilisez « Sur mesure »." }));
+        opts.forEach(function (o) {
+          var p = { l: 2, h: 1, armee: o.armee, type: /Violet/.test(o.type_pion || "") ? "violet" : "capacite" };
+          liste.appendChild(el("div", { classe: "carte-poser" }, [forme(p),
+            el("span", { classe: "carte-poser-nom" }, [o.libelle, el("small", { texte: fourchette(o) + (vueComplete() ? " · fiche " + o.role : "") })]),
+            el("span", { classe: "poser-boutons" }, [el("button", { type: "button", classe: "btn-poser plein", onclick: function () { poser({ type: "libre", modele: o.code }); } }, ["Poser"])])]));
+        });
+      } else {
+        var nom = el("input", { placeholder: "Intitulé", "aria-label": "Intitulé", maxlength: 120 });
+        var prix = el("input", { type: "number", min: 100, step: 100, placeholder: "M€ par an", "aria-label": "Prix en M€ par an" });
+        var arm = el("select", { "aria-label": "Armée" });
+        M.ARMEES.forEach(function (a) { arm.appendChild(el("option", { value: a, texte: a })); });
+        arm.value = armeeDuRole();
+        var err = el("p", { classe: "erreur" });
+        liste.appendChild(el("form", { classe: "form-mesure", onsubmit: function (ev) {
+          ev.preventDefault();
+          if (!nom.value.trim()) { err.textContent = "Donnez un intitulé."; return; }
+          if (!(Number(prix.value) > 0)) { err.textContent = "Fixez un prix : il sera arrondi à la case de 100 M€."; return; }
+          poser({ type: "libre", libelle: nom.value.trim(), cout: Number(prix.value), armee: arm.value });
+        } }, [
+          el("p", { classe: "aide", texte: "Un besoin hors catalogue. Il restera « à valider » jusqu'à l'accord de l'animateur." }),
+          el("label", null, ["Intitulé", nom]), el("label", null, ["Prix, M€ par an", prix]), el("label", null, ["Armée qui le porte", arm]),
+          el("button", { classe: "btn-laiton", type: "submit", texte: "Poser sur la table" }), err
+        ]));
+      }
+    }
+  }
+
+  function badgeDecision(l) {
+    var a = M.arbitrageDe(l, params());
+    if (a.statut === "attente") return el("span", { classe: "badge badge-attente", texte: "En attente du CEMA" });
+    return el("span", { classe: "badge " + (a.statut === "retenu" ? "badge-ok" : a.statut === "renonce" ? "badge-alerte" : "badge-attente"),
+      texte: "CEMA : " + M.STATUTS[a.statut] + (a.statut === "differe" ? " de " + a.decalage + " an" + (a.decalage > 1 ? "s" : "") : "") });
+  }
+
+  function blocArbitrage(l) {
     var p = params();
-    $("note-vue").textContent = vueComplete() ? "Vue complète de la partie." : "Vue limitée à vos postes de dépense ; les totaux par armée restent visibles.";
+    var a = M.arbitrageDe(l, p);
+    var choix = el("div", { classe: "choix" });
+    Object.keys(M.STATUTS).forEach(function (k) {
+      choix.appendChild(el("button", { type: "button", "data-statut": k, "aria-pressed": a.statut === k ? "true" : "false", texte: M.STATUTS[k],
+        onclick: function () { modifierParams(function (pp) { pp.arbitrages = pp.arbitrages || {}; pp.arbitrages[l.id] = { statut: k, decalage: k === "differe" ? (a.decalage || 1) : 0 }; }); } }));
+    });
+    if (a.statut === "differe") {
+      var dec = el("select", { "aria-label": "Décalage" });
+      [1, 2, 3].forEach(function (n) { dec.appendChild(el("option", { value: n, texte: "de " + n + " an" + (n > 1 ? "s" : "") })); });
+      dec.value = String(a.decalage || 1);
+      dec.addEventListener("change", function () { modifierParams(function (pp) { pp.arbitrages = pp.arbitrages || {}; pp.arbitrages[l.id] = { statut: "differe", decalage: Number(dec.value) }; }); });
+      choix.appendChild(dec);
+    }
+    if (l.type === "libre" && !l.modele) {
+      var cb = el("input", { type: "checkbox", id: "val-" + l.id });
+      cb.checked = !!(p.validations || {})[l.id];
+      cb.addEventListener("change", function () { modifierParams(function (pp) { pp.validations = pp.validations || {}; pp.validations[l.id] = cb.checked; }); });
+      choix.appendChild(el("label", { for: cb.id, classe: "petit" }, [cb, " pion sur mesure validé"]));
+    }
+    return choix;
+  }
+
+  function voletSelection(v) {
+    var s = etat.selection;
+    if (!s) {
+      v.appendChild(el("p", { classe: "vide", texte: "Cliquez sur un pion de la table pour voir ce que vous pouvez en faire." }));
+      return;
+    }
+    var l = ligneDe(s.ligne);
+    if (l) return ficheLigne(v, l);
+    var p = IDX[s.pion];
+    if (!p) { etat.selection = null; return voletSelection(v); }
+    ficheSocle(v, p);
+  }
+
+  // Un pion du socle : le renforcer, le dissoudre.
+  function ficheSocle(v, p) {
+    var plein = M.nbManquantes(p) === 0;
+    v.appendChild(el("p", { classe: "volet-sur", texte: (p.type === "gris" ? "Dépense fixe" : p.type === "violet" ? "Investissement" : p.type === "orange" ? "Pion de scénario" : "Capacité") + " · " + p.armee }));
+    v.appendChild(el("h2", { classe: "volet-titre", texte: p.nom }));
+    var dep = M.doreseDepart(p);
+    var lignesEtat = [["Coût sur la table", md(M.coutSocle(p)) + " par an"], ["Place", (p.l * p.h) + " cases"]];
+    if (p.type === "capacite") lignesEtat.push(["DORESE posées", M.nbDepart(p) + " / " + M.nbDorese(p) + (M.nbDorese(p) ? " (" + dep.ao + " AO, " + dep.mco + " MCO, " + dep.rh + " RH)" : "")]);
+    var lActive = function (type) { var l = etat.lignes.filter(function (x) { return x.type === type && x.pion === p.id && M.quantite(x, etat.annee); })[0]; return l; };
+    if (p.type === "capacite") lignesEtat.push(["État en " + etat.annee, lActive("degrade") ? "à 50 %, DORESE rendues (" + lActive("degrade").role + ")" : lActive("dorese") ? "à 100 %, renforcée (" + lActive("dorese").role + ")" : plein ? "à 100 %" : "dégradée"]);
+    v.appendChild(el("dl", { classe: "etat-pion" }, lignesEtat.reduce(function (acc, x) { return acc.concat([el("dt", { texte: x[0] }), el("dd", { texte: x[1] })]); }, [])));
+    if (p.remarque) v.appendChild(el("p", { classe: "aide", texte: p.remarque }));
+
+    if (p.type === "gris" || p.type === "orange") {
+      v.appendChild(el("p", { classe: "aide", texte: p.type === "gris" ? "Dépense fixe : elle ne se négocie pas à la table." : "Pion de scénario : l'animateur le pose ou le retire dans les Réglages." }));
+      return;
+    }
+    if (!dansMonPerimetre(p)) { v.appendChild(el("p", { classe: "aide", texte: "Ce pion relève d'un autre pôle." })); return; }
+
+    v.appendChild(choixPortee());
+    var actions = el("div", { classe: "actions-pion" });
+    var renf = etat.lignes.filter(function (x) { return memeGeste(x, { type: "dorese", pion: p.id }); })[0];
+    var diss = etat.lignes.filter(function (x) { return memeGeste(x, { type: "retrait", pion: p.id }); })[0];
+    var degr = etat.lignes.filter(function (x) { return memeGeste(x, { type: "degrade", pion: p.id }); })[0];
+    var degrCetteAnnee = degr && M.quantite(degr, etat.annee);
+    if (degrCetteAnnee) {
+      actions.appendChild(el("button", { type: "button", classe: "action", onclick: function () { enlever(degr); } }, [
+        el("b", { texte: "Revenir à 100 %" }), el("span", { texte: "Reposer ses DORESE " + textePortee() }), el("em", { texte: "+" + md(M.nbDepart(p) * M.CASE) + " par an" })]));
+    } else if (p.type === "capacite" && M.nbDepart(p) && !(renf && M.quantite(renf, etat.annee))) {
+      var dd = M.doreseDepart(p);
+      actions.appendChild(el("button", { type: "button", classe: "action action-retrait", onclick: function () { poser({ type: "degrade", pion: p.id }); } }, [
+        el("b", { texte: "Repasser à 50 %" }),
+        el("span", { texte: "Rend ses " + M.nbDepart(p) + " DORESE (" + dd.ao + " AO, " + dd.mco + " MCO, " + dd.rh + " RH) : capacité dégradée" }),
+        el("em", { texte: "−" + md(M.nbDepart(p) * M.CASE) + " par an" })]));
+    }
+    if (renf && M.quantite(renf, etat.annee)) {
+      actions.appendChild(el("button", { type: "button", classe: "action", onclick: function () { enlever(renf); } }, [
+        el("b", { texte: "Annuler le renforcement" }), el("span", { texte: "Retire les DORESE ajoutées " + textePortee() }), el("em", { texte: "−" + md(M.nbManquantes(p) * M.CASE) + " par an" })]));
+    } else if (!plein && !degrCetteAnnee) {
+      var mq = M.doreseManquantes(p);
+      actions.appendChild(el("button", { type: "button", classe: "action", onclick: function () { poser({ type: "dorese", pion: p.id }); } }, [
+        el("b", { texte: "Renforcer à 100 %" }),
+        el("span", { texte: "Ajoute " + M.nbManquantes(p) + " DORESE au contact (" + mq.ao + " AO, " + mq.mco + " MCO, " + mq.rh + " RH)" }),
+        el("em", { texte: "+" + md(M.nbManquantes(p) * M.CASE) + " par an" })
+      ]));
+    }
+    actions.appendChild(el("button", { type: "button", classe: "action action-retrait", onclick: function () { poser({ type: "retrait", pion: p.id }); } }, [
+      el("b", { texte: "Dissoudre" }),
+      el("span", { texte: "Retire le pion de la table " + textePortee() }),
+      el("em", { texte: "−" + md(M.coutSocle(p)) + " par an" })
+    ]));
+    actions.appendChild(el("button", { type: "button", classe: "action", onclick: function () { poser({ type: "ajout", pion: p.id, niveau: M.nbDorese(p) ? 100 : 50 }); } }, [
+      el("b", { texte: "Ajouter un exemplaire" }),
+      el("span", { texte: "Un " + p.nom.replace(/ \d$/, "") + " de plus" + (M.nbDorese(p) ? ", à 100 %" : "") }),
+      el("em", { texte: "+" + md(M.nbDorese(p) ? p.cout100 : p.cout50) + " par an" })
+    ]));
+    v.appendChild(actions);
+    [renf, diss, degr].forEach(function (l) { if (l) v.appendChild(el("p", { classe: "aide" }, ["Déjà dans votre demande : " + natureLigne(l).toLowerCase() + " (" + anneesDe(l) + "). ", el("button", { classe: "btn-lien", type: "button", texte: "Ouvrir", onclick: function () { etat.selection = { ligne: l.id, pion: l.pion }; rendreVolet(); } })])); });
+  }
+
+  // Une demande (ligne) : la régler ou l'enlever.
+  function ficheLigne(v, l) {
+    var mien = l.role === etat.role;
+    var p = IDX[l.pion];
+    var o = optionDe(l.modele);
+    if (!visible(l)) {
+      v.appendChild(el("p", { classe: "volet-sur", texte: "Demande d'un autre pôle" }));
+      v.appendChild(el("h2", { classe: "volet-titre", texte: "Demande " + M.armeeDeLigne(l, IDX) }));
+      v.appendChild(el("p", { classe: "aide", texte: "Son détail n'est visible que de son pôle, du CEMA, du SC-Plans et de l'animateur." }));
+      return;
+    }
+    v.appendChild(el("p", { classe: "volet-sur", texte: natureLigne(l) + " · " + l.role }));
+    var titre = el("h2", { classe: "volet-titre", texte: libelleLigne(l) });
+    v.appendChild(titre);
+    v.appendChild(el("div", { classe: "badges" }, [badgeDecision(l),
+      l.type === "libre" && !l.modele ? el("span", { classe: "badge " + ((params().validations || {})[l.id] ? "badge-ok" : "badge-attente"), texte: (params().validations || {})[l.id] ? "Validé par l'animateur" : "À valider par l'animateur" }) : null]));
+
+    var c = M.coutLigne(l, IDX);
+    var u = M.unitaire(l, IDX);
+    var resume = el("dl", { classe: "etat-pion" }, [
+      el("dt", { texte: "Par an posé" }), el("dd", { texte: u.cout ? md(u.cout) : "prix à fixer" }),
+      el("dt", { texte: "Années" }), el("dd", { texte: anneesDe(l) }),
+      el("dt", { texte: "Total LPM" }), el("dd", { texte: md(c.total) + (c.totalDorese ? " · " + c.totalDorese + " DORESE" : "") }),
+      el("dt", { texte: "Imputé à" }), el("dd", { texte: M.armeeDeLigne(l, IDX) })
+    ]);
+    v.appendChild(resume);
+
+    if (mien) {
+      if (l.type === "ajout" && p && p.type === "capacite" && M.nbDorese(p)) {
+        var seg = el("div", { classe: "segment", role: "group", "aria-label": "Niveau" });
+        [[50, "À 50 % · " + md(p.cout50)], [100, "À 100 % · " + md(p.cout100)]].forEach(function (x) {
+          seg.appendChild(el("button", { type: "button", "aria-pressed": Number(l.niveau) === x[0] ? "true" : "false", texte: x[1], onclick: function () { l.niveau = x[0]; enregistrer(l); rendre(true); } }));
+        });
+        v.appendChild(seg);
+      }
+      if (l.type === "libre") {
+        var prix = el("input", { type: "number", min: 0, step: 100, value: l.cout_unitaire || "", placeholder: "M€", "aria-label": "Prix fixé en M€ par an" });
+        var note = el("p", { classe: "alerte-texte" });
+        function majNote() {
+          var t = [];
+          if (!l.cout_unitaire) t.push("Fixez le prix : la demande ne compte pas tant qu'il est vide.");
+          if (o && o.cout && l.cout_unitaire && (l.cout_unitaire < M.arrondiCase(o.cout) || l.cout_unitaire > Math.max(M.arrondiCase(o.cout_max || o.cout), o.cout_max || o.cout))) t.push("Hors fourchette de la fiche (" + fourchette(o) + ").");
+          note.textContent = t.join(" ");
+        }
+        prix.addEventListener("change", function () { l.cout_unitaire = M.arrondiCase(prix.value); prix.value = l.cout_unitaire || ""; enregistrer(l); rendre(true); });
+        majNote();
+        v.appendChild(el("label", { classe: "champ" }, ["Prix fixé, M€ par an (arrondi à la case)", prix]));
+        if (o) v.appendChild(el("p", { classe: "aide", texte: "Fiche : " + fourchette(o) + (o.periodicite ? " · " + o.periodicite : "") }));
+        v.appendChild(note);
+      }
+      var cal = el("div", { classe: "cal" });
+      M.ANNEES.forEach(function (a) {
+        var q = M.quantite(l, a);
+        var unique = l.type !== "ajout" && !(l.type === "libre" && !l.modele);
+        cal.appendChild(el("button", { type: "button", classe: "cal-an" + (q ? " actif" : ""), "aria-pressed": q ? "true" : "false", title: unique ? "Poser ou retirer en " + a : "Clic : +1 · Maj+clic : −1",
+          onclick: function (ev) {
+            l.qte[a] = unique ? (q ? 0 : 1) : ev.shiftKey ? Math.max(0, q - 1) : q + 1;
+            if (!M.ANNEES.some(function (x) { return M.quantite(l, x) > 0; })) { supprimer(l); etat.selection = null; etat.volet = "demande"; }
+            else enregistrer(l);
+            rendre(true);
+          } }, [el("small", { texte: String(a) }), el("b", { texte: unique ? (q ? "✓" : "—") : String(q) })]));
+      });
+      v.appendChild(el("div", { classe: "champ" }, [el("span", { texte: "Années sur la table" }), cal]));
+      var arm = el("select", { "aria-label": "Armée qui porte le projet" });
+      M.ARMEES.forEach(function (a) { arm.appendChild(el("option", { value: a, texte: a })); });
+      arm.value = M.armeeDeLigne(l, IDX);
+      arm.addEventListener("change", function () { l.armee = arm.value; enregistrer(l); rendre(true); });
+      v.appendChild(el("label", { classe: "champ" }, ["Surcoût imputé à", arm]));
+      var just = el("textarea", { placeholder: "Votre argument pour l'arbitrage du CEMA", "aria-label": "Justification" });
+      just.value = l.justification || "";
+      just.addEventListener("input", function () { l.justification = just.value; enregistrer(l); });
+      v.appendChild(el("label", { classe: "champ" }, ["Justification", just]));
+      v.appendChild(el("div", { classe: "actions-bas" }, [
+        el("button", { type: "button", classe: "btn-contour", texte: "Enlever de la table " + textePortee(), onclick: function () { enlever(l); } }),
+        el("button", { type: "button", classe: "btn-lien", texte: "Supprimer toute la demande", onclick: function (ev) {
+          var b = ev.currentTarget;
+          if (b.dataset.arme !== "1") { b.dataset.arme = "1"; b.textContent = "Confirmer la suppression"; return; }
+          supprimer(l); etat.selection = null; etat.volet = "demande"; rendre(true);
+        } })
+      ]));
+      v.appendChild(choixPortee());
+    } else if (l.justification) {
+      v.appendChild(el("blockquote", { classe: "citation", texte: l.justification }));
+    }
+    if (arbitre()) {
+      v.appendChild(el("h3", { texte: "Décision du CEMA" }));
+      v.appendChild(blocArbitrage(l));
+    }
+  }
+
+  function voletDemande(v) {
+    var miennes = etat.lignes.filter(function (l) { return l.role === etat.role; });
+    var mien = M.synthese(PIONS, etat.lignes, params(), function (l) { return l.role === etat.role; });
+    var tot = 0, dor = 0;
+    M.ANNEES.forEach(function (a) { tot += mien[a].totalDemandes; dor += mien[a].dorese.ao + mien[a].dorese.mco + mien[a].dorese.rh; });
+    v.appendChild(el("h2", { classe: "volet-titre", texte: "Demande " + etat.role }));
+    v.appendChild(el("p", { classe: "total-demande" }, [el("b", { texte: md(tot) }), " sur 2027-2032 · " + dor + " DORESE"]));
+    if (!miennes.length) { v.appendChild(el("p", { classe: "vide", texte: "Rien encore. Posez un pion depuis l'onglet « Poser », ou cliquez sur un pion de la table." })); return; }
+    var ul = el("ul", { classe: "liste-demande" });
+    miennes.forEach(function (l) {
+      ul.appendChild(el("li", null, [el("button", { type: "button", style: "--c:" + couleur(M.armeeDeLigne(l, IDX)), onclick: function () { etat.selection = { ligne: l.id, pion: l.pion || null }; etat.volet = "selection"; rendre(true); } }, [
+        el("span", null, [el("b", { texte: libelleLigne(l) }), el("small", { texte: natureLigne(l) + " · " + anneesDe(l) })]),
+        el("span", { classe: "num" }, [md(M.coutLigne(l, IDX).total), badgeDecision(l)])
+      ])]));
+    });
+    v.appendChild(ul);
+  }
+
+  function voletArbitrage(v) {
+    var p = params();
+    v.appendChild(el("h2", { classe: "volet-titre", texte: "Arbitrage" }));
+    var arb = M.synthese(PIONS, M.lignesApresArbitrage(etat.lignes, p), p);
+    var tab = el("table", { classe: "mini-tableau" }, [el("thead", null, [el("tr", null, [el("th", { texte: "" }), el("th", { classe: "num", texte: "Retenu" }), el("th", { classe: "num", texte: "Marge" })])])]);
+    var tb = el("tbody");
+    M.ANNEES.forEach(function (a) { tb.appendChild(el("tr", null, [el("td", { texte: String(a) }), el("td", { classe: "num", texte: md(arb[a].total) }), el("td", { classe: "num " + (arb[a].marge < 0 ? "neg" : "pos"), texte: md(arb[a].marge) })])); });
+    tab.appendChild(tb);
+    v.appendChild(tab);
+    var lignes = etat.lignes.filter(visible);
+    var groupes = { attente: [], retenu: [], differe: [], renonce: [] };
+    lignes.forEach(function (l) { groupes[M.arbitrageDe(l, p).statut].push(l); });
+    Object.keys(groupes).forEach(function (k) {
+      if (!groupes[k].length) return;
+      var total = groupes[k].reduce(function (s, l) { return s + M.coutLigne(l, IDX).total; }, 0);
+      v.appendChild(el("h3", { texte: M.STATUTS[k] + " · " + groupes[k].length + " · " + md(total) }));
+      var ul = el("ul", { classe: "liste-demande" });
+      groupes[k].forEach(function (l) {
+        ul.appendChild(el("li", null, [el("button", { type: "button", style: "--c:" + couleur(M.armeeDeLigne(l, IDX)), onclick: function () { etat.selection = { ligne: l.id, pion: l.pion || null }; etat.volet = "selection"; var a1 = M.ANNEES.filter(function (a) { return M.quantite(l, a); })[0]; if (a1) etat.annee = a1; rendre(true); } }, [
+          el("span", null, [el("b", { texte: libelleLigne(l) }), el("small", { texte: l.role + " · " + natureLigne(l) + " · " + anneesDe(l) })]),
+          el("span", { classe: "num", texte: md(M.coutLigne(l, IDX).total) })
+        ])]));
+      });
+      v.appendChild(ul);
+    });
+    if (!lignes.length) v.appendChild(el("p", { classe: "vide", texte: "Aucune demande pour l'instant." }));
+  }
+
+  function voletBilan(v) {
+    var p = params();
     var syn = M.synthese(PIONS, etat.lignes, p);
     var arb = M.synthese(PIONS, M.lignesApresArbitrage(etat.lignes, p), p);
-    var tr = $("trajectoire");
-    vider(tr);
-    var max = Math.max.apply(null, M.ANNEES.map(function (a) { return Math.max(syn[a].total, syn[a].table); }));
+    v.appendChild(el("h2", { classe: "volet-titre", texte: "Bilan 2027-2032" }));
+    var t = el("table", { classe: "mini-tableau" });
+    t.appendChild(el("thead", null, [el("tr", null, [el("th", { texte: "Md€" }), el("th", { classe: "num", texte: "Socle" }), el("th", { classe: "num", texte: "Demandes" }), el("th", { classe: "num", texte: "Plafond" }), el("th", { classe: "num", texte: "Marge après arb." })])]));
+    var tb = el("tbody");
+    function n(m) { return (m / 1000).toLocaleString("fr-FR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }); }
     M.ANNEES.forEach(function (a) {
-      var s = syn[a];
-      var b = el("div", { classe: "traj-barre" });
-      b.appendChild(el("span", { style: "width:" + (100 * s.totalSocle / max) + "%;background:var(--gris)" }));
-      M.ARMEES.forEach(function (arm) { var v = Math.max(0, s.demandes[arm]); if (v) b.appendChild(el("span", { style: "width:" + (100 * v / max) + "%;background:" + couleur(arm), title: arm + " " + md(v) })); });
-      b.appendChild(el("span", { classe: "traj-plafond", style: "left:" + (100 * s.plafond / max) + "%" }));
-      tr.appendChild(el("div", { classe: "traj-ligne" }, [el("span", { classe: "traj-an", texte: String(a) }), b, el("span", { classe: "num " + (s.marge < 0 ? "neg" : ""), texte: md(s.total) })]));
+      tb.appendChild(el("tr", null, [el("td", { texte: String(a) }), el("td", { classe: "num", texte: n(syn[a].totalSocle) }), el("td", { classe: "num", texte: n(syn[a].totalDemandes) }), el("td", { classe: "num", texte: n(syn[a].plafond) }), el("td", { classe: "num " + (arb[a].marge < 0 ? "neg" : "pos"), texte: n(arb[a].marge) })]));
     });
-    var t = $("table-synthese");
-    vider(t);
-    t.appendChild(el("thead", null, [el("tr", null, [el("th", { texte: "M€" })].concat(M.ANNEES.map(function (a) { return el("th", { classe: "num", texte: String(a) }); })).concat([el("th", { classe: "num", texte: "Total" })]))]));
-    var c = el("tbody");
-    function rangee(lib, f, cl) {
-      var tot = 0;
-      var cells = M.ANNEES.map(function (a) { var v = f(a); tot += v; return el("td", { classe: "num " + (cl ? cl(v) : ""), texte: md(v) }); });
-      c.appendChild(el("tr", null, [el("td", null, lib)].concat(cells).concat([el("td", { classe: "num", texte: md(tot) })])));
-    }
-    rangee([el("span", { classe: "pastille", style: "background:var(--gris)" }), "Socle"], function (a) { return syn[a].totalSocle; });
-    M.ARMEES.forEach(function (arm) { rangee([el("span", { classe: "pastille", style: "background:" + couleur(arm) }), "Demandes " + arm], function (a) { return syn[a].demandes[arm]; }); });
-    rangee(["Total demandé"], function (a) { return syn[a].total; });
-    rangee(["Total après arbitrage"], function (a) { return arb[a].total; });
-    rangee(["Plafond"], function (a) { return syn[a].plafond; });
-    rangee(["Marge après arbitrage"], function (a) { return arb[a].marge; }, function (v) { return v < 0 ? "neg" : "pos"; });
-    t.appendChild(c);
-
-    var t3 = $("table-toutes");
-    vider(t3);
-    t3.appendChild(el("thead", null, [el("tr", null, ["Pôle", "Action", "Objet", "Armée"].map(function (h) { return el("th", { texte: h }); }).concat(M.ANNEES.map(function (a) { return el("th", { classe: "num", texte: String(a) }); })).concat([el("th", { classe: "num", texte: "Total" }), el("th", { texte: "Décision" })]))]));
-    var c3 = el("tbody");
-    etat.lignes.filter(visible).forEach(function (l) {
-      var cl = M.coutLigne(l, IDX);
-      c3.appendChild(el("tr", null, [el("td", { texte: l.role }), el("td", { texte: natureLigne(l) }), el("td", { texte: libelleLigne(l) }), el("td", { texte: M.armeeDeLigne(l, IDX) })]
-        .concat(M.ANNEES.map(function (a) { return el("td", { classe: "num", texte: cl.annees[a].cout ? md(cl.annees[a].cout) : "·" }); }))
-        .concat([el("td", { classe: "num", texte: md(cl.total) }), el("td", { texte: M.STATUTS[M.arbitrageDe(l, p).statut] })])));
+    t.appendChild(tb);
+    v.appendChild(t);
+    v.appendChild(el("h3", { texte: "Demandes par armée, sur 6 ans" }));
+    var ul = el("ul", { classe: "par-armee" });
+    M.ARMEES.forEach(function (arm) {
+      var s = M.ANNEES.reduce(function (acc, a) { return acc + syn[a].demandes[arm]; }, 0);
+      ul.appendChild(el("li", null, [el("span", { classe: "pastille", style: "background:" + couleur(arm) }), arm, el("b", { classe: "num", texte: md(s) })]));
     });
-    t3.appendChild(c3);
+    v.appendChild(ul);
+    v.appendChild(el("button", { classe: "btn-contour", type: "button", texte: "Télécharger les lignes (CSV)", onclick: telechargerCsv }));
   }
-
-  function csv() {
+  function telechargerCsv() {
     var p = params();
     var ent = ["Pôle", "Action", "Objet", "Armée"].concat(M.ANNEES.map(String)).concat(["Total (M€)", "Décision", "Justification"]);
     var out = [ent.join(";")];
@@ -7051,52 +7356,46 @@ window.STRAT_CATALOGUE_ROLES = [
         .concat([c.total, M.STATUTS[M.arbitrageDe(l, p).statut], (l.justification || "").replace(/\s+/g, " ")]);
       out.push(v.map(function (x) { var s = String(x); return /[";\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }).join(";"));
     });
-    return out.join("\n");
+    var a = el("a", { href: URL.createObjectURL(new Blob(["﻿" + out.join("\n")], { type: "text/csv;charset=utf-8" })), download: "strategikon-" + etat.partie.nom + ".csv" });
+    document.body.appendChild(a); a.click(); a.remove();
   }
 
-  // ---------- Réglages ----------
-  function rendreReglages() {
+  function voletReglages(v) {
     var p = params();
-    var edit = ROLES_REGLAGES.indexOf(etat.role) !== -1;
-    $("aide-parametres").textContent = edit ? "Plafonds et pions de scénario valent pour toute la partie." : "Lecture seule.";
-    var pf = $("plafonds");
-    vider(pf);
-    M.ANNEES.forEach(function (a) {
-      var i = el("input", { id: "plafond-" + a, type: "number", min: 0, max: 2000, step: 1, value: p.plafonds[a], disabled: edit ? null : "disabled" });
-      var s = el("small", { texte: md((Number(p.plafonds[a]) || 0) * M.CASE) });
-      i.addEventListener("input", function () { s.textContent = md((Number(i.value) || 0) * M.CASE); });
-      pf.appendChild(el("label", { for: i.id }, [String(a), i, s]));
-    });
-    var al = $("aleas");
-    vider(al);
+    v.appendChild(el("h2", { classe: "volet-titre", texte: "Réglages de la partie" }));
+    var f = el("form", { classe: "form-reglages" });
+    f.appendChild(el("h3", { texte: "Plafond annuel, en cases de 100 M€" }));
+    var pf = el("div", { classe: "plafonds" });
+    M.ANNEES.forEach(function (a) { pf.appendChild(el("label", null, [String(a), el("input", { id: "plafond-" + a, type: "number", min: 0, max: 2000, value: p.plafonds[a] })])); });
+    f.appendChild(pf);
+    f.appendChild(el("h3", { texte: "Pions de scénario posés" }));
     PIONS.filter(function (x) { return x.type === "orange"; }).forEach(function (o) {
       var an = ((p.aleas || {})[o.id] || []).map(Number);
-      al.appendChild(el("div", { classe: "alea" }, [el("span", { texte: o.nom + " (" + o.cout50 / M.CASE + " cases par an)" }), el("div", { classe: "alea-annees" }, M.ANNEES.map(function (a) {
-        var cb = el("input", { type: "checkbox", id: "alea-" + o.id + "-" + a, "data-pion": o.id, "data-annee": a, disabled: edit ? null : "disabled" });
+      f.appendChild(el("div", { classe: "alea" }, [el("span", { texte: o.nom + " · " + md(o.cout50) }), el("div", { classe: "alea-annees" }, M.ANNEES.map(function (a) {
+        var cb = el("input", { type: "checkbox", "data-pion": o.id, "data-annee": a });
         cb.checked = an.indexOf(a) !== -1;
-        return el("label", { for: cb.id }, [cb, " " + a]);
+        return el("label", null, [cb, " " + a]);
       }))]));
     });
-    $("btn-parametres").hidden = !edit;
-  }
-
-  function enregistrerReglages(ev) {
-    ev.preventDefault();
-    var plaf = {}, aleas = {};
-    M.ANNEES.forEach(function (a) { plaf[a] = Math.max(0, Number($("plafond-" + a).value) || 0); });
-    document.querySelectorAll("#aleas input[type=checkbox]").forEach(function (cb) {
-      var id = cb.getAttribute("data-pion"); aleas[id] = aleas[id] || [];
-      if (cb.checked) aleas[id].push(Number(cb.getAttribute("data-annee")));
+    f.appendChild(el("button", { classe: "btn-laiton", type: "submit", texte: "Enregistrer" }));
+    f.addEventListener("submit", function (ev) {
+      ev.preventDefault();
+      var plaf = {}, aleas = {};
+      M.ANNEES.forEach(function (a) { plaf[a] = Math.max(0, Number($("plafond-" + a).value) || 0); });
+      f.querySelectorAll("input[type=checkbox]").forEach(function (cb) {
+        var id = cb.getAttribute("data-pion"); aleas[id] = aleas[id] || [];
+        if (cb.checked) aleas[id].push(Number(cb.getAttribute("data-annee")));
+      });
+      modifierParams(function (pp) { pp.plafonds = plaf; pp.aleas = aleas; }).then(function () { toast("Réglages enregistrés"); });
     });
-    modifierParams(function (pp) { pp.plafonds = plaf; pp.aleas = aleas; }).then(function () { $("param-etat").textContent = "Réglages enregistrés."; toast("Réglages enregistrés"); });
+    v.appendChild(f);
   }
 
   // ---------- Démarrage ----------
   function demarrer() {
-    $("mode").textContent = S.mode === "partage" ? "Base partagée" : "Mode local";
-    $("note-mode").textContent = S.mode === "partage"
-      ? "Les parties sont conservées d'une séance à l'autre ; chaque pôle voit les autres avancer en quelques secondes."
-      : "Mode local : les parties restent dans ce navigateur.";
+    $("note-mode").textContent = S.mode === "partage" ? "Base partagée : chaque pôle voit les autres avancer en quelques secondes." : "Mode local : les parties restent dans ce navigateur.";
+    $("btn-montrer-creer").addEventListener("click", function () { etapeAccueil("creer"); $("cre-nom").focus(); });
+    $("btn-montrer-rejoindre").addEventListener("click", function () { etapeAccueil("rejoindre"); });
     $("form-rejoindre").addEventListener("submit", function (ev) {
       ev.preventDefault();
       $("rej-erreur").textContent = "";
@@ -7109,35 +7408,23 @@ window.STRAT_CATALOGUE_ROLES = [
       $("cre-erreur").textContent = "";
       var nom = $("cre-nom").value.trim(), mdp = $("cre-mdp").value;
       if (mdp !== $("cre-mdp2").value) { $("cre-erreur").textContent = "Les deux mots de passe diffèrent."; return; }
-      S.creerPartie(nom, mdp, M.parametresParDefaut()).then(function (p) { toast("Partie « " + p.nom + " » ouverte"); montrerRoles(p, mdp); })
-        .catch(function (e) { $("cre-erreur").textContent = e.message; });
+      S.creerPartie(nom, mdp, M.parametresParDefaut()).then(function (p) { montrerRoles(p, mdp); }).catch(function (e) { $("cre-erreur").textContent = e.message; });
     });
     $("btn-retour-partie").addEventListener("click", quitter);
     $("btn-quitter").addEventListener("click", quitter);
-    $("btn-role").addEventListener("click", function () {
-      $("ecran-partie").hidden = true; $("ecran-accueil").hidden = false; montrerRoles(etat.partie, etat.mdp);
-    });
-    document.querySelectorAll(".parcours button").forEach(function (b) { b.addEventListener("click", function () { changerOnglet(b.getAttribute("data-onglet")); }); });
-    document.querySelectorAll(".bascule button").forEach(function (b) { b.addEventListener("click", function () { etat.vueTable = b.getAttribute("data-vue"); rendreTable(); }); });
-    $("recherche").addEventListener("input", function () { etat.recherche = $("recherche").value; rendreArsenal(); });
-    $("form-parametres").addEventListener("submit", enregistrerReglages);
-    $("btn-copier-csv").addEventListener("click", function () {
-      try { navigator.clipboard.writeText(csv()).then(function () { toast("CSV copié : collez-le dans Excel"); }, function () { toast("Copie refusée par le navigateur"); }); }
-      catch (e) { toast("Copie refusée par le navigateur"); }
-    });
-    $("btn-telecharger-csv").addEventListener("click", function () {
-      var a = el("a", { href: URL.createObjectURL(new Blob(["﻿" + csv()], { type: "text/csv;charset=utf-8" })), download: "strategikon-" + (etat.partie ? etat.partie.nom : "partie") + ".csv" });
-      document.body.appendChild(a); a.click(); a.remove();
-    });
+    $("btn-role").addEventListener("click", function () { montrerRoles(etat.partie, etat.mdp); });
+    document.querySelectorAll(".bascule button[data-vue]").forEach(function (b) { b.addEventListener("click", function () { etat.vue = b.getAttribute("data-vue"); rendre(false); }); });
+    document.querySelectorAll(".bascule button[data-filtre]").forEach(function (b) { b.addEventListener("click", function () { etat.maTable = b.getAttribute("data-filtre") === "mien"; rendre(false); }); });
     setInterval(function () { if (etat.partie && etat.role && !Object.keys(enAttente).length) recharger(false); }, S.mode === "partage" ? 6000 : 5000);
 
+    etapeAccueil("rejoindre");
     chargerParties().then(function () {
       var mem = null;
-      try { mem = JSON.parse(sessionStorage.getItem("strategikon.v2")); } catch (e) { mem = null; }
+      try { mem = JSON.parse(sessionStorage.getItem(CLE_SESSION)); } catch (e) { mem = null; }
       if (mem && mem.nom && mem.role) {
         S.ouvrirPartie(mem.nom, mem.mdp).then(function (p) {
-          etat.partie = p; etat.mdp = mem.mdp;
-          return entrer(mem.role).then(function () { if (mem.onglet) changerOnglet(mem.onglet); });
+          etat.partie = p; etat.mdp = mem.mdp; if (mem.annee) etat.annee = mem.annee;
+          return entrer(mem.role);
         }).catch(function () { etat.partie = null; memoriser(); });
       }
     });

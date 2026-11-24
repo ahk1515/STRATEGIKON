@@ -31,7 +31,7 @@ Mise en ligne : [INSTALLATION-SUPABASE.md](INSTALLATION-SUPABASE.md) (Supabase e
 | `js/moteur.js` | calculs, sans dépendance |
 | `js/stockage.js` | stockage : Supabase, feuille Google (Apps Script) ou navigateur seul |
 | `supabase/schema.sql` | tables et fonctions de la base Supabase |
-| `js/app.js`, `css/style.css`, `index.html` | interface |
+| `js/app.js`, `js/figuratifs.js`, `css/style.css`, `css/table.css`, `index.html` | interface « table d'abord » : on pose, modifie et arbitre les pions directement sur la table ; les lignes sont écrites en arrière-plan |
 | `apps-script/Code.gs` | serveur Google Apps Script |
 | `scripts/assembler.py` | produit `apps-script/Index.html` (page en un seul fichier) |
 

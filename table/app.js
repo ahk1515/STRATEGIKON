@@ -319,24 +319,41 @@
         rendre(true);
       };
     }
+    var F = window.STRAT_FIGURATIFS;
+    function court(nom) { return nom.replace(/^Capacité /, "").replace(/^Brigade /, "Bde ").replace(/^\+ Capacité /, "+ "); }
     t.pieces.forEach(function (x) {
-      var c = x.groupe === "Fixes" ? "var(--gris)" : x.nature === "violet" ? "var(--violet)" : couleur(x.armee);
-      var cl = ["pion", "pion-clic"];
-      if (x.niveau === 50) cl.push("pion-50");
+      var bande = x.groupe === "Fixes" ? "var(--gris-carte)" : x.nature === "violet" ? "var(--violet)" : x.nature === "orange" ? "var(--orange-carte)" : couleur(x.armee);
+      var cl = ["pion", "pion-clic", "fig"];
+      var aire = x.w * x.h, petit = Math.min(x.w, x.h) === 1 && Math.max(x.w, x.h) <= 3;
+      cl.push(x.w >= x.h ? "fig-h" : "fig-v");
+      if (petit) cl.push("fig-mini");
+      if (x.nature === "orange") cl.push("fig-alea");
+      if (x.niveau === 50) cl.push("fig-rouge");
       if (depasse(x.r, x.c, x.w, x.h)) cl.push("pion-debord");
-      if (x.w * x.h <= 2) cl.push("pion-petit");
       if (x.role && x.role === etat.role) cl.push("pion-mien");
       if (selectionCorrespond(x)) cl.push("pion-choisi");
       if (x.ligne && x.ligne === etat.neuf) cl.push("pion-neuf");
       if (estompe(x)) cl.push("pion-estompe");
-      var nom = masque(x) ? "Demande " + x.armee : x.libelle;
-      pl.appendChild(el("button", { type: "button", classe: cl.join(" "), title: nom + (x.niveau ? " · " + x.niveau + " %" : "") + (x.role && !masque(x) ? " · " + x.role : ""),
-        style: "grid-row:" + (x.r + 1) + " / span " + x.h + ";grid-column:" + (x.c + 1) + " / span " + x.w + ";background:" + c, onclick: choisir(x) }, [
-        el("span", { texte: nom.replace(/^Capacité /, "").replace(/^Brigade /, "Bde ") })]));
+      var cache = masque(x);
+      var nom = cache ? "Demande " + x.armee : x.libelle;
+      var pion = x.pion ? IDX[x.pion] : null;
+      var picto = cache ? null : F.svg(F.pictoDe(x.libelle) || "puce");
+      var enfants = [el("span", { classe: "fig-bande" }, [el("span", { classe: "fig-titre", texte: court(nom) })])];
+      if (picto) enfants.push(el("span", { classe: "fig-picto" }, [picto]));
+      if (pion && pion.type === "capacite" && M.nbDorese(pion) && !petit && aire >= 4) {
+        var co = el("span", { classe: "fig-coins" });
+        ["ao", "mco", "rh"].forEach(function (k) {
+          var ic = F.svg(F.DORESE[k]);
+          co.appendChild(el("span", { classe: "fig-coin", title: "DORESE " + k.toUpperCase() + " requises" }, [ic, el("b", { texte: String(pion.dorese[k]) })]));
+        });
+        enfants.push(co);
+      }
+      pl.appendChild(el("button", { type: "button", classe: cl.join(" "), title: nom + (x.niveau ? " · " + (x.niveau === 50 ? "face rouge (dégradée)" : "à 100 %") : "") + (x.role && !cache ? " · " + x.role : ""),
+        style: "grid-row:" + (x.r + 1) + " / span " + x.h + ";grid-column:" + (x.c + 1) + " / span " + x.w + ";--bande:" + bande, onclick: choisir(x) }, enfants));
     });
     t.cellules.forEach(function (x) {
       var cl = ["pion", "pion-case", "pion-clic"];
-      if (x.nature === "dorese") cl.push("pion-dorese");
+      cl.push(x.nature === "dorese" ? "jeton" : "jeton-option");
       if (x.horsCatalogue) cl.push("pion-mesure");
       if (x.r * t.largeur + x.c >= t.plafond) cl.push("pion-debord");
       if (x.role && x.role === etat.role) cl.push("pion-mien");
@@ -345,9 +362,9 @@
       if (selectionCorrespond(cible) || (x.ligne && etat.selection && etat.selection.ligne === x.ligne)) cl.push("pion-choisi");
       if (x.nature === "dorese" ? estompe(cible) && estompe(x) : estompe(x)) cl.push("pion-estompe");
       var nom = masque(x) ? (x.nature === "dorese" ? "DORESE" : "Demande " + x.armee) : x.libelle;
-      pl.appendChild(el("button", { type: "button", classe: cl.join(" "), title: nom, style: "grid-row:" + (x.r + 1) + ";grid-column:" + (x.c + 1) + ";background:" + couleur(x.armee),
-        onclick: x.ligne && x.nature !== "dorese" ? choisir(x) : x.ligne ? choisir({ ligne: x.ligne, pion: cible.pion }) : choisir(cible) }, [
-        el("span", { texte: x.nature === "dorese" ? { ao: "AO", mco: "M", rh: "RH" }[x.type] : "" })]));
+      var ic = x.nature === "dorese" ? F.svg(F.DORESE[x.type]) : F.svg(masque(x) ? "document" : (F.pictoDe(x.libelle) || "document"));
+      pl.appendChild(el("button", { type: "button", classe: cl.join(" "), title: nom, style: "grid-row:" + (x.r + 1) + ";grid-column:" + (x.c + 1) + ";--bande:" + couleur(x.armee),
+        onclick: x.ligne && x.nature !== "dorese" ? choisir(x) : x.ligne ? choisir({ ligne: x.ligne, pion: cible.pion }) : choisir(cible) }, [ic]));
     });
     etat.neuf = null;
 
@@ -368,8 +385,10 @@
     lg.appendChild(puce("background:var(--gris)", "", "Dépense fixe"));
     lg.appendChild(puce("background:var(--violet)", "", "Investissement"));
     M.ARMEES.forEach(function (a) { lg.appendChild(puce("background:" + couleur(a), "", a)); });
-    lg.appendChild(puce("background:var(--air)", "pion-50", "Capacité dégradée"));
-    lg.appendChild(puce("background:var(--air)", "pion-dorese", "DORESE"));
+    lg.appendChild(puce("background:var(--rouge)", "", "Face rouge : capacité dégradée"));
+    ["ao", "mco", "rh"].forEach(function (k) {
+      lg.appendChild(el("span", null, [el("span", { classe: "puce-legende jeton-legende", style: "--bande:var(--marine)" }, [F.svg(F.DORESE[k])]), { ao: "DORESE activité", mco: "DORESE MCO", rh: "DORESE RH" }[k]]));
+    });
     lg.appendChild(puce("background:var(--case-vide)", "pion-mien", "Ma demande"));
     lg.appendChild(puce("background:var(--hors)", "", "Au-delà du plafond"));
   }

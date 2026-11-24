@@ -139,3 +139,50 @@ button.pion-case { font-size: .55rem; }
   .plateau { --case: 1.05rem; }
   .an-jauge-val { font-size: .66rem; }
 }
+
+/* ---------- Figuratifs : la table comme sur les photos ---------- */
+:root { --carte: #f6f4ee; --gris-carte: #5d6168; --orange-carte: #e6a52a; --trait-table: #1d1d1f; }
+.plateau { --case: 1.9rem; background: var(--trait-table); gap: 2px; padding: 2px; }
+.plateau .fond { background: #fff; border-radius: 0; }
+.plateau .fond-hors { background: #f7dede; }
+.plateau .fond-horstable { background: repeating-linear-gradient(135deg, #f1d3d3 0 4px, #fff 4px 8px); }
+.fig {
+  --picto: #141414; position: relative; padding: 0; border-radius: 1px; color: var(--picto); background: var(--carte) !important;
+  box-shadow: inset 0 0 0 2px #1a1a1a, 0 1px 2px rgba(0, 0, 0, .35); display: grid; overflow: hidden;
+}
+.fig-h { grid-template-rows: auto 1fr; }
+.fig-v { grid-template-columns: 1fr auto; }
+.fig-bande { background: var(--bande); color: #fff; display: flex; align-items: center; justify-content: center; padding: 1px 3px; min-width: 0; min-height: 0; }
+.fig-v .fig-bande { grid-column: 2; grid-row: 1; writing-mode: vertical-rl; padding: 3px 1px; }
+.fig-v .fig-picto { grid-column: 1; grid-row: 1; }
+.fig-rouge .fig-bande { background: var(--rouge); }
+.fig-titre {
+  font-family: "Stardos Stencil", "Source Serif 4", Georgia, serif; font-weight: 700; text-transform: uppercase; letter-spacing: .02em;
+  font-size: .62rem; line-height: 1.05; text-align: center; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; text-shadow: none;
+}
+.fig-picto { display: grid; place-items: center; min-height: 0; min-width: 0; padding: 3px; }
+.fig-picto svg { width: 100%; height: 100%; max-width: 3.4rem; max-height: 3.4rem; }
+.fig-coins { position: absolute; right: 3px; bottom: 3px; display: flex; gap: 2px; }
+.fig-v .fig-coins { right: auto; left: 3px; flex-direction: column; }
+.fig-coin { display: flex; align-items: center; gap: 1px; background: #d9d9d9; border: 1px solid #555; padding: 0 2px; font-size: .55rem; color: #111; line-height: 1.2; }
+.fig-coin svg { width: .7rem; height: .7rem; }
+.fig-mini { grid-template-rows: none; grid-template-columns: auto 1fr; }
+.fig-mini .fig-bande { grid-row: 1; grid-column: 1 / span 2; writing-mode: horizontal-tb; }
+.fig-mini .fig-picto { display: none; }
+.fig-mini .fig-titre { font-size: .55rem; -webkit-line-clamp: 2; }
+.fig-alea { background: var(--orange-carte) !important; background-image: linear-gradient(90deg, rgba(0,0,0,.25) 1px, transparent 1px), linear-gradient(rgba(0,0,0,.25) 1px, transparent 1px) !important; background-size: calc(var(--case) + 2px) calc(var(--case) + 2px) !important; }
+.fig-alea .fig-bande { background: transparent; }
+.fig-alea .fig-titre { font-size: .75rem; }
+.jeton {
+  background: var(--bande) !important; color: #121212; border-radius: 2px !important; padding: 2px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .55), 0 1px 1px rgba(0, 0, 0, .3); display: grid; place-items: center;
+}
+.jeton svg, .jeton-option svg { width: 100%; height: 100%; }
+.jeton-option { background: var(--carte) !important; color: #222; box-shadow: inset 0 0 0 2px var(--bande); padding: 3px; display: grid; place-items: center; }
+.jeton-legende { display: inline-grid !important; place-items: center; background: var(--bande); color: #111; padding: 1px; }
+.jeton-legende svg { width: 100%; height: 100%; }
+.fig.pion-mien { box-shadow: inset 0 0 0 2px #1a1a1a, 0 0 0 3px var(--laiton); }
+.pion-choisi { outline: 3px solid var(--rouge); outline-offset: 1px; }
+@media (max-width: 640px) { .plateau { --case: 1.1rem; } .fig-titre { display: none; } .fig-coins { display: none; } }
+button.fig .fig-picto, button.jeton { color: #141414; }
+button.jeton-option { color: #222; }

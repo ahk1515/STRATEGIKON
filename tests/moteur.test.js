@@ -272,3 +272,30 @@ test("alertes : une ligne renoncée n'alerte plus", () => {
   const aed = { id: "a", role: "DGA", type: "libre", modele: "DGA-AED-10", cout_unitaire: 300, qte: ANS(1) };
   assert.deepStrictEqual(regles([aed], pp({ arbitrages: { a: { statut: "renonce" } } })), []);
 });
+
+// ---------- Échanges : export, import, comparaison ----------
+test("export du modèle 2032 puis de la trajectoire ; réimport et comparaison", () => {
+  const p = pp({ arbitrages: { a: { statut: "retenu" }, b: { statut: "retenu" } }, debuts: { a: 2028, b: 2030 } });
+  const L = [
+    { id: "a", role: "EMAT", type: "ajout", pion: "P24", niveau: 100, cible: true, priorite: 1, qte: { 2032: 1 } },
+    { id: "b", role: "DGA", type: "libre", modele: "DGA-SEAD", cout_unitaire: 400, cible: true, priorite: 2, qte: { 2032: 1 } }
+  ];
+  const mod = M.exporterPartie(PIONS, L, p, CAT, "modele2032", "Test");
+  assert.strictEqual(mod.type, "modele2032");
+  assert.deepStrictEqual(Object.keys(mod.synthese), ["2032"]);
+  assert.strictEqual(mod.lignes[0].annees[2032].cout, 600);
+  assert.strictEqual(mod.socle.length, 53);
+  const traj = M.exporterPartie(PIONS, L, p, CAT, "trajectoire", "Test");
+  assert.strictEqual(traj.lignes[0].entree, 2028);
+  assert.strictEqual(traj.synthese[2028].total, 39900 + 600);
+  assert.ok(M.echangeEnCsv(traj).split("\n")[0].startsWith("id;Pôle"));
+  // Une référence qui fait entrer le Serval en 2029 et renonce au SEAD.
+  const ref = JSON.parse(JSON.stringify(traj));
+  ref.lignes[0].entree = 2029; ref.lignes[1].decision.statut = "renonce";
+  const cmp = M.comparerTrajectoires(M.lireEchange(JSON.stringify(traj)), M.lireEchange(ref));
+  assert.strictEqual(cmp.lignes.find((x) => x.id === "a").ecart_entree, -1);
+  assert.strictEqual(cmp.resume.plus_tot_joueurs, 1);
+  assert.strictEqual(cmp.resume.renonces_reference, 1);
+  assert.throws(() => M.lireEchange(mod), /modèle 2032/);
+  assert.throws(() => M.lireEchange("{}"), /export STRATEGIKON/);
+});

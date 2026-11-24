@@ -856,6 +856,129 @@
     return res;
   }
 
+  // ---------- Échanges : export d'une partie, comparaison de deux trajectoires ----------
+  // Un même format pour le modèle 2032 arbitré et pour une trajectoire 2027-2032 : assez riche pour
+  // reconstruire une trajectoire hors de l'outil, puis la réimporter et la comparer.
+  var FORMAT_ECHANGE = "strategikon-echange";
+  var NATURES = { dorese: "renforcement à 100 %", ajout: "nouvel exemplaire", retrait: "dissolution", degrade: "repassage à 50 %", libre: "option ou pion sur mesure" };
+  function exporterPartie(pions, lignes, params, catalogue, type, nomPartie) {
+    params = params || parametresParDefaut();
+    var idx = indexPions(pions);
+    var opts = {};
+    (catalogue || []).forEach(function (o) { opts[o.code] = o; });
+    var trajectoire = type === "trajectoire";
+    var pp = trajectoire ? params : Object.assign({}, params, { debuts: {} });
+    var fin = ANNEES[ANNEES.length - 1];
+    var al = alertes(pions, lignes, pp, catalogue);
+    var lignesX = lignes.map(function (l) {
+      var e = ligneEffective(l, pp);
+      var f = financements(e, idx, pp), r = remboursements(e, idx, pp), c = coutLigne(e, idx);
+      var arb = arbitrageDe(l, pp), pr = prioriteDe(l, pp), fin0 = financementDe(l, pp), o = opts[l.modele];
+      var annees = {};
+      ANNEES.forEach(function (a) {
+        if (!trajectoire && a !== fin) return;
+        annees[a] = { cout: f[a].cout + (r[a] || 0), brut: f[a].brut, quantite: quantite(e, a), dorese: c.annees[a].dorese };
+      });
+      var entree = null;
+      ANNEES.forEach(function (a) { if (entree === null && (c.annees[a].cout || quantite(e, a))) entree = a; });
+      if (trajectoire && l.cible && debutDe(l, pp) === APRES_LPM) entree = APRES_LPM;
+      var pion = idx[l.pion];
+      return {
+        id: l.id, role: l.role, type: l.type, nature: NATURES[l.type] || l.type,
+        libelle: l.type === "libre" ? (l.libelle || "Pion sur mesure") : (pion ? pion.nom : l.pion),
+        pion: l.pion || null, modele: l.modele || null, niveau: l.niveau || null, armee: armeeDeLigne(l, idx), cible: !!l.cible,
+        cout_unitaire: unitaire(l, idx).cout, tranches: tranchesDe(l), dorese_unitaire: unitaire(l, idx).dorese,
+        priorite: { pole: pr.pole, cema: pr.cema, retenue: pr.valeur }, contrainte_politique: contrainteDe(l.id, pp),
+        financement: fin0.mode === "national" ? { mode: "national" } : Object.assign({ actif: financementActif(l, pp), defection: defectionDe(l, pp) }, fin0),
+        enveloppe: l.enveloppe || null,
+        decision: { statut: arb.statut, decalage: arb.decalage || 0, contrainte: !!arb.contrainte },
+        entree: entree, annees: annees, total: Object.keys(annees).reduce(function (t, a) { return t + annees[a].cout; }, 0),
+        hors_lpm: (r.hors || 0) + (e.horsLpm || 0),
+        delai_fiche: o ? o.delai || null : null, mise_en_service: o ? miseEnService(o, entree && entree <= fin ? entree : ANNEE_DECISION) : null,
+        justification: l.justification || "",
+        alertes: al.filter(function (x) { return x.ligne === l.id; }).map(function (x) { return { regle: x.regle, niveau: x.niveau, message: x.message }; })
+      };
+    });
+    var syn = synthese(pions, lignesApresArbitrage(lignesEnTrajectoire(lignes, pp), pp), pp);
+    var synX = {};
+    ANNEES.forEach(function (a) {
+      if (!trajectoire && a !== fin) return;
+      synX[a] = { socle: syn[a].totalSocle, demandes: syn[a].totalDemandes, total: syn[a].total, plafond: syn[a].plafond, marge: syn[a].marge, part_alliee: syn[a].allie };
+    });
+    return {
+      format: FORMAT_ECHANGE, version: 1, type: trajectoire ? "trajectoire" : "modele2032", partie: nomPartie || null,
+      exporte_le: new Date().toISOString(), unite: "M€ (1 case = 100 M€)",
+      regles_de_lecture: "annees[a].cout = part payée par la France cette année, financement et remboursements compris ; synthese = après arbitrage (renoncés retirés, différés décalés) ; entree " + APRES_LPM + " = glisse après 2032.",
+      parametres: { table: params.table, plafonds: params.plafonds, aleas: params.aleas, enveloppes: enveloppesDe(params), debuts: trajectoire ? (params.debuts || {}) : {} },
+      socle: pions.map(function (p) { return { id: p.id, nom: p.nom, type: p.type, armee: p.armee, cout: coutSocle(p), cout50: p.cout50, cout100: p.cout100, cases: [p.l, p.h], dorese_requises: p.dorese, dorese_posees: doreseDepart(p), contrainte_politique: contrainteDe("pion:" + p.id, params) }; }),
+      lignes: lignesX,
+      synthese: synX,
+      alertes_globales: al.filter(function (x) { return !x.ligne; })
+    };
+  }
+  function lireEchange(texte) {
+    var o = typeof texte === "string" ? JSON.parse(texte) : texte;
+    if (!o || o.format !== FORMAT_ECHANGE || !Array.isArray(o.lignes)) throw new Error("Ce fichier n'est pas un export STRATEGIKON.");
+    if (o.type !== "trajectoire") throw new Error("Ce fichier est un modèle 2032 : importez une trajectoire 2027-2032.");
+    return o;
+  }
+  // Comparaison : a = trajectoire des joueurs, b = trajectoire de référence. Lignes appariées par id.
+  function comparerTrajectoires(a, b) {
+    var annees = ANNEES.map(function (an) {
+      var x = (a.synthese || {})[an] || {}, y = (b.synthese || {})[an] || {};
+      return { annee: an, joueurs: x, reference: y, ecart_total: (x.total || 0) - (y.total || 0),
+        depassement_joueurs: Math.max(0, -(x.marge || 0)), depassement_reference: Math.max(0, -(y.marge || 0)) };
+    });
+    var parId = {};
+    a.lignes.forEach(function (l) { parId[l.id] = { id: l.id, libelle: l.libelle, role: l.role, joueurs: l, reference: null }; });
+    b.lignes.forEach(function (l) { (parId[l.id] = parId[l.id] || { id: l.id, libelle: l.libelle, role: l.role, joueurs: null, reference: null }).reference = l; });
+    var lignes = Object.keys(parId).map(function (k) {
+      var x = parId[k], j = x.joueurs, r = x.reference;
+      var sj = j ? j.decision.statut : null, sr = r ? r.decision.statut : null;
+      x.entree_joueurs = j && sj !== "renonce" ? j.entree : null;
+      x.entree_reference = r && sr !== "renonce" ? r.entree : null;
+      x.ecart_entree = x.entree_joueurs && x.entree_reference ? x.entree_joueurs - x.entree_reference : null;
+      x.total_joueurs = j && sj !== "renonce" ? j.total : 0;
+      x.total_reference = r && sr !== "renonce" ? r.total : 0;
+      x.renonce_joueurs = sj === "renonce"; x.renonce_reference = sr === "renonce";
+      x.alertes_joueurs = j ? j.alertes.filter(function (y) { return y.niveau === "alerte"; }).length : 0;
+      x.alertes_reference = r ? r.alertes.filter(function (y) { return y.niveau === "alerte"; }).length : 0;
+      return x;
+    });
+    function compte(f) { return lignes.filter(f).length; }
+    return {
+      annees: annees, lignes: lignes,
+      resume: {
+        plus_tot_joueurs: compte(function (x) { return x.ecart_entree < 0; }),
+        plus_tard_joueurs: compte(function (x) { return x.ecart_entree > 0; }),
+        apres_2032_joueurs: compte(function (x) { return x.entree_joueurs === APRES_LPM; }),
+        apres_2032_reference: compte(function (x) { return x.entree_reference === APRES_LPM; }),
+        renonces_joueurs: compte(function (x) { return x.renonce_joueurs; }),
+        renonces_reference: compte(function (x) { return x.renonce_reference; }),
+        alertes_joueurs: lignes.reduce(function (t, x) { return t + x.alertes_joueurs; }, 0) + (a.alertes_globales || []).length,
+        alertes_reference: lignes.reduce(function (t, x) { return t + x.alertes_reference; }, 0) + (b.alertes_globales || []).length
+      }
+    };
+  }
+  // Export à plat pour un tableur.
+  function echangeEnCsv(o) {
+    var ent = ["id", "Pôle", "Objet", "Nature", "Armée", "Modèle 2032", "Priorité pôle", "Priorité CEMA", "Priorité retenue", "Contrainte politique", "Financement", "Part (%)", "Décision", "Entrée"]
+      .concat(ANNEES.map(String)).concat(["Total LPM (M€)", "Hors LPM (M€)", "DORESE AO/MCO/RH par unité", "Tranches", "Délai fiche", "Mise en service", "Alertes", "Justification"]);
+    var out = [ent.join(";")];
+    o.lignes.forEach(function (l) {
+      var v = [l.id, l.role, l.libelle, l.nature, l.armee, l.cible ? "oui" : "", l.priorite.pole || "", l.priorite.cema || "", l.priorite.retenue,
+        l.contrainte_politique ? l.contrainte_politique.etat : "", l.financement.mode, l.financement.part !== undefined ? l.financement.part : "", l.decision.statut, l.entree || ""]
+        .concat(ANNEES.map(function (a) { return l.annees[a] ? l.annees[a].cout : ""; }))
+        .concat([l.total, l.hors_lpm, [l.dorese_unitaire.ao, l.dorese_unitaire.mco, l.dorese_unitaire.rh].join("/"), l.tranches.join(" "), l.delai_fiche || "", l.mise_en_service || "",
+          l.alertes.map(function (x) { return x.regle; }).join(" "), (l.justification || "").replace(/\s+/g, " ")]);
+      out.push(v.map(function (x) { var s2 = String(x === null || x === undefined ? "" : x); return /[";\n]/.test(s2) ? '"' + s2.replace(/"/g, '""') + '"' : s2; }).join(";"));
+    });
+    out.push("");
+    out.push(["Année", "Socle", "Demandes", "Total", "Plafond", "Marge"].join(";"));
+    Object.keys(o.synthese).forEach(function (a) { var y = o.synthese[a]; out.push([a, y.socle, y.demandes, y.total, y.plafond, y.marge].join(";")); });
+    return out.join("\n");
+  }
+
   var API = {
     CASE: CASE,
     ANNEES: ANNEES,
@@ -908,6 +1031,11 @@
     lignesEnTrajectoire: lignesEnTrajectoire,
     etalerAuto: etalerAuto,
     alertes: alertes,
+    FORMAT_ECHANGE: FORMAT_ECHANGE,
+    exporterPartie: exporterPartie,
+    lireEchange: lireEchange,
+    comparerTrajectoires: comparerTrajectoires,
+    echangeEnCsv: echangeEnCsv,
     miseEnService: miseEnService
   };
 

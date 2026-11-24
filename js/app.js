@@ -539,6 +539,7 @@
     if (arbitre() || vueComplete()) o.push(["arbitrage", "Arbitrage"]);
     o.push(["bilan", "Bilan"]);
     if (ROLES_REGLAGES.indexOf(etat.role) !== -1) o.push(["reglages", "Réglages"]);
+    if (etat.role === "Animateur") o.push(["echanges", "Échanges"]);
     return o;
   }
   function rendreVolet() {
@@ -552,7 +553,7 @@
     var v = $("volet");
     vider(v);
     ({ poser: voletPoser, selection: voletSelection, demande: voletDemande, flottaison: voletFlottaison, enveloppes: voletEnveloppes, trajectoire: voletTrajectoire,
-      arbitrage: voletArbitrage, bilan: voletBilan, reglages: voletReglages }[etat.volet] || voletPoser)(v);
+      arbitrage: voletArbitrage, bilan: voletBilan, reglages: voletReglages, echanges: voletEchanges }[etat.volet] || voletPoser)(v);
   }
 
   function choixPortee() {
@@ -1317,6 +1318,128 @@
     ul.appendChild(el("li", { classe: "traj-marge" }, [el("span", { texte: "Marge après arbitrage" }),
       el("div", { classe: "traj-bande" }, M.ANNEES.map(function (a) { return el("span", { classe: arb[a].marge < 0 ? "neg" : "pos", texte: n(arb[a].marge) || "0" }); }))]));
     v.appendChild(ul);
+  }
+
+  // ---------- Échanges (animateur) : exports, import d'une trajectoire de référence, comparaison ----------
+  var REFERENCE = null;
+  function cleReference() { return "strategikon.reference." + (etat.partie ? etat.partie.nom : ""); }
+  function chargerReference() {
+    if (REFERENCE && REFERENCE._partie === (etat.partie && etat.partie.nom)) return REFERENCE;
+    REFERENCE = null;
+    try { var t = localStorage.getItem(cleReference()); if (t) { REFERENCE = M.lireEchange(t); REFERENCE._partie = etat.partie.nom; } } catch (e) { REFERENCE = null; }
+    return REFERENCE;
+  }
+  function telecharger(nom, contenu, type) {
+    var a = el("a", { href: URL.createObjectURL(new Blob([contenu], { type: type })), download: nom });
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+  function nomFichier(type, ext) {
+    var d = new Date(), z = function (n) { return String(n).padStart(2, "0"); };
+    return "strategikon-" + (etat.partie.nom || "partie").replace(/[^\w-]+/g, "-") + "-" + type + "-" + d.getFullYear() + z(d.getMonth() + 1) + z(d.getDate()) + "-" + z(d.getHours()) + z(d.getMinutes()) + "." + ext;
+  }
+  function exporter(type) { return M.exporterPartie(PIONS, etat.lignes, params(), CATALOGUE, type, etat.partie.nom); }
+  function boutonsExport(type) {
+    return el("div", { classe: "export-boutons" }, [
+      el("button", { type: "button", classe: "btn-laiton", texte: "JSON", title: "Fichier complet, à me transmettre", onclick: function () { telecharger(nomFichier(type, "json"), JSON.stringify(exporter(type), null, 1), "application/json"); toast("Export " + (type === "trajectoire" ? "de la trajectoire" : "du modèle 2032") + " téléchargé"); } }),
+      el("button", { type: "button", classe: "btn-contour", texte: "CSV (tableur)", onclick: function () { telecharger(nomFichier(type, "csv"), "﻿" + M.echangeEnCsv(exporter(type)), "text/csv;charset=utf-8"); } })
+    ]);
+  }
+  function voletEchanges(v) {
+    var p = params();
+    v.appendChild(el("h2", { classe: "volet-titre", texte: "Échanges et comparaison" }));
+    var cibles = etat.lignes.filter(function (l) { return l.cible; });
+    var attente = cibles.filter(function (l) { return M.arbitrageDe(l, p).statut === "attente"; }).length;
+    v.appendChild(el("section", { classe: "bloc-conception" }, [el("h3", { texte: "1 · Modèle 2032 arbitré" }),
+      el("p", { classe: "aide", texte: cibles.length + " ligne(s) au modèle 2032" + (attente ? ", dont " + attente + " encore en attente du CEMA." : ", toutes arbitrées.") + " Le fichier contient le socle, les pions, DORESE, priorités, contraintes politiques, financements et décisions du CEMA." }),
+      boutonsExport("modele2032")]));
+    var places = cibles.filter(function (l) { return M.debutDe(l, p) !== null; }).length;
+    v.appendChild(el("section", { classe: "bloc-conception" }, [el("h3", { texte: "2 · Trajectoire des joueurs" }),
+      el("p", { classe: "aide", texte: "Les années 2027 à 2032 telles que les joueurs les ont construites : " + places + " ligne(s) du modèle placée(s) sur la trajectoire, plus les autres demandes, année par année." }),
+      boutonsExport("trajectoire")]));
+    var ref = chargerReference();
+    var fichier = el("input", { type: "file", accept: ".json,application/json", "aria-label": "Trajectoire de référence (JSON)" });
+    var err = el("p", { classe: "erreur" });
+    fichier.addEventListener("change", function () {
+      var f = fichier.files && fichier.files[0];
+      if (!f) return;
+      f.text().then(function (t) {
+        var o = M.lireEchange(t);
+        try { localStorage.setItem(cleReference(), t); } catch (e) { /* gardée pour la séance seulement */ }
+        o._partie = etat.partie.nom; REFERENCE = o;
+        toast("Trajectoire de référence importée"); rendreVolet();
+      }).catch(function (e) { err.textContent = e.message; });
+    });
+    var imp = el("section", { classe: "bloc-conception" }, [el("h3", { texte: "3 · Trajectoire de référence" }),
+      el("p", { classe: "aide", texte: ref ? "Importée : " + (ref.partie || "sans nom") + ", exportée le " + new Date(ref.exporte_le).toLocaleString("fr-FR") + ". Elle reste dans ce navigateur, invisible des joueurs." : "Importez le fichier JSON de la trajectoire construite hors de l'outil. Elle reste dans ce navigateur, invisible des joueurs." }),
+      el("label", { classe: "champ" }, [ref ? "Remplacer" : "Fichier JSON", fichier]), err]);
+    if (ref) imp.appendChild(el("button", { type: "button", classe: "btn-lien", texte: "Retirer la référence", onclick: function () { try { localStorage.removeItem(cleReference()); } catch (e) { /* rien */ } REFERENCE = null; rendreVolet(); } }));
+    v.appendChild(imp);
+    if (!ref) return;
+    var cmp = M.comparerTrajectoires(exporter("trajectoire"), ref);
+    v.appendChild(el("section", { classe: "bloc-conception" }, [el("h3", { texte: "4 · Comparaison" }), resumeComparaison(cmp),
+      el("button", { type: "button", classe: "btn-laiton", texte: "Afficher les deux trajectoires côte à côte", onclick: function () { ouvrirComparaison(cmp, ref); } })]));
+  }
+  function n1(m) { return (m / 1000).toLocaleString("fr-FR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }); }
+  function resumeComparaison(cmp) {
+    var t = el("table", { classe: "mini-tableau" });
+    t.appendChild(el("thead", null, [el("tr", null, ["Md€", "Joueurs", "Référence", "Écart"].map(function (x, i) { return el("th", { classe: i ? "num" : "", texte: x }); }))]));
+    var tb = el("tbody");
+    cmp.annees.forEach(function (a) {
+      tb.appendChild(el("tr", null, [el("td", { texte: String(a.annee) }),
+        el("td", { classe: "num " + (a.depassement_joueurs ? "neg" : ""), texte: n1(a.joueurs.total || 0) }),
+        el("td", { classe: "num " + (a.depassement_reference ? "neg" : ""), texte: n1(a.reference.total || 0) }),
+        el("td", { classe: "num", texte: (a.ecart_total > 0 ? "+" : "") + n1(a.ecart_total) })]));
+    });
+    t.appendChild(tb);
+    var r = cmp.resume;
+    return el("div", null, [t, el("ul", { classe: "cmp-resume" }, [
+      el("li", { texte: r.plus_tot_joueurs + " ligne(s) entrent plus tôt chez les joueurs, " + r.plus_tard_joueurs + " plus tard." }),
+      el("li", { texte: "Après 2032 : " + r.apres_2032_joueurs + " chez les joueurs, " + r.apres_2032_reference + " dans la référence." }),
+      el("li", { texte: "Renoncements : " + r.renonces_joueurs + " chez les joueurs, " + r.renonces_reference + " dans la référence." }),
+      el("li", { texte: "Alertes des fiches franchies : " + r.alertes_joueurs + " chez les joueurs, " + r.alertes_reference + " dans la référence." })
+    ])]);
+  }
+  // Vue plein écran : les deux trajectoires 2027-2032 côte à côte, ligne par ligne.
+  function ouvrirComparaison(cmp, ref) {
+    var ancien = $("comparaison"); if (ancien) ancien.remove();
+    function bande(l) {
+      return el("div", { classe: "traj-bande" }, M.ANNEES.map(function (a) {
+        var c = l && l.decision.statut !== "renonce" && l.annees[a] ? l.annees[a].cout : 0;
+        return el("span", { classe: c ? "traj-on" : "", texte: c ? n1(c) : "" });
+      }));
+    }
+    function jauge(s) {
+      var max = Math.max(s.plafond || 1, s.total || 0);
+      return el("span", { classe: "mini-barre" }, [el("span", { style: "width:" + (100 * (s.total || 0) / max) + "%", classe: (s.marge || 0) < 0 ? "trop" : "" }), el("i", { style: "left:" + (100 * (s.plafond || 0) / max) + "%" })]);
+    }
+    var tete = el("div", { classe: "cmp-ligne cmp-tete" }, [el("span", { texte: "" }), el("b", { texte: "Joueurs" }), el("b", { texte: "Référence" })]);
+    var annees = el("div", { classe: "cmp-annees" }, cmp.annees.map(function (a) {
+      return el("div", { classe: "cmp-ligne" }, [el("b", { texte: String(a.annee) }),
+        el("span", { classe: "cmp-cell" }, [jauge(a.joueurs), el("small", { classe: (a.joueurs.marge || 0) < 0 ? "neg" : "pos", texte: n1(a.joueurs.total || 0) + " Md€ · " + ((a.joueurs.marge || 0) < 0 ? "dépasse de " : "marge ") + n1(Math.abs(a.joueurs.marge || 0)) })]),
+        el("span", { classe: "cmp-cell" }, [jauge(a.reference), el("small", { classe: (a.reference.marge || 0) < 0 ? "neg" : "pos", texte: n1(a.reference.total || 0) + " Md€ · " + ((a.reference.marge || 0) < 0 ? "dépasse de " : "marge ") + n1(Math.abs(a.reference.marge || 0)) })])]);
+    }));
+    var entete = el("div", { classe: "cmp-ligne cmp-tete" }, [el("span", { texte: "Ligne" }),
+      el("div", { classe: "traj-bande traj-entete" }, M.ANNEES.map(function (a) { return el("span", { texte: String(a) }); })),
+      el("div", { classe: "traj-bande traj-entete" }, M.ANNEES.map(function (a) { return el("span", { texte: String(a) }); }))]);
+    var lignes = cmp.lignes.slice().sort(function (x, y) { return Math.abs(y.ecart_entree || 0) - Math.abs(x.ecart_entree || 0) || (x.role < y.role ? -1 : 1); });
+    var corps = lignes.map(function (x) {
+      var note = [];
+      if (x.ecart_entree) note.push(x.ecart_entree < 0 ? "joueurs " + -x.ecart_entree + " an(s) plus tôt" : "joueurs " + x.ecart_entree + " an(s) plus tard");
+      if (x.renonce_joueurs !== x.renonce_reference) note.push(x.renonce_joueurs ? "renoncée par les joueurs" : "renoncée dans la référence");
+      else if (x.renonce_joueurs) note.push("renoncée des deux côtés");
+      if (!x.joueurs || !x.reference) note.push(x.joueurs ? "absente de la référence" : "absente chez les joueurs");
+      if (x.alertes_joueurs || x.alertes_reference) note.push("alertes " + x.alertes_joueurs + " / " + x.alertes_reference);
+      return el("div", { classe: "cmp-ligne" + (note.length ? " cmp-diff" : "") }, [
+        el("span", { classe: "cmp-nom" }, [el("b", { texte: x.libelle }), el("small", { texte: x.role + (note.length ? " · " + note.join(" · ") : "") })]),
+        bande(x.joueurs), bande(x.reference)]);
+    });
+    var boite = el("section", { classe: "comparaison", id: "comparaison", role: "dialog", "aria-label": "Comparaison des trajectoires" }, [
+      el("div", { classe: "comparaison-in" }, [
+        el("div", { classe: "comparaison-tete" }, [el("h2", { classe: "volet-titre", texte: "Trajectoires 2027-2032 : joueurs et référence" }),
+          el("button", { type: "button", classe: "btn-contour", texte: "Fermer", onclick: function () { boite.remove(); } })]),
+        el("p", { classe: "aide", texte: "Montants payés par la France, en Md€, après arbitrage. Référence : " + (ref.partie || "fichier importé") + "." }),
+        resumeComparaison(cmp), tete, annees, el("h3", { texte: "Ligne par ligne" }), entete].concat(corps))]);
+    document.body.appendChild(boite);
   }
 
   // ---------- Démarrage ----------

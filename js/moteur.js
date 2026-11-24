@@ -36,7 +36,8 @@
     return {
       table: 600, // cases par année (60 Md€)
       plafonds: { 2027: 590, 2028: 580, 2029: 570, 2030: 590, 2031: 590, 2032: 590 }, // cases
-      aleas: {} // id de pion orange -> liste des années où il est posé
+      // id de pion orange -> années où il est posé. Photo 2027 : SMV et munitions posés, répétés jusqu'en 2032.
+      aleas: { P12: ANNEES.slice(), P13: ANNEES.slice() }
     };
   }
 
@@ -48,6 +49,27 @@
 
   function nbDorese(pion) {
     return pion ? pion.dorese.ao + pion.dorese.mco + pion.dorese.rh : 0;
+  }
+
+  // Situation de départ (photo 2027) : DORESE déjà posées sur chaque capacité du socle.
+  function doreseDepart(pion) {
+    var d = (pion && pion.depart) || {};
+    return { ao: d.ao || 0, mco: d.mco || 0, rh: d.rh || 0 };
+  }
+  function nbDepart(pion) { var d = doreseDepart(pion); return d.ao + d.mco + d.rh; }
+  // DORESE qui manquent à une capacité du socle pour être à 100 %.
+  function doreseManquantes(pion) {
+    if (!pion) return { ao: 0, mco: 0, rh: 0 };
+    var d = doreseDepart(pion);
+    return { ao: Math.max(0, pion.dorese.ao - d.ao), mco: Math.max(0, pion.dorese.mco - d.mco), rh: Math.max(0, pion.dorese.rh - d.rh) };
+  }
+  function nbManquantes(pion) { var m = doreseManquantes(pion); return m.ao + m.mco + m.rh; }
+  // Coût annuel d'un pion du socle tel qu'il est posé au départ.
+  function coutSocle(pion) { return pion.cout50 + nbDepart(pion) * CASE; }
+  function typesDorese(d) {
+    var t = [];
+    ["ao", "mco", "rh"].forEach(function (k) { for (var n = 0; n < (d[k] || 0); n++) t.push(k); });
+    return t;
   }
 
   // Le socle : ce qui est posé d'office chaque année (gris, violets, capacités à 50 %,
@@ -67,14 +89,14 @@
     switch (ligne.type) {
       case "dorese":
         if (!pion) return vide;
-        return { cout: nbDorese(pion) * CASE, dorese: copie(pion.dorese) };
+        return { cout: nbManquantes(pion) * CASE, dorese: doreseManquantes(pion) };
       case "ajout":
         if (!pion) return vide;
         if (Number(ligne.niveau) === 100) return { cout: pion.cout100, dorese: copie(pion.dorese) };
         return { cout: pion.cout50, dorese: { ao: 0, mco: 0, rh: 0 } };
       case "retrait":
         if (!pion) return vide;
-        return { cout: -pion.cout50, dorese: { ao: 0, mco: 0, rh: 0 } };
+        return { cout: -coutSocle(pion), dorese: { ao: 0, mco: 0, rh: 0 } };
       case "libre":
         return {
           cout: Number(ligne.cout_unitaire) || 0,
@@ -134,7 +156,7 @@
       var socle = zeroArmees();
       var demandes = zeroArmees();
       pions.forEach(function (p) {
-        if (estDansSocle(p, a, params)) socle[p.armee] = (socle[p.armee] || 0) + p.cout50;
+        if (estDansSocle(p, a, params)) socle[p.armee] = (socle[p.armee] || 0) + coutSocle(p);
       });
       var dorese = { ao: 0, mco: 0, rh: 0 };
       lignes.forEach(function (l) {
@@ -193,10 +215,12 @@
       return ordreType[a.type] - ordreType[b.type];
     });
     socle.forEach(function (p) {
-      blocs.push({ armee: p.armee, nature: p.type, libelle: p.nom, cases: p.cout50 / CASE, niveau: 50 });
-      if (passes100[p.id]) {
-        blocs[blocs.length - 1].niveau = 100;
-        blocs.push({ armee: armeeDeLigne(passes100[p.id], idx), nature: "dorese", libelle: "DORESE " + p.nom, cases: nbDorese(p) });
+      var plein = nbDorese(p) > 0 && nbManquantes(p) === 0;
+      blocs.push({ armee: p.armee, nature: p.type, libelle: p.nom, cases: p.cout50 / CASE, niveau: plein || passes100[p.id] ? 100 : 50 });
+      if (nbDepart(p)) blocs.push({ armee: p.armee, nature: "dorese", libelle: "DORESE " + p.nom, cases: nbDepart(p) });
+      if (passes100[p.id] && nbManquantes(p)) {
+        blocs[blocs.length - 1 - (nbDepart(p) ? 1 : 0)].niveau = 100;
+        blocs.push({ armee: armeeDeLigne(passes100[p.id], idx), nature: "dorese", libelle: "DORESE " + p.nom, cases: nbManquantes(p) });
       }
     });
     lignes.forEach(function (l) {
@@ -288,10 +312,12 @@
     function groupe(nom) { return groupes[nom] || groupes["Interarmées"]; }
     pions.forEach(function (p) {
       if (!estDansSocle(p, annee, params) || retires[p.id]) return;
-      var l100 = passes100[p.id];
+      var l100 = passes100[p.id] && nbManquantes(p) ? passes100[p.id] : null;
       var g = p.type === "gris" ? "Fixes" : (l100 ? armeeDeLigne(l100, idx) : p.armee);
+      var types = typesDorese(doreseDepart(p)).concat(l100 ? typesDorese(doreseManquantes(p)) : []);
+      var plein = nbDorese(p) > 0 && types.length >= nbDorese(p);
       groupe(g).rigides.push({ pion: p, w: p.l || 1, h: p.h || 1, armee: g === "Fixes" ? p.armee : g, nature: p.type,
-        libelle: p.nom, niveau: l100 ? 100 : 50, dorese: l100 ? nbDorese(p) : 0, detailDorese: p.dorese, socle: true });
+        libelle: p.nom, niveau: plein ? 100 : 50, dorese: types.length, types: types, socle: true });
     });
     lignes.forEach(function (l) {
       var q = quantite(l, annee);
@@ -337,8 +363,7 @@
         pieces.push({ r: pos.r, c: pos.c, w: pos.w, h: pos.h, armee: it.armee, nature: it.nature, libelle: it.libelle,
           niveau: it.nature === "capacite" ? it.niveau : null, role: it.role || null, groupe: nomG, cases: pos.w * pos.h });
         // DORESE au contact : cases libres voisines de la capacité (ou de ses DORESE déjà posées).
-        var types = [];
-        ["ao", "mco", "rh"].forEach(function (k) { for (var n = 0; n < (it.detailDorese || {})[k]; n++) types.push(k); });
+        var types = it.types || typesDorese(it.detailDorese || {});
         var amas = [{ r: pos.r, c: pos.c, w: pos.w, h: pos.h }];
         types.slice(0, it.dorese).forEach(function (t) {
           var cand = voisinLibre(plateau, amas);
@@ -444,6 +469,11 @@
     parametresParDefaut: parametresParDefaut,
     indexPions: indexPions,
     nbDorese: nbDorese,
+    doreseDepart: doreseDepart,
+    nbDepart: nbDepart,
+    doreseManquantes: doreseManquantes,
+    nbManquantes: nbManquantes,
+    coutSocle: coutSocle,
     unitaire: unitaire,
     quantite: quantite,
     coutLigne: coutLigne,

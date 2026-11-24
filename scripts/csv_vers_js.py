@@ -41,6 +41,12 @@ def main():
                 "rh": nombre(ligne["DORESE RH (soldat)"]),
             }
             cout50 = nombre(ligne["Coût actuel (M€)"])
+            # Situation de départ (photo 2027) : DORESE déjà posées.
+            depart = {
+                "ao": nombre(ligne.get("DORESE posées 2027 AO")),
+                "mco": nombre(ligne.get("DORESE posées 2027 MCO")),
+                "rh": nombre(ligne.get("DORESE posées 2027 RH")),
+            }
             pions.append({
                 "id": "P" + ligne["ID"].strip(),
                 "armee": ligne["Armée / pôle"].strip(),
@@ -51,6 +57,7 @@ def main():
                 "cout50": cout50,
                 "dorese": dorese,
                 "cout100": cout50 + 100 * sum(dorese.values()),
+                "depart": depart,
                 "remarque": ligne["Fiabilité / remarques"].strip(),
             })
     entete = "// Fichier généré par scripts/csv_vers_js.py : ne pas modifier à la main.\n"

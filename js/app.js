@@ -560,8 +560,8 @@
   function demarrer() {
     $("mode").textContent = S.mode === "partage" ? "Base partagée" : "Mode local";
     $("note-mode").textContent = S.mode === "partage"
-      ? "Les parties sont enregistrées dans la feuille Google de l'animateur : elles restent disponibles d'une séance à l'autre, et chaque joueur voit les demandes des autres en quelques secondes."
-      : "Mode local : les parties restent dans ce navigateur. Pour jouer à plusieurs, ouvrez l'outil par le lien Google de l'animateur.";
+      ? "Les parties sont enregistrées dans la base partagée : elles restent disponibles d'une séance à l'autre, et chaque joueur voit les demandes des autres en quelques secondes."
+      : "Mode local : les parties restent dans ce navigateur. Pour jouer à plusieurs, ouvrez l'outil par le lien que donne l'animateur.";
     remplirRoles($("rej-role"), "EMAT");
     var ty = $("ajout-type");
     Object.keys(M.TYPES_LIGNE).forEach(function (k) { ty.appendChild(el("option", { value: k, texte: M.TYPES_LIGNE[k] })); });

@@ -2,7 +2,7 @@
 
 Outil web du serious game STRATEGIKON (École de guerre). Chaque pôle compose sa demande année par année ; l'outil calcule les cases occupées et les DORESE, et confronte la somme des demandes au plafond de chaque année.
 
-Installation pour une partie réelle : voir [INSTALLATION.md](INSTALLATION.md).
+Mise en ligne : [INSTALLATION-SUPABASE.md](INSTALLATION-SUPABASE.md) (Supabase et GitHub Pages, recommandé) ou [INSTALLATION.md](INSTALLATION.md) (Google Sheets, en secours).
 
 ## Règles modélisées
 
@@ -29,7 +29,8 @@ Installation pour une partie réelle : voir [INSTALLATION.md](INSTALLATION.md).
 | `scripts/csv_vers_js.py` | convertit le CSV en `data/pions.js` |
 | `data/options.js` | modèles de lignes libres (DGRIS, DGA), à valider |
 | `js/moteur.js` | calculs, sans dépendance |
-| `js/stockage.js` | stockage : feuille Google (Apps Script) ou navigateur seul |
+| `js/stockage.js` | stockage : Supabase, feuille Google (Apps Script) ou navigateur seul |
+| `supabase/schema.sql` | tables et fonctions de la base Supabase |
 | `js/app.js`, `css/style.css`, `index.html` | interface |
 | `apps-script/Code.gs` | serveur Google Apps Script |
 | `scripts/assembler.py` | produit `apps-script/Index.html` (page en un seul fichier) |

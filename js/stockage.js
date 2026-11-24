@@ -1,5 +1,5 @@
 // Stockage des parties. Deux modes, même interface (toutes les méthodes renvoient une Promise) :
-//  - « partagé » : feuille Google via Apps Script (page servie par le script, ou URL dans js/config.js) ;
+//  - « partagé » : base Supabase (clés dans js/config.js), ou feuille Google via Apps Script ;
 //  - « local »   : navigateur seul (localStorage), pour essayer l'outil sans rien installer.
 // Interface : listerParties, creerPartie, ouvrirPartie, lireEtat, majParams, ecrireLigne, supprimerLigne.
 (function (racine) {
@@ -40,6 +40,35 @@
   Partage.prototype.majParams = function (nom, mdp, params) { return this.appel("majParams", { nom: nom, mdp: mdp, params: params }); };
   Partage.prototype.ecrireLigne = function (nom, mdp, ligne) { return this.appel("ecrireLigne", { nom: nom, mdp: mdp, ligne: ligne }); };
   Partage.prototype.supprimerLigne = function (nom, mdp, id) { return this.appel("supprimerLigne", { nom: nom, mdp: mdp, id: id }); };
+
+  // ---------- Mode partagé : Supabase (fonctions SQL de supabase/schema.sql) ----------
+  function Supabase(url, cle) {
+    this.mode = "partage";
+    this.url = url.replace(/\/+$/, "");
+    this.cle = cle;
+  }
+  Supabase.prototype.rpc = function (fonction, args) {
+    var entetes = { "Content-Type": "application/json", apikey: this.cle };
+    // Ancienne clé « anon » (JWT) : on la passe aussi en Authorization. Nouvelle clé sb_publishable_ : apikey seul.
+    if (this.cle.indexOf("sb_") !== 0) entetes.Authorization = "Bearer " + this.cle;
+    return fetch(this.url + "/rest/v1/rpc/" + fonction, {
+      method: "POST", headers: entetes, body: JSON.stringify(args || {})
+    }).then(function (r) {
+      return r.text().then(function (t) {
+        var corps = null;
+        try { corps = t ? JSON.parse(t) : null; } catch (e) { corps = { message: t }; }
+        if (!r.ok) throw new Error((corps && corps.message) || "Erreur du serveur (" + r.status + ")");
+        return corps;
+      });
+    }, function () { throw new Error("Base injoignable : vérifiez la connexion internet."); });
+  };
+  Supabase.prototype.listerParties = function () { return this.rpc("lister_parties"); };
+  Supabase.prototype.creerPartie = function (nom, mdp, params) { return this.rpc("creer_partie", { p_nom: nom, p_mdp: mdp, p_params: params }); };
+  Supabase.prototype.ouvrirPartie = function (nom, mdp) { return this.rpc("ouvrir_partie", { p_nom: nom, p_mdp: mdp }); };
+  Supabase.prototype.lireEtat = function (nom, mdp) { return this.rpc("lire_etat", { p_nom: nom, p_mdp: mdp }); };
+  Supabase.prototype.majParams = function (nom, mdp, params) { return this.rpc("maj_params", { p_nom: nom, p_mdp: mdp, p_params: params }); };
+  Supabase.prototype.ecrireLigne = function (nom, mdp, ligne) { return this.rpc("ecrire_ligne", { p_nom: nom, p_mdp: mdp, p_ligne: ligne }); };
+  Supabase.prototype.supprimerLigne = function (nom, mdp, id) { return this.rpc("supprimer_ligne", { p_nom: nom, p_mdp: mdp, p_id: id }); };
 
   // ---------- Mode local (un seul navigateur) ----------
   var CLE_LOCALE = "strategikon.v1";
@@ -128,7 +157,8 @@
   };
 
   var dansAppsScript = !!(racine.google && racine.google.script && racine.google.script.run);
-  racine.STRAT_STOCKAGE = (dansAppsScript || CONFIG.appsScriptUrl)
-    ? new Partage(CONFIG.appsScriptUrl)
+  racine.STRAT_STOCKAGE = dansAppsScript ? new Partage("")
+    : (CONFIG.supabaseUrl && CONFIG.supabaseCle) ? new Supabase(CONFIG.supabaseUrl, CONFIG.supabaseCle)
+    : CONFIG.appsScriptUrl ? new Partage(CONFIG.appsScriptUrl)
     : new Local();
 })(window);

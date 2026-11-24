@@ -8,7 +8,7 @@
 // Option 2, Google Sheets : rien à remplir si l'outil est ouvert par le lien Apps Script ;
 // sinon collez l'URL du déploiement Apps Script (elle finit par /exec).
 window.STRAT_CONFIG = {
-  supabaseUrl: "",
-  supabaseCle: "",
+  supabaseUrl: "https://woxavwyljpqzhljutprg.supabase.co",
+  supabaseCle: "sb_publishable_EP1fMsE6_INYupnQajGZbA_jGDX2rDp",
   appsScriptUrl: ""
 };

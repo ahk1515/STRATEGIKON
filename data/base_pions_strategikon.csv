@@ -1,0 +1,53 @@
+ID,Armée / pôle,Nom du pion,Type de pion,Face posée,Largeur (cases),Hauteur (cases),Taille (cases),Coût actuel (M€),DORESE Activité opé. (botte),DORESE MCO (camion),DORESE RH (soldat),Total DORESE pour passer à 100 %,Surcoût pour 100 % (M€),Coût à 100 % (M€),Photo source,Fiabilité / remarques
+1,Interarmées,Dissuasion (1/6),Gris – dépense fixe,Gris,5,2,10,1000,,,,,,1000,"p6, p5",Lisible. 6 pions identiques de 5x2.
+2,Interarmées,Dissuasion (2/6),Gris – dépense fixe,Gris,5,2,10,1000,,,,,,1000,"p6, p5",Lisible.
+3,Interarmées,Dissuasion (3/6),Gris – dépense fixe,Gris,5,2,10,1000,,,,,,1000,"p6, p5",Lisible.
+4,Interarmées,Dissuasion (4/6),Gris – dépense fixe,Gris,5,2,10,1000,,,,,,1000,"p6, p5",Lisible.
+5,Interarmées,Dissuasion (5/6),Gris – dépense fixe,Gris,5,2,10,1000,,,,,,1000,"p6, p5",Lisible.
+6,Interarmées,Dissuasion (6/6),Gris – dépense fixe,Gris,5,2,10,1000,,,,,,1000,"p6, p5",Lisible.
+7,Interarmées,Infrastructures,Gris – dépense fixe,Gris,5,3,15,1500,,,,,,1500,p2,Lisible. Taille comptée sur la grille.
+8,Interarmées,Secrétariat général pour l'administration (SGA),Gris – dépense fixe,Gris,3,2,6,600,,,,,,600,p2,Lisible.
+9,Interarmées,Surcoût OPEX,Gris – dépense fixe,Gris,3,3,9,900,,,,,,900,p2,Lisible.
+10,Interarmées,R&D,Violet – investissement,Violet,3,3,9,900,,,,,,900,p2,"Bandeau violet = investissement selon le guide, mais posé d'office : à traiter comme fixe ? À confirmer."
+11,Interarmées,Base SIC,Violet – investissement,Violet,5,4,20,2000,,,,,,2000,"p4, p5","Bandeau violet, pas de DORESE. Taille 5x4 comptée sur la grille (±1 rangée)."
+12,Interarmées,"Service militaire volontaire (SMV) – 2,5 Md€",Orange – scénario / aléa,Orange,5,5,25,2500,,,,,,2500,p0,"Montant écrit sur le pion (2,5 Md€ = 25 cases, cohérent)."
+13,Interarmées,"Munitions – 1,5 Md€",Orange – scénario / aléa,Orange,3,5,15,1500,,,,,,1500,p0,"Montant lu sur le Figuratif (1,5 Md€ = 15 cases, cohérent avec le pointillé 3x5)."
+14,Terre,Brigade forces spéciales,Capacité,Rouge (dégradé),3,1,3,300,1,1,0,2,200,500,p3,Lisible.
+15,Terre,Brigade SIC,Capacité,Rouge (dégradé),3,1,3,300,0,0,0,0,0,300,p3,"Lisible : 0/0/0, donc déjà à 100 % ?"
+16,Terre,Brigade de renseignement,Capacité,Rouge (dégradé),3,1,3,300,1,0,0,1,100,400,p3,Lisible.
+17,Terre,Brigade logistique,Capacité,Rouge (dégradé),3,1,3,300,1,0,0,1,100,400,p3,Lisible.
+18,Terre,Brigade maintenance,Capacité,Rouge (dégradé),3,1,3,300,1,0,0,1,100,400,p3,Lisible.
+19,Terre,Socle Terre,Capacité,Rouge (dégradé),3,1,3,300,0,0,0,0,0,300,p3,Lisible : 0/0/0. Le logo du pion ressemble à celui de l'Armée de l'Air : à vérifier.
+20,Terre,Brigade Leclerc 1,Capacité,Rouge (dégradé),3,1,3,300,1,1,0,2,200,500,p3,Lisible. Identique à l'exemple du guide.
+21,Terre,Brigade Leclerc 2,Capacité,Rouge (dégradé),3,1,3,300,1,1,0,2,200,500,p3,Lisible.
+22,Terre,Brigade Scorpion 1,Capacité,Rouge (dégradé),3,1,3,300,1,1,0,2,200,500,p3,Lisible.
+23,Terre,Brigade Scorpion 2,Capacité,Rouge (dégradé),3,1,3,300,1,1,0,2,200,500,p3,Lisible.
+24,Terre,Brigade Serval 1,Capacité,Rouge (dégradé),3,1,3,300,1,1,0,2,200,500,"p3, p2",Lisible.
+25,Terre,Brigade Serval 2,Capacité,Rouge (dégradé),3,1,3,300,1,1,0,2,200,500,"p3, p2",Lisible.
+26,Terre,Brigade aéromobile,Capacité,Rouge (dégradé),2,2,4,400,1,1,0,2,200,600,p3,Lisible. Porte le logo Armée de l'Air et de l'Espace : armée de rattachement à confirmer.
+27,Air et Espace,Capacité A400M,Capacité,Rouge (dégradé),3,1,3,300,1,2,0,3,300,600,p6,Lisible.
+28,Air et Espace,Capacité MRTT,Capacité,Rouge (dégradé),2,1,2,200,0,1,0,1,100,300,p6,Lisible.
+29,Air et Espace,Capacité hélicoptères,Capacité,Rouge (dégradé),2,1,2,200,0,1,0,1,100,300,p6,Lisible.
+30,Air et Espace,Capacité drones MALE,Capacité,Rouge (dégradé),2,1,2,200,0,1,0,1,100,300,p6,Lisible.
+31,Air et Espace,Capacité C130J,Capacité,Rouge (dégradé),1,1,1,100,1,1,1,3,300,400,p6,Petits chiffres : lisibles mais pictogramme MCO différent (clé). Vérifier sur le pion.
+32,Air et Espace,Socle Air,Capacité,Rouge (dégradé),4,2,8,800,0,0,2,2,200,1000,p6,Lisible.
+33,Air et Espace,Capacité Rafale,Capacité,Rouge (dégradé),4,2,8,800,1,3,1,5,500,1300,p6,Lisible.
+34,Marine,Capacité SNA,Capacité,Rouge (dégradé),2,1,2,200,0,1,0,1,100,300,p1,Lisible.
+35,Marine,Capacité hélicoptères manœuvre et assaut,Capacité,Rouge (dégradé),3,1,3,300,0,2,0,2,200,500,p1,Lisible.
+36,Marine,Capacité souveraineté & surveillance,Capacité,Rouge (dégradé),2,1,2,200,0,1,0,1,100,300,p1,Lisible.
+37,Marine,Capacité drones maritimes,Capacité,Rouge (dégradé),2,1,2,200,0,1,0,1,100,300,p1,Lisible.
+38,Marine,Capacité Rafale Marine,Capacité,Rouge (dégradé),2,1,2,200,0,2,0,2,200,400,p1,Lisible.
+39,Marine,Capacité Atlantique 2,Capacité,Rouge (dégradé),2,1,2,200,0,1,0,1,100,300,p1,Lisible.
+40,Marine,Capacité FREMM/FDA,Capacité,Rouge (dégradé),2,2,4,400,1,2,1,4,400,800,p1,Lisible.
+41,Marine,Capacité porte-avions,Capacité,Rouge (dégradé),2,2,4,400,1,2,1,4,400,800,p1,Lisible.
+42,Marine,Capacité FDI,Capacité,Rouge (dégradé),2,2,4,400,1,1,0,2,200,600,p1,Lisible.
+43,Marine,Capacité HIL,Capacité,Rouge (dégradé),1,1,1,100,0,0,0,0,0,100,p1,"Petit pion, lisible au zoom : 0/0/0."
+44,Marine,FUSCO,Capacité,Rouge (dégradé),1,1,1,100,0,0,1,1,100,200,p1,"Petit pion, lisible au zoom."
+45,Marine,Capacité porte-hélicoptères,Capacité,Rouge (dégradé),1,1,1,100,0,1,0,1,100,200,p1,"Petit pion, lisible au zoom."
+46,Marine,Capacité ravitaillement en mer,Capacité,Rouge (dégradé),1,1,1,100,0,1,0,1,100,200,p1,"Petit pion, lisible au zoom."
+47,Marine,Capacité de surveillance et d'intervention maritime,Capacité,Rouge (dégradé),1,1,1,100,0,1,0,1,100,200,p1,"Petit pion, lisible au zoom."
+48,Interarmées,Cyberdéfense,Capacité,Rouge (dégradé),2,1,2,200,0,1,1,2,200,400,p4,Lisible.
+49,Interarmées,Renseignement,Capacité,Rouge (dégradé),2,2,4,400,1,1,1,3,300,700,p4,Lisible.
+50,Interarmées,Service de santé des armées,Capacité,Rouge (dégradé),3,2,6,600,0,0,2,2,200,800,p4,Lisible.
+51,Interarmées,Planification et conduite des opérations,Capacité,Rouge (dégradé),4,3,12,1200,0,2,2,4,400,1600,p4,Lisible. Valeurs identiques à l'exemple du guide.
+52,Interarmées,Soutien et logistique interarmées,Capacité,Rouge (dégradé),4,6,24,2400,0,3,3,6,600,3000,p4,Lisible.

@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>STRATEGIKON LPM</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="css/style.css">
+
+</head>
+<body>
+<header class="bandeau">
+  <div class="bandeau-in">
+    <div class="marque">
+      <span class="marque-nom">STRATEGIKON</span>
+      <span class="marque-sous">LPM 2027-2032 · table budgétaire</span>
+    </div>
+    <div class="session" id="session" hidden>
+      <span class="puce" id="session-partie"></span>
+      <label class="sr" for="session-role">Rôle</label>
+      <select id="session-role"></select>
+      <button class="btn-discret" id="btn-quitter" type="button">Changer de partie</button>
+    </div>
+    <span class="mode" id="mode"></span>
+  </div>
+</header>
+
+<main class="page">
+  <!-- Accueil : choisir ou créer une partie -->
+  <section id="ecran-accueil" class="accueil">
+    <div class="accueil-intro">
+      <h1>Construire la LPM, case par case</h1>
+      <p>Chaque pôle compose sa demande année par année. L'outil calcule en direct les cases occupées et les DORESE, et confronte la somme des demandes au plafond de chaque année. Une case vaut 100 M€ ; la table compte 600 cases, soit 60 Md€.</p>
+    </div>
+    <div class="accueil-cartes">
+      <form class="carte" id="form-rejoindre" autocomplete="off">
+        <h2>Rejoindre une partie</h2>
+        <label for="rej-partie">Partie</label>
+        <select id="rej-partie" required></select>
+        <label for="rej-mdp">Mot de passe de la partie</label>
+        <input id="rej-mdp" type="password" required>
+        <label for="rej-role">Votre rôle</label>
+        <select id="rej-role" required></select>
+        <button class="btn" type="submit">Entrer dans la partie</button>
+        <p class="erreur" id="rej-erreur" role="alert"></p>
+      </form>
+      <form class="carte" id="form-creer" autocomplete="off">
+        <h2>Créer une partie</h2>
+        <label for="cre-nom">Nom de la partie</label>
+        <input id="cre-nom" placeholder="Bageia 5" maxlength="80" required>
+        <label for="cre-mdp">Mot de passe (4 caractères minimum)</label>
+        <input id="cre-mdp" type="password" minlength="4" required>
+        <label for="cre-mdp2">Confirmer le mot de passe</label>
+        <input id="cre-mdp2" type="password" minlength="4" required>
+        <button class="btn btn-second" type="submit">Créer et entrer comme animateur</button>
+        <p class="erreur" id="cre-erreur" role="alert"></p>
+      </form>
+    </div>
+    <p class="note" id="note-mode"></p>
+  </section>
+
+  <!-- Partie en cours -->
+  <section id="ecran-partie" hidden>
+    <nav class="onglets" role="tablist">
+      <button role="tab" data-onglet="demande" aria-selected="true">Ma demande</button>
+      <button role="tab" data-onglet="synthese" aria-selected="false">Synthèse</button>
+      <button role="tab" data-onglet="table" aria-selected="false">Table</button>
+      <button role="tab" data-onglet="parametres" aria-selected="false">Paramètres</button>
+    </nav>
+
+    <div class="vue" id="vue-demande">
+      <div class="entete-vue">
+        <div>
+          <h2 id="titre-demande">Demande</h2>
+          <p class="aide">Une ligne par objet. Indiquez dans chaque année le nombre d'exemplaires posés sur la table cette année-là. Les modifications sont enregistrées aussitôt.</p>
+        </div>
+        <div class="ajout">
+          <label for="ajout-type" class="sr">Type de ligne</label>
+          <select id="ajout-type"></select>
+          <button class="btn" id="btn-ajouter" type="button">Ajouter la ligne</button>
+        </div>
+      </div>
+      <div class="defile">
+        <table class="grille-saisie" id="table-demande"></table>
+      </div>
+      <div class="bilan" id="bilan-role"></div>
+    </div>
+
+    <div class="vue" id="vue-synthese" hidden>
+      <div class="entete-vue">
+        <div>
+          <h2>Synthèse de la partie</h2>
+          <p class="aide">Socle (pions posés d'office) plus toutes les demandes, par année et par armée, face au plafond.</p>
+        </div>
+        <div class="ajout">
+          <button class="btn-discret" id="btn-copier-csv" type="button">Copier en CSV</button>
+          <button class="btn-discret" id="btn-telecharger-csv" type="button">Télécharger le CSV</button>
+        </div>
+      </div>
+      <div class="trajectoire" id="trajectoire"></div>
+      <div class="defile"><table class="tableau" id="table-synthese"></table></div>
+      <h3>Demandes par rôle</h3>
+      <div class="defile"><table class="tableau" id="table-roles"></table></div>
+      <h3>Toutes les lignes</h3>
+      <div class="defile"><table class="tableau" id="table-toutes"></table></div>
+    </div>
+
+    <div class="vue" id="vue-table" hidden>
+      <div class="entete-vue">
+        <div>
+          <h2>Table budgétaire</h2>
+          <p class="aide">Chaque carré est une case de 100 M€. Le socle est posé d'abord, puis les demandes armée par armée ; les DORESE sont posées au contact de leur capacité. Survolez une case pour voir le pion.</p>
+        </div>
+        <div class="ajout">
+          <label for="table-annee">Année</label>
+          <select id="table-annee"></select>
+        </div>
+      </div>
+      <div class="table-chiffres" id="table-chiffres"></div>
+      <div class="defile"><div class="plateau" id="plateau"></div></div>
+      <div class="legende" id="legende"></div>
+    </div>
+
+    <div class="vue" id="vue-parametres" hidden>
+      <h2>Paramètres de la partie</h2>
+      <p class="aide" id="aide-parametres"></p>
+      <form id="form-parametres" class="parametres">
+        <fieldset>
+          <legend>Plafond annuel (en cases de 100 M€)</legend>
+          <div class="plafonds" id="plafonds"></div>
+        </fieldset>
+        <fieldset>
+          <legend>Pions de scénario (orange) posés sur la table</legend>
+          <div id="aleas"></div>
+        </fieldset>
+        <button class="btn" type="submit" id="btn-parametres">Enregistrer les paramètres</button>
+        <p class="note" id="param-etat" role="status"></p>
+      </form>
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script src="js/config.js"></script>
+<script src="data/pions.js"></script>
+<script src="data/options.js"></script>
+<script src="js/moteur.js"></script>
+<script src="js/stockage.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

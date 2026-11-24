@@ -52,6 +52,14 @@ button.pion-case { font-size: .55rem; }
 .pion-clic { cursor: pointer; }
 .pion-clic:hover { filter: brightness(1.08); }
 .pion-choisi { outline: 3px solid var(--texte); outline-offset: 1px; z-index: 3; }
+.pion-estompe { opacity: .16; filter: grayscale(1); }
+.pion-estompe.pion-choisi { opacity: .6; }
+.fond-clic { cursor: copy; }
+.fond-clic:hover { background: var(--accent-doux); outline: 1px dashed var(--laiton); outline-offset: -1px; }
+.bascules { display: flex; flex-wrap: wrap; gap: .5rem; }
+.hors-table { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; margin-top: .6rem; font-size: .82rem; }
+.hors-titre { color: var(--sourdine); }
+.hors-pion { cursor: pointer; background: var(--panneau); border: 1px dashed var(--alerte); border-radius: 2px; padding: .15rem .5rem; font-size: .8rem; color: var(--texte); }
 .pion-neuf { animation: pose .6s ease-out; }
 @keyframes pose { from { transform: scale(.6); opacity: .2; } to { transform: none; opacity: 1; } }
 

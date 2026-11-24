@@ -29,6 +29,7 @@
     dorese: "Passer à 100 % (ajout des DORESE)",
     ajout: "Ajouter un pion",
     retrait: "Retirer un pion du socle",
+    degrade: "Repasser une capacité à 50 % (retirer ses DORESE)",
     libre: "Option du catalogue ou pion sur mesure"
   };
 
@@ -94,6 +95,10 @@
         if (!pion) return vide;
         if (Number(ligne.niveau) === 100) return { cout: pion.cout100, dorese: copie(pion.dorese) };
         return { cout: pion.cout50, dorese: { ao: 0, mco: 0, rh: 0 } };
+      case "degrade":
+        if (!pion) return vide;
+        var dd = doreseDepart(pion);
+        return { cout: -nbDepart(pion) * CASE, dorese: { ao: -dd.ao, mco: -dd.mco, rh: -dd.rh } };
       case "retrait":
         if (!pion) return vide;
         return { cout: -coutSocle(pion), dorese: { ao: 0, mco: 0, rh: 0 } };
@@ -116,7 +121,7 @@
   function quantite(ligne, annee) {
     var q = Number((ligne.qte || {})[annee]) || 0;
     // Un pion du socle n'existe qu'en un exemplaire : on plafonne à 1.
-    if (ligne.type === "dorese" || ligne.type === "retrait") q = Math.max(0, Math.min(1, q));
+    if (ligne.type === "dorese" || ligne.type === "retrait" || ligne.type === "degrade") q = Math.max(0, Math.min(1, q));
     return Math.max(0, q);
   }
 
@@ -197,12 +202,13 @@
     var idx = indexPions(pions);
     var blocs = [];
     var retires = {};
-    var passes100 = {};
+    var passes100 = {}, degrades = {};
     lignes.forEach(function (l) {
       var q = quantite(l, annee);
       if (!q) return;
       if (l.type === "retrait") retires[l.pion] = true;
       if (l.type === "dorese") passes100[l.pion] = l;
+      if (l.type === "degrade") degrades[l.pion] = l;
     });
     var ordreType = { gris: 0, violet: 1, orange: 2, capacite: 3 };
     var socle = pions.filter(function (p) { return estDansSocle(p, annee, params) && !retires[p.id]; });
@@ -215,9 +221,10 @@
       return ordreType[a.type] - ordreType[b.type];
     });
     socle.forEach(function (p) {
-      var plein = p.type === "capacite" && nbManquantes(p) === 0;
+      var dg = !!degrades[p.id] && !passes100[p.id];
+      var plein = p.type === "capacite" && nbManquantes(p) === 0 && !dg;
       blocs.push({ armee: p.armee, nature: p.type, libelle: p.nom, cases: p.cout50 / CASE, niveau: plein || passes100[p.id] ? 100 : 50 });
-      if (nbDepart(p)) blocs.push({ armee: p.armee, nature: "dorese", libelle: "DORESE " + p.nom, cases: nbDepart(p) });
+      if (nbDepart(p) && !dg) blocs.push({ armee: p.armee, nature: "dorese", libelle: "DORESE " + p.nom, cases: nbDepart(p) });
       if (passes100[p.id] && nbManquantes(p)) {
         blocs[blocs.length - 1 - (nbDepart(p) ? 1 : 0)].niveau = 100;
         blocs.push({ armee: armeeDeLigne(passes100[p.id], idx), nature: "dorese", libelle: "DORESE " + p.nom, cases: nbManquantes(p) });
@@ -225,7 +232,7 @@
     });
     lignes.forEach(function (l) {
       var q = quantite(l, annee);
-      if (!q || l.type === "dorese" || l.type === "retrait") return;
+      if (!q || l.type === "dorese" || l.type === "retrait" || l.type === "degrade") return;
       var arm = armeeDeLigne(l, idx);
       if (l.type === "ajout") {
         var p = idx[l.pion];
@@ -299,11 +306,12 @@
     var tableCases = Number(params.table) || 600;
     var plateau = new Plateau(Math.ceil(tableCases / LARGEUR));
     var pieces = [];
-    var retires = {}, passes100 = {};
+    var retires = {}, passes100 = {}, degrades = {};
     lignes.forEach(function (l) {
       if (!quantite(l, annee)) return;
       if (l.type === "retrait") retires[l.pion] = true;
       if (l.type === "dorese") passes100[l.pion] = l;
+      if (l.type === "degrade") degrades[l.pion] = l;
     });
 
     // Constitution des groupes.
@@ -314,15 +322,16 @@
       if (!estDansSocle(p, annee, params) || retires[p.id]) return;
       var l100 = passes100[p.id] && nbManquantes(p) ? passes100[p.id] : null;
       var g = p.type === "gris" ? "Fixes" : (l100 ? armeeDeLigne(l100, idx) : p.armee);
-      var types = typesDorese(doreseDepart(p)).concat(l100 ? typesDorese(doreseManquantes(p)) : []);
+      var dg = degrades[p.id] && !passes100[p.id] ? degrades[p.id] : null;
+      var types = (dg ? [] : typesDorese(doreseDepart(p))).concat(l100 ? typesDorese(doreseManquantes(p)) : []);
       var plein = types.length >= nbDorese(p);
       groupe(g).rigides.push({ pion: p, w: p.l || 1, h: p.h || 1, armee: g === "Fixes" ? p.armee : g, nature: p.type,
         libelle: p.nom, niveau: plein ? 100 : 50, dorese: types.length, types: types, socle: true,
-        nDepart: nbDepart(p), ligneDorese: l100 ? l100.id : null, roleDorese: l100 ? l100.role : null });
+        nDepart: dg ? 0 : nbDepart(p), ligneDorese: l100 ? l100.id : null, roleDorese: l100 ? l100.role : null, degrade: dg ? dg.id : null });
     });
     lignes.forEach(function (l) {
       var q = quantite(l, annee);
-      if (!q || l.type === "dorese" || l.type === "retrait") return;
+      if (!q || l.type === "dorese" || l.type === "retrait" || l.type === "degrade") return;
       var arm = armeeDeLigne(l, idx);
       if (l.type === "ajout") {
         var p = idx[l.pion];
@@ -362,7 +371,7 @@
         }
         plateau.marquer(pos.r, pos.c, pos.w, pos.h, id);
         pieces.push({ r: pos.r, c: pos.c, w: pos.w, h: pos.h, armee: it.armee, nature: it.nature, libelle: it.libelle,
-          pion: it.pion ? it.pion.id : null, ligne: it.ligne || null, socle: !!it.socle, ligneDorese: it.ligneDorese || null,
+          pion: it.pion ? it.pion.id : null, ligne: it.ligne || null, socle: !!it.socle, ligneDorese: it.ligneDorese || null, degrade: it.degrade || null,
           niveau: it.nature === "capacite" ? it.niveau : null, role: it.role || null, groupe: nomG, cases: pos.w * pos.h });
         // DORESE au contact : cases libres voisines de la capacité (ou de ses DORESE déjà posées).
         var types = it.types || typesDorese(it.detailDorese || {});

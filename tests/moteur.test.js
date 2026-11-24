@@ -111,3 +111,15 @@ test("arbitrage : renoncé retire la ligne, différé la décale et reporte hors
   assert.strictEqual(M.arrondiCase(150), 200);
   assert.strictEqual(M.arrondiCase(249), 200);
 });
+
+test("repasser une capacité à 50 % rend ses DORESE et les ôte de la table", () => {
+  const l = { id: "g", role: "EMAAE", type: "degrade", pion: "P33", qte: { 2027: 1 } };
+  assert.strictEqual(M.coutLigne(l, IDX).annees[2027].cout, -500);
+  const s = M.synthese(PIONS, [l], P)[2027];
+  assert.strictEqual(s.total, 39900 - 500);
+  const t = M.placerAnnee(PIONS, [l], P, 2027);
+  const rafale = t.pieces.find((p) => p.libelle === "Capacité Rafale");
+  assert.strictEqual(rafale.niveau, 50);
+  assert.strictEqual(t.cellules.filter((c) => c.libelle.endsWith("Capacité Rafale")).length, 0);
+  assert.strictEqual(t.occupees, 399 - 5);
+});

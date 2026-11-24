@@ -15,7 +15,7 @@
 
   var etat = {
     partie: null, mdp: "", role: "", lignes: [], annee: M.ANNEES[0], vue: "demandes",
-    volet: "poser", filtre: "capacites", portee: "suite", recherche: "", selection: null, neuf: null
+    volet: "poser", filtre: "capacites", portee: "suite", recherche: "", selection: null, neuf: null, maTable: true
   };
   var enAttente = {};
   var signature = "";
@@ -71,6 +71,7 @@
     if (l.type === "ajout") return "Nouvel exemplaire à " + (Number(l.niveau) === 100 ? "100 %" : "50 %");
     if (l.type === "dorese") return "Renforcement à 100 %";
     if (l.type === "retrait") return "Dissolution";
+    if (l.type === "degrade") return "Repassage à 50 %";
     return l.modele ? "Option de la fiche " + ((optionDe(l.modele) || {}).role || "") : "Pion sur mesure";
   }
   function anneesDe(l) {
@@ -124,6 +125,7 @@
   function entrer(code) {
     etat.role = code;
     etat.selection = null;
+    etat.maTable = !vueComplete();
     etat.volet = "poser";
     etat.filtre = role(code).armee === "Interarmées" && CATALOGUE.some(function (o) { return o.role === code; }) ? "options" : "capacites";
     $("ecran-accueil").hidden = true;
@@ -186,7 +188,7 @@
   function memeGeste(l, g) {
     if (l.role !== etat.role || l.type !== g.type) return false;
     if (g.type === "ajout") return l.pion === g.pion && Number(l.niveau) === Number(g.niveau);
-    if (g.type === "dorese" || g.type === "retrait") return l.pion === g.pion;
+    if (g.type === "dorese" || g.type === "retrait" || g.type === "degrade") return l.pion === g.pion;
     if (g.type === "libre") return !!g.modele && l.modele === g.modele;
     return false;
   }
@@ -280,7 +282,8 @@
     var lignes = etat.vue === "arbitrage" ? M.lignesApresArbitrage(etat.lignes, p) : etat.lignes;
     var t = M.placerAnnee(PIONS, lignes, p, etat.annee);
     var syn = M.synthese(PIONS, lignes, p)[etat.annee];
-    document.querySelectorAll(".bascule button").forEach(function (b) { b.setAttribute("aria-pressed", b.getAttribute("data-vue") === etat.vue ? "true" : "false"); });
+    document.querySelectorAll(".bascule button[data-vue]").forEach(function (b) { b.setAttribute("aria-pressed", b.getAttribute("data-vue") === etat.vue ? "true" : "false"); });
+    document.querySelectorAll(".bascule button[data-filtre]").forEach(function (b) { b.setAttribute("aria-pressed", (b.getAttribute("data-filtre") === "mien") === etat.maTable ? "true" : "false"); });
 
     var rel = $("table-releve");
     vider(rel);
@@ -290,16 +293,25 @@
     });
     $("consigne").textContent = arbitre()
       ? "Cliquez sur une demande posée sur la table pour la retenir, la différer ou y renoncer."
-      : "Cliquez sur un pion de la table pour le renforcer ou le dissoudre ; posez un nouveau pion depuis le catalogue à droite.";
+      : "Les pions en place sont votre point de départ. Cliquez sur un pion pour le modifier, sur une case vide pour en poser un nouveau.";
 
     var pl = $("plateau");
     vider(pl);
     pl.style.gridTemplateRows = "repeat(" + t.hauteur + ", var(--case))";
     for (var k = 0; k < t.hauteur * t.largeur; k++) {
-      pl.appendChild(el("div", { classe: "fond" + (k >= t.table ? " fond-horstable" : k >= t.plafond ? " fond-hors" : ""), style: "grid-row:" + (Math.floor(k / t.largeur) + 1) + ";grid-column:" + (k % t.largeur + 1) }));
+      pl.appendChild(el("div", { classe: "fond fond-clic" + (k >= t.table ? " fond-horstable" : k >= t.plafond ? " fond-hors" : ""), title: "Poser un nouveau pion en " + etat.annee, style: "grid-row:" + (Math.floor(k / t.largeur) + 1) + ";grid-column:" + (k % t.largeur + 1),
+        onclick: function () { etat.selection = null; etat.volet = "poser"; rendre(true); toast("Choisissez à droite le pion à poser en " + etat.annee); } }));
     }
     function depasse(r, c, w, h) { for (var i = r; i < r + h; i++) for (var j = c; j < c + w; j++) if (i * t.largeur + j >= t.plafond) return true; return false; }
     function masque(x) { return x.role && !vueComplete() && x.role !== etat.role; }
+    // « Ma demande » : mes pions posés et les pions en place de mon armée.
+    function aMoi(x) {
+      if (x.role) return x.role === etat.role;
+      var p = x.pion && IDX[x.pion];
+      if (!x.socle || !p || p.type === "gris" || p.type === "orange" || vueComplete()) return false;
+      return p.armee === armeeDuRole();
+    }
+    function estompe(x) { return etat.maTable && !aMoi(x); }
     function choisir(x) {
       return function () {
         etat.selection = { ligne: x.ligne || null, pion: x.pion || null, socle: !!x.socle && !x.ligne };
@@ -316,6 +328,7 @@
       if (x.role && x.role === etat.role) cl.push("pion-mien");
       if (selectionCorrespond(x)) cl.push("pion-choisi");
       if (x.ligne && x.ligne === etat.neuf) cl.push("pion-neuf");
+      if (estompe(x)) cl.push("pion-estompe");
       var nom = masque(x) ? "Demande " + x.armee : x.libelle;
       pl.appendChild(el("button", { type: "button", classe: cl.join(" "), title: nom + (x.niveau ? " · " + x.niveau + " %" : "") + (x.role && !masque(x) ? " · " + x.role : ""),
         style: "grid-row:" + (x.r + 1) + " / span " + x.h + ";grid-column:" + (x.c + 1) + " / span " + x.w + ";background:" + c, onclick: choisir(x) }, [
@@ -330,12 +343,24 @@
       var cible = x.nature === "dorese" && x.parent !== undefined ? t.pieces[x.parent] : x;
       if (x.ligne && x.ligne === etat.neuf) cl.push("pion-neuf");
       if (selectionCorrespond(cible) || (x.ligne && etat.selection && etat.selection.ligne === x.ligne)) cl.push("pion-choisi");
+      if (x.nature === "dorese" ? estompe(cible) && estompe(x) : estompe(x)) cl.push("pion-estompe");
       var nom = masque(x) ? (x.nature === "dorese" ? "DORESE" : "Demande " + x.armee) : x.libelle;
       pl.appendChild(el("button", { type: "button", classe: cl.join(" "), title: nom, style: "grid-row:" + (x.r + 1) + ";grid-column:" + (x.c + 1) + ";background:" + couleur(x.armee),
         onclick: x.ligne && x.nature !== "dorese" ? choisir(x) : x.ligne ? choisir({ ligne: x.ligne, pion: cible.pion }) : choisir(cible) }, [
         el("span", { texte: x.nature === "dorese" ? { ao: "AO", mco: "M", rh: "RH" }[x.type] : "" })]));
     });
     etat.neuf = null;
+
+    var hors = $("hors-table");
+    vider(hors);
+    var absents = lignes.filter(function (l) { return (l.type === "retrait" || l.type === "degrade") && M.quantite(l, etat.annee) && visible(l); });
+    if (absents.length) {
+      hors.appendChild(el("span", { classe: "hors-titre", texte: "Retiré de la table en " + etat.annee + " :" }));
+      absents.forEach(function (l) {
+        hors.appendChild(el("button", { type: "button", classe: "hors-pion", onclick: function () { etat.selection = { ligne: l.id, pion: l.pion }; etat.volet = "selection"; rendre(true); } },
+          [libelleLigne(l) + (l.type === "degrade" ? " (DORESE rendues)" : "") + " · " + l.role]));
+      });
+    }
 
     var lg = $("legende");
     vider(lg);
@@ -502,7 +527,8 @@
     var dep = M.doreseDepart(p);
     var lignesEtat = [["Coût sur la table", md(M.coutSocle(p)) + " par an"], ["Place", (p.l * p.h) + " cases"]];
     if (p.type === "capacite") lignesEtat.push(["DORESE posées", M.nbDepart(p) + " / " + M.nbDorese(p) + (M.nbDorese(p) ? " (" + dep.ao + " AO, " + dep.mco + " MCO, " + dep.rh + " RH)" : "")]);
-    if (p.type === "capacite") lignesEtat.push(["État", plein ? "à 100 %" : "dégradée"]);
+    var lActive = function (type) { var l = etat.lignes.filter(function (x) { return x.type === type && x.pion === p.id && M.quantite(x, etat.annee); })[0]; return l; };
+    if (p.type === "capacite") lignesEtat.push(["État en " + etat.annee, lActive("degrade") ? "à 50 %, DORESE rendues (" + lActive("degrade").role + ")" : lActive("dorese") ? "à 100 %, renforcée (" + lActive("dorese").role + ")" : plein ? "à 100 %" : "dégradée"]);
     v.appendChild(el("dl", { classe: "etat-pion" }, lignesEtat.reduce(function (acc, x) { return acc.concat([el("dt", { texte: x[0] }), el("dd", { texte: x[1] })]); }, [])));
     if (p.remarque) v.appendChild(el("p", { classe: "aide", texte: p.remarque }));
 
@@ -516,7 +542,22 @@
     var actions = el("div", { classe: "actions-pion" });
     var renf = etat.lignes.filter(function (x) { return memeGeste(x, { type: "dorese", pion: p.id }); })[0];
     var diss = etat.lignes.filter(function (x) { return memeGeste(x, { type: "retrait", pion: p.id }); })[0];
-    if (!plein) {
+    var degr = etat.lignes.filter(function (x) { return memeGeste(x, { type: "degrade", pion: p.id }); })[0];
+    var degrCetteAnnee = degr && M.quantite(degr, etat.annee);
+    if (degrCetteAnnee) {
+      actions.appendChild(el("button", { type: "button", classe: "action", onclick: function () { enlever(degr); } }, [
+        el("b", { texte: "Revenir à 100 %" }), el("span", { texte: "Reposer ses DORESE " + textePortee() }), el("em", { texte: "+" + md(M.nbDepart(p) * M.CASE) + " par an" })]));
+    } else if (p.type === "capacite" && M.nbDepart(p) && !(renf && M.quantite(renf, etat.annee))) {
+      var dd = M.doreseDepart(p);
+      actions.appendChild(el("button", { type: "button", classe: "action action-retrait", onclick: function () { poser({ type: "degrade", pion: p.id }); } }, [
+        el("b", { texte: "Repasser à 50 %" }),
+        el("span", { texte: "Rend ses " + M.nbDepart(p) + " DORESE (" + dd.ao + " AO, " + dd.mco + " MCO, " + dd.rh + " RH) : capacité dégradée" }),
+        el("em", { texte: "−" + md(M.nbDepart(p) * M.CASE) + " par an" })]));
+    }
+    if (renf && M.quantite(renf, etat.annee)) {
+      actions.appendChild(el("button", { type: "button", classe: "action", onclick: function () { enlever(renf); } }, [
+        el("b", { texte: "Annuler le renforcement" }), el("span", { texte: "Retire les DORESE ajoutées " + textePortee() }), el("em", { texte: "−" + md(M.nbManquantes(p) * M.CASE) + " par an" })]));
+    } else if (!plein && !degrCetteAnnee) {
       var mq = M.doreseManquantes(p);
       actions.appendChild(el("button", { type: "button", classe: "action", onclick: function () { poser({ type: "dorese", pion: p.id }); } }, [
         el("b", { texte: "Renforcer à 100 %" }),
@@ -535,7 +576,7 @@
       el("em", { texte: "+" + md(M.nbDorese(p) ? p.cout100 : p.cout50) + " par an" })
     ]));
     v.appendChild(actions);
-    [renf, diss].forEach(function (l) { if (l) v.appendChild(el("p", { classe: "aide" }, ["Déjà dans votre demande : " + natureLigne(l).toLowerCase() + " (" + anneesDe(l) + "). ", el("button", { classe: "btn-lien", type: "button", texte: "Ouvrir", onclick: function () { etat.selection = { ligne: l.id, pion: l.pion }; rendreVolet(); } })])); });
+    [renf, diss, degr].forEach(function (l) { if (l) v.appendChild(el("p", { classe: "aide" }, ["Déjà dans votre demande : " + natureLigne(l).toLowerCase() + " (" + anneesDe(l) + "). ", el("button", { classe: "btn-lien", type: "button", texte: "Ouvrir", onclick: function () { etat.selection = { ligne: l.id, pion: l.pion }; rendreVolet(); } })])); });
   }
 
   // Une demande (ligne) : la régler ou l'enlever.
@@ -764,7 +805,8 @@
     $("btn-retour-partie").addEventListener("click", quitter);
     $("btn-quitter").addEventListener("click", quitter);
     $("btn-role").addEventListener("click", function () { montrerRoles(etat.partie, etat.mdp); });
-    document.querySelectorAll(".bascule button").forEach(function (b) { b.addEventListener("click", function () { etat.vue = b.getAttribute("data-vue"); rendre(false); }); });
+    document.querySelectorAll(".bascule button[data-vue]").forEach(function (b) { b.addEventListener("click", function () { etat.vue = b.getAttribute("data-vue"); rendre(false); }); });
+    document.querySelectorAll(".bascule button[data-filtre]").forEach(function (b) { b.addEventListener("click", function () { etat.maTable = b.getAttribute("data-filtre") === "mien"; rendre(false); }); });
     setInterval(function () { if (etat.partie && etat.role && !Object.keys(enAttente).length) recharger(false); }, S.mode === "partage" ? 6000 : 5000);
 
     etapeAccueil("rejoindre");

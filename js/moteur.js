@@ -215,7 +215,7 @@
       return ordreType[a.type] - ordreType[b.type];
     });
     socle.forEach(function (p) {
-      var plein = nbDorese(p) > 0 && nbManquantes(p) === 0;
+      var plein = p.type === "capacite" && nbManquantes(p) === 0;
       blocs.push({ armee: p.armee, nature: p.type, libelle: p.nom, cases: p.cout50 / CASE, niveau: plein || passes100[p.id] ? 100 : 50 });
       if (nbDepart(p)) blocs.push({ armee: p.armee, nature: "dorese", libelle: "DORESE " + p.nom, cases: nbDepart(p) });
       if (passes100[p.id] && nbManquantes(p)) {
@@ -315,7 +315,7 @@
       var l100 = passes100[p.id] && nbManquantes(p) ? passes100[p.id] : null;
       var g = p.type === "gris" ? "Fixes" : (l100 ? armeeDeLigne(l100, idx) : p.armee);
       var types = typesDorese(doreseDepart(p)).concat(l100 ? typesDorese(doreseManquantes(p)) : []);
-      var plein = nbDorese(p) > 0 && types.length >= nbDorese(p);
+      var plein = types.length >= nbDorese(p);
       groupe(g).rigides.push({ pion: p, w: p.l || 1, h: p.h || 1, armee: g === "Fixes" ? p.armee : g, nature: p.type,
         libelle: p.nom, niveau: plein ? 100 : 50, dorese: types.length, types: types, socle: true });
     });

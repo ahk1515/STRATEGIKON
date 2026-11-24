@@ -1,4 +1,5 @@
-// Interface STRATEGIKON : accueil (parties), saisie par rôle, synthèse, table, paramètres.
+// STRATEGIKON, interface « salle d'état-major ».
+// Même moteur (js/moteur.js), même stockage (js/stockage.js), mêmes données que la version en ligne.
 (function () {
   "use strict";
 
@@ -6,490 +7,159 @@
   var S = window.STRAT_STOCKAGE;
   var PIONS = window.STRAT_PIONS || [];
   var CATALOGUE = window.STRAT_CATALOGUE_ROLES || [];
-  function optionDe(code) { return code ? CATALOGUE.filter(function (o) { return o.code === code; })[0] || null : null; }
-  function fourchette(o) {
-    var u = o.annuel ? "/an" : (o.periodicite && o.periodicite !== "non précisée" ? " (" + o.periodicite + ")" : "");
-    if (o.cout === null || o.cout === undefined) return o.statut_cout === "a_definir" ? "coût à définir" : "non chiffré";
-    if (o.cout_max && o.cout_max !== o.cout) return o.cout + " à " + o.cout_max + " M€" + u;
-    return o.cout + " M€" + u;
-  }
   var IDX = M.indexPions(PIONS);
-  var ROLES_EDITION_PARAMS = ["Animateur", "SC-Plans", "CEMA"];
+  var ROLES_REGLAGES = ["Animateur", "SC-Plans", "CEMA"];
   var ROLES_ARBITRAGE = ["CEMA", "Animateur"];
   var ROLES_VUE_COMPLETE = ["CEMA", "Animateur", "SC-Plans"];
-  function vueComplete() { return ROLES_VUE_COMPLETE.indexOf(etat.role) !== -1; }
-  function visible(l) { return vueComplete() || l.role === etat.role; }
-
-  var etat = {
-    partie: null, // { id, nom, params }
-    mdp: "",
-    role: "",
-    lignes: [],
-    onglet: "demande",
-    anneeTable: M.ANNEES[0],
-    vueTable: "demandes"
+  var MISSIONS = {
+    EMAT: "Défend les capacités Terre", EMM: "Défend les capacités Marine", EMAAE: "Défend les capacités Air et Espace",
+    COCA: "Porte les besoins opérationnels", "SC-Plans": "Tient la table budgétaire", CEMA: "Arbitre",
+    DGRIS: "Porte les partenariats", DGA: "Porte les programmes", SGA: "Porte l'humain et l'infrastructure",
+    MINARM: "Porte l'ambition politique", MEFR: "Tient les finances publiques", MEAE: "Porte la diplomatie",
+    Animateur: "Règle la partie"
   };
-  var enAttente = {}; // id de ligne -> minuteur d'enregistrement
-  var signatureLignes = "";
+
+  var etat = { partie: null, mdp: "", role: "", lignes: [], onglet: "composer", annee: M.ANNEES[0], vueTable: "demandes", filtre: "renforcer", recherche: "", ouverte: null };
+  var enAttente = {};
+  var signature = "";
 
   // ---------- Outils ----------
   function $(id) { return document.getElementById(id); }
   function el(tag, attrs, enfants) {
     var n = document.createElement(tag);
     if (attrs) Object.keys(attrs).forEach(function (k) {
-      if (k === "texte") n.textContent = attrs[k];
-      else if (k === "classe") n.className = attrs[k];
-      else if (k.slice(0, 2) === "on") n.addEventListener(k.slice(2), attrs[k]);
-      else if (attrs[k] !== undefined && attrs[k] !== null && attrs[k] !== false) n.setAttribute(k, attrs[k]);
+      var v = attrs[k];
+      if (k === "texte") n.textContent = v;
+      else if (k === "classe") n.className = v;
+      else if (k.slice(0, 2) === "on") n.addEventListener(k.slice(2), v);
+      else if (v !== undefined && v !== null && v !== false) n.setAttribute(k, v);
     });
-    (enfants || []).forEach(function (e) { if (e !== null && e !== undefined) n.appendChild(typeof e === "string" ? document.createTextNode(e) : e); });
+    (enfants || []).forEach(function (e) { if (e !== null && e !== undefined && e !== false) n.appendChild(typeof e === "string" ? document.createTextNode(e) : e); });
     return n;
   }
   function vider(n) { while (n.firstChild) n.removeChild(n.firstChild); }
-  function md(m) { // M€ -> « 5,9 Md€ » ou « 300 M€ »
+  function md(m) {
     var signe = m < 0 ? "−" : "";
     m = Math.abs(m);
     if (m >= 1000) return signe + (m / 1000).toLocaleString("fr-FR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " Md€";
     return signe + m.toLocaleString("fr-FR") + " M€";
   }
-  function cases(m) { return (m / M.CASE).toLocaleString("fr-FR", { maximumFractionDigits: 1 }); }
-  function classeArmee(a) { return { "Terre": "a-Terre", "Marine": "a-Marine", "Air et Espace": "a-Air", "Interarmées": "a-Inter" }[a] || "a-Inter"; }
-  function couleurArmee(a) { return { "Terre": "var(--terre)", "Marine": "var(--marine)", "Air et Espace": "var(--air)", "Interarmées": "var(--inter)" }[a] || "var(--inter)"; }
-  function nouvelId() {
-    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
-    return "l-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
-  }
+  function nCases(m) { var n = Math.round(m / M.CASE); return n + (Math.abs(n) > 1 ? " cases" : " case"); }
+  function couleur(a) { return { "Terre": "var(--terre)", "Marine": "var(--marine)", "Air et Espace": "var(--air)", "Interarmées": "var(--inter)" }[a] || "var(--inter)"; }
+  function nouvelId() { return window.crypto && crypto.randomUUID ? crypto.randomUUID() : "l-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
   function role(code) { return M.ROLES.filter(function (r) { return r.code === code; })[0] || M.ROLES[0]; }
-  var minuteurToast;
-  function toast(msg) {
-    var t = $("toast"); t.textContent = msg; t.hidden = false;
-    clearTimeout(minuteurToast); minuteurToast = setTimeout(function () { t.hidden = true; }, 2600);
+  function vueComplete() { return ROLES_VUE_COMPLETE.indexOf(etat.role) !== -1; }
+  function visible(l) { return vueComplete() || l.role === etat.role; }
+  function params() { return (etat.partie && etat.partie.params && etat.partie.params.plafonds) ? etat.partie.params : M.parametresParDefaut(); }
+  function optionDe(code) { return code ? CATALOGUE.filter(function (o) { return o.code === code; })[0] || null : null; }
+  function fourchette(o) {
+    var u = o.annuel ? "/an" : "";
+    if (o.cout === null || o.cout === undefined) return o.statut_cout === "a_definir" ? "coût à définir" : "non chiffré";
+    if (o.cout_max && o.cout_max !== o.cout) return o.cout + " à " + o.cout_max + " M€" + u;
+    return o.cout + " M€" + u;
   }
+  var minuteur;
+  function toast(msg) { var t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(minuteur); minuteur = setTimeout(function () { t.hidden = true; }, 2600); }
   function memoriser() {
     try {
-      if (etat.partie) sessionStorage.setItem("strategikon.session", JSON.stringify({ nom: etat.partie.nom, mdp: etat.mdp, role: etat.role, onglet: etat.onglet }));
-      else sessionStorage.removeItem("strategikon.session");
-    } catch (e) { /* session non mémorisée */ }
+      if (etat.partie) sessionStorage.setItem("strategikon.v2", JSON.stringify({ nom: etat.partie.nom, mdp: etat.mdp, role: etat.role, onglet: etat.onglet }));
+      else sessionStorage.removeItem("strategikon.v2");
+    } catch (e) { /* rien */ }
   }
-  function peutEditerParams() { return ROLES_EDITION_PARAMS.indexOf(etat.role) !== -1; }
-  function params() { return etat.partie.params || M.parametresParDefaut(); }
+  function libelleLigne(l) {
+    if (l.type === "libre") return l.libelle || "Pion sur mesure";
+    var p = IDX[l.pion];
+    return p ? p.nom : l.pion;
+  }
+  var ACTIONS = {
+    dorese: "Renforcer à 100 %",
+    ajout: "Créer",
+    retrait: "Dissoudre",
+    libre: "Option"
+  };
+  function natureLigne(l) {
+    if (l.type === "ajout") return "Créer à " + (Number(l.niveau) === 100 ? "100 %" : "50 %");
+    if (l.type === "libre") return l.modele ? "Option de la fiche " + (optionDe(l.modele) || {}).role : "Pion sur mesure";
+    return ACTIONS[l.type];
+  }
 
   // ---------- Accueil ----------
-  function remplirRoles(select, valeur) {
-    vider(select);
-    M.ROLES.forEach(function (r) {
-      select.appendChild(el("option", { value: r.code, texte: r.code + " · " + r.nom }));
-    });
-    if (valeur) select.value = valeur;
-  }
-
   function chargerParties() {
     var sel = $("rej-partie");
     vider(sel);
     return S.listerParties().then(function (liste) {
-      if (!liste.length) sel.appendChild(el("option", { value: "", texte: "Aucune partie pour l'instant" }));
+      if (!liste.length) sel.appendChild(el("option", { value: "", texte: "Aucune partie ouverte" }));
       liste.forEach(function (p) { sel.appendChild(el("option", { value: p.nom, texte: p.nom })); });
-    }).catch(function (e) {
-      sel.appendChild(el("option", { value: "", texte: "Liste indisponible" }));
-      $("rej-erreur").textContent = e.message;
+    }).catch(function (e) { sel.appendChild(el("option", { value: "", texte: "Liste indisponible" })); $("rej-erreur").textContent = e.message; });
+  }
+
+  function montrerRoles(partie, mdp) {
+    etat.partie = partie; etat.mdp = mdp;
+    $("etape-partie").hidden = true;
+    $("etape-role").hidden = false;
+    $("nom-partie-role").textContent = partie.nom;
+    var g = $("grille-roles");
+    vider(g);
+    M.ROLES.forEach(function (r) {
+      g.appendChild(el("button", { classe: "role-tuile", type: "button", style: "--couleur:" + couleur(r.armee), onclick: function () { entrer(r.code); } }, [
+        el("span", { classe: "role-mission", texte: MISSIONS[r.code] || "" }),
+        el("b", { texte: r.code }),
+        el("small", { texte: r.nom })
+      ]));
     });
   }
 
-  function entrer(partie, mdp, codeRole) {
-    etat.partie = partie;
-    if (!etat.partie.params || !etat.partie.params.plafonds) etat.partie.params = M.parametresParDefaut();
-    etat.mdp = mdp;
+  function entrer(codeRole) {
     etat.role = codeRole;
     $("ecran-accueil").hidden = true;
     $("ecran-partie").hidden = false;
-    $("session").hidden = false;
-    $("session-partie").textContent = partie.nom;
-    remplirRoles($("session-role"), codeRole);
+    $("poste-partie").textContent = etat.partie.nom;
+    var r = role(codeRole);
+    $("insigne-code").textContent = r.code;
+    $("insigne-nom").textContent = r.nom;
+    $("onglet-reglages").hidden = ROLES_REGLAGES.indexOf(codeRole) === -1;
+    etat.filtre = r.armee === "Interarmées" && CATALOGUE.some(function (o) { return o.role === codeRole; }) ? "options" : "renforcer";
     memoriser();
-    return rechargerLignes(true);
+    signature = "";
+    return recharger(true);
   }
 
   function quitter() {
-    etat.partie = null; etat.mdp = ""; etat.lignes = []; signatureLignes = "";
+    etat.partie = null; etat.mdp = ""; etat.lignes = []; signature = "";
     memoriser();
     $("ecran-partie").hidden = true;
-    $("session").hidden = true;
     $("ecran-accueil").hidden = false;
+    $("etape-partie").hidden = false;
+    $("etape-role").hidden = true;
     chargerParties();
   }
 
   // ---------- Données ----------
-  function rechargerLignes(forcer) {
+  function recharger(forcer) {
     if (!etat.partie) return Promise.resolve();
     var nom = etat.partie.nom;
     return S.lireEtat(nom, etat.mdp).then(function (e) {
       if (!etat.partie || etat.partie.nom !== nom) return;
-      var r = [e.lignes, e.partie];
-      var lignes = r[0].slice().sort(function (a, b) { return (a.cree_le || "") < (b.cree_le || "") ? -1 : 1; });
-      // On garde la version locale des lignes en cours d'enregistrement.
-      lignes = lignes.map(function (l) {
-        if (enAttente[l.id]) return etat.lignes.filter(function (x) { return x.id === l.id; })[0] || l;
-        return l;
-      });
-      etat.lignes.forEach(function (l) {
-        if (enAttente[l.id] && !lignes.some(function (x) { return x.id === l.id; })) lignes.push(l);
-      });
-      var sig = JSON.stringify(lignes) + JSON.stringify(r[1].params);
-      etat.partie.params = r[1].params && r[1].params.plafonds ? r[1].params : M.parametresParDefaut();
+      var lignes = e.lignes.slice().sort(function (a, b) { return (a.cree_le || "") < (b.cree_le || "") ? -1 : 1; });
+      lignes = lignes.map(function (l) { return enAttente[l.id] ? (etat.lignes.filter(function (x) { return x.id === l.id; })[0] || l) : l; });
+      etat.lignes.forEach(function (l) { if (enAttente[l.id] && !lignes.some(function (x) { return x.id === l.id; })) lignes.push(l); });
+      var sig = JSON.stringify(lignes) + JSON.stringify(e.partie.params);
+      etat.partie.params = e.partie.params;
       etat.lignes = lignes;
-      if (forcer || sig !== signatureLignes) {
-        signatureLignes = sig;
-        rendre(forcer);
-      }
+      if (forcer || sig !== signature) { signature = sig; rendre(forcer); }
     }).catch(function (e) { toast(e.message); });
   }
 
-  function enregistrer(ligne) {
-    clearTimeout(enAttente[ligne.id]);
-    enAttente[ligne.id] = setTimeout(function () {
-      S.ecrireLigne(etat.partie.nom, etat.mdp, ligne).then(function () {
-        delete enAttente[ligne.id];
-      }).catch(function (e) { delete enAttente[ligne.id]; toast("Non enregistré : " + e.message); });
+  function enregistrer(l) {
+    clearTimeout(enAttente[l.id]);
+    enAttente[l.id] = setTimeout(function () {
+      S.ecrireLigne(etat.partie.nom, etat.mdp, l).then(function () { delete enAttente[l.id]; })
+        .catch(function (e) { delete enAttente[l.id]; toast("Non enregistré : " + e.message); });
     }, 400);
   }
 
-  // ---------- Rendu général ----------
-  function rendre(complet) {
-    var actif = document.activeElement;
-    var saisieEnCours = actif && $("table-demande").contains(actif);
-    if (complet || !saisieEnCours) rendreDemande();
-    else rendreBilan();
-    if (etat.onglet === "synthese") rendreSynthese();
-    if (etat.onglet === "table") rendreTable();
-    if (etat.onglet === "arbitrage" && (complet || !$("vue-arbitrage").contains(actif))) rendreArbitrage();
-    if (etat.onglet === "parametres" && (complet || !$("form-parametres").contains(actif))) rendreParametres();
-  }
-
-  function changerOnglet(nom) {
-    etat.onglet = nom;
-    document.querySelectorAll(".onglets button").forEach(function (b) {
-      b.setAttribute("aria-selected", b.getAttribute("data-onglet") === nom ? "true" : "false");
-    });
-    ["demande", "synthese", "table", "arbitrage", "parametres"].forEach(function (v) { $("vue-" + v).hidden = v !== nom; });
-    memoriser();
-    rendre(true);
-  }
-
-  // ---------- Ma demande ----------
-  function pionsPour(type) {
-    return PIONS.filter(function (p) {
-      if (type === "dorese") return p.type === "capacite" && M.nbDorese(p) > 0;
-      if (type === "ajout") return p.type === "capacite" || p.type === "violet";
-      if (type === "retrait") return p.type !== "gris";
-      return false;
-    });
-  }
-
-  function selectPion(ligne) {
-    var s = el("select", { "aria-label": "Pion" });
-    var groupes = {};
-    pionsPour(ligne.type).forEach(function (p) {
-      if (!groupes[p.armee]) { groupes[p.armee] = el("optgroup", { label: p.armee }); s.appendChild(groupes[p.armee]); }
-      var txt = p.nom + " · " + p.cout50 / M.CASE + " c." + (M.nbDorese(p) ? " +" + M.nbDorese(p) + " DORESE" : "");
-      groupes[p.armee].appendChild(el("option", { value: p.id, texte: txt }));
-    });
-    s.value = ligne.pion;
-    return s;
-  }
-
-  function nouvelleLigne(type) {
-    var r = role(etat.role);
-    var l = { id: nouvelId(), role: etat.role, type: type, qte: {}, justification: "", cree_le: new Date().toISOString() };
-    if (type === "libre") {
-      l.libelle = ""; l.modele = null; l.cout_unitaire = 100; l.dorese = { ao: 0, mco: 0, rh: 0 }; l.armee = r.armee;
-    } else {
-      var candidats = pionsPour(type);
-      var duRole = candidats.filter(function (p) { return p.armee === r.armee; });
-      var p = (duRole[0] || candidats[0]);
-      l.pion = p.id;
-      l.niveau = 100;
-      l.armee = r.armee !== "Interarmées" ? r.armee : p.armee;
-      if (type !== "ajout") M.ANNEES.forEach(function (a) { l.qte[a] = 1; });
-      else l.qte[M.ANNEES[0]] = 1;
-    }
-    return l;
-  }
-
-  function rendreDemande() {
-    var r = role(etat.role);
-    $("titre-demande").textContent = "Demande " + r.code;
-    var t = $("table-demande");
-    vider(t);
-    var mesLignes = etat.lignes.filter(function (l) { return l.role === etat.role; });
-    var tete = el("tr", null, [el("th", { texte: "Type" }), el("th", { texte: "Objet" }), el("th", { texte: "Armée imputée" })]
-      .concat(M.ANNEES.map(function (a) { return el("th", { classe: "num", texte: String(a) }); }))
-      .concat([el("th", { classe: "num", texte: "Unitaire" }), el("th", { classe: "num", texte: "Total 6 ans" }), el("th", { texte: "Justification" }), el("th", { html: "" })]));
-    t.appendChild(el("thead", null, [tete]));
-    var corps = el("tbody");
-    if (!mesLignes.length) {
-      corps.appendChild(el("tr", null, [el("td", { colspan: 11 + M.ANNEES.length - 6, classe: "vide-etat", texte: "Aucune ligne pour " + r.code + ". Choisissez un type de ligne en haut à droite, puis « Ajouter la ligne »." })]));
-    }
-    mesLignes.forEach(function (l) { corps.appendChild(rangeeSaisie(l)); });
-    t.appendChild(corps);
-    rendreBilan();
-  }
-
-  function rangeeSaisie(l) {
-    var tr = el("tr");
-    var totalCellule = el("td", { classe: "num" });
-    var unitCellule = el("td", { classe: "num" });
-
-    function majChiffres() {
-      var u = M.unitaire(l, IDX);
-      var c = M.coutLigne(l, IDX);
-      unitCellule.textContent = md(u.cout);
-      vider(totalCellule);
-      totalCellule.appendChild(document.createTextNode(md(c.total)));
-      if (c.totalDorese) totalCellule.appendChild(el("div", { classe: "sous", texte: c.totalDorese + " DORESE" }));
-      rendreBilan();
-    }
-    function changer() { majChiffres(); enregistrer(l); }
-
-    tr.appendChild(el("td", null, [el("span", { texte: M.TYPES_LIGNE[l.type] })]));
-
-    // Objet
-    var objet = el("td", { classe: "objet" });
-    if (l.type === "libre") {
-      var choix = el("select", { "aria-label": "Option du catalogue" });
-      choix.appendChild(el("option", { value: "", texte: "Pion sur mesure (hors catalogue)" }));
-      var rolesCat = vueComplete()
-        ? [etat.role].concat(M.ROLES.map(function (r) { return r.code; }).filter(function (c) { return c !== etat.role; }))
-        : [etat.role];
-      rolesCat.forEach(function (rc) {
-        var opts = CATALOGUE.filter(function (o) { return o.role === rc; });
-        if (!opts.length) return;
-        var g = el("optgroup", { label: "Fiche " + rc });
-        opts.forEach(function (o) { g.appendChild(el("option", { value: o.code, texte: o.libelle + " · " + fourchette(o) })); });
-        choix.appendChild(g);
-      });
-      choix.value = l.modele || "";
-      var o = optionDe(l.modele);
-      var lib = el("input", { value: l.libelle || "", placeholder: "Intitulé du pion", "aria-label": "Intitulé" });
-      var cu = el("input", { classe: "court", type: "number", min: 0, step: 100, value: l.cout_unitaire, "aria-label": "Prix fixé en M€" });
-      var noteCu = el("div", { classe: "sous" });
-      var d = l.dorese || { ao: 0, mco: 0, rh: 0 };
-      function champDor(k, nomCourt) {
-        var i = el("input", { type: "number", min: 0, step: 1, value: d[k] || 0, "aria-label": "DORESE " + nomCourt });
-        i.addEventListener("input", function () { l.dorese = l.dorese || {}; l.dorese[k] = Number(i.value) || 0; changer(); });
-        return el("label", null, [nomCourt + " ", i]);
-      }
-      function majNote(brut) {
-        var txt = [];
-        if (!l.cout_unitaire) txt.push("Fixez le prix : la ligne ne compte pas tant qu'il est à 0");
-        if (brut !== undefined && Number(brut) !== l.cout_unitaire && l.cout_unitaire) txt.push("Arrondi à la case : " + md(l.cout_unitaire));
-        if (brut === undefined && o && o.cout && o.cout % M.CASE && l.cout_unitaire) txt.push("Prix de la fiche " + md(o.cout) + ", arrondi à " + md(l.cout_unitaire) + " : à confirmer");
-        if (o && o.cout !== null && o.cout !== undefined) {
-          var hautO = o.cout_max || o.cout;
-          if (l.cout_unitaire < M.arrondiCase(o.cout) && l.cout_unitaire < o.cout || l.cout_unitaire > Math.max(M.arrondiCase(hautO), hautO)) txt.push("Hors fourchette de la fiche (" + fourchette(o) + ")");
-        }
-        noteCu.textContent = txt.join(" · ");
-        noteCu.className = "sous" + (txt.length ? " alerte-texte" : "");
-      }
-      choix.addEventListener("change", function () {
-        var opt = optionDe(choix.value);
-        if (!opt) { l.modele = null; l.source = null; changer(); rendreDemande(); return; }
-        l.modele = opt.code; l.libelle = opt.libelle; l.armee = opt.armee; l.source = opt.source;
-        l.cout_unitaire = opt.cout ? M.arrondiCase(opt.cout) : 0;
-        l.dorese = opt.dorese ? { ao: opt.dorese.ao || 0, mco: opt.dorese.mco || 0, rh: opt.dorese.rh || 0 } : { ao: 0, mco: 0, rh: 0 };
-        changer(); rendreDemande();
-      });
-      lib.addEventListener("input", function () { l.libelle = lib.value; enregistrer(l); });
-      cu.addEventListener("input", function () { l.cout_unitaire = M.arrondiCase(cu.value); majChiffres(); majNote(cu.value); enregistrer(l); });
-      cu.addEventListener("change", function () { cu.value = l.cout_unitaire; majNote(); });
-      objet.appendChild(choix);
-      objet.appendChild(el("div", { style: "margin-top:.25rem" }, [lib]));
-      if (o) {
-        var infos = [fourchette(o) + (o.periodicite ? " · " + o.periodicite : "")];
-        if (o.etalement) infos.push("Étalement : " + o.etalement);
-        if (o.delai) infos.push("Délai : " + o.delai);
-        objet.appendChild(el("div", { classe: "sous", texte: "Fiche : " + infos.join(" · ") }));
-        if (o.alerte) objet.appendChild(el("div", { classe: "sous alerte-texte", texte: o.alerte }));
-        if (o.source || o.edition) objet.appendChild(el("div", { classe: "sous", texte: [o.source, o.edition].filter(Boolean).join(" · ") }));
-        if (o.conditions) objet.appendChild(el("details", { classe: "sous" }, [el("summary", { texte: "Conditions" }), el("p", { texte: o.conditions })]));
-      } else {
-        var val = ((params().validations || {})[l.id]);
-        objet.appendChild(el("div", { classe: "badge " + (val ? "badge-ok" : "badge-attente"), texte: val ? "Sur mesure · validé par l'animateur" : "Sur mesure · à valider par l'animateur" }));
-      }
-      objet.appendChild(el("div", { classe: "dor" }, [el("label", null, ["Prix fixé (M€ par an) ", cu])]));
-      objet.appendChild(noteCu);
-      objet.appendChild(el("div", { classe: "dor" }, ["DORESE incluses :", champDor("ao", "AO"), champDor("mco", "MCO"), champDor("rh", "RH")]));
-      objet.appendChild(el("div", { classe: "sous", texte: "Les cases des années indiquent combien de fois ce prix est posé. Pour un investissement étalé, posez une fois par année concernée." }));
-      majNote();
-    } else {
-      var sp = selectPion(l);
-      sp.addEventListener("change", function () { l.pion = sp.value; changer(); rendreDemande(); });
-      objet.appendChild(sp);
-      if (l.type === "ajout") {
-        var niv = el("select", { "aria-label": "Niveau" }, [el("option", { value: "50", texte: "à 50 % (face dégradée)" }), el("option", { value: "100", texte: "à 100 % (avec DORESE)" })]);
-        niv.value = String(l.niveau || 50);
-        niv.addEventListener("change", function () { l.niveau = Number(niv.value); changer(); });
-        objet.appendChild(el("div", { style: "margin-top:.25rem" }, [niv]));
-      }
-      var p = IDX[l.pion];
-      if (p) {
-        var info = l.type === "dorese"
-          ? "DORESE : " + p.dorese.ao + " AO · " + p.dorese.mco + " MCO · " + p.dorese.rh + " RH"
-          : l.type === "retrait" ? "Libère " + p.cout50 / M.CASE + " cases par année cochée"
-          : "50 % : " + p.cout50 / M.CASE + " c. · 100 % : " + p.cout100 / M.CASE + " c.";
-        objet.appendChild(el("div", { classe: "sous", texte: info }));
-      }
-    }
-    tr.appendChild(objet);
-
-    // Armée imputée
-    var arm = el("select", { "aria-label": "Armée imputée" });
-    M.ARMEES.forEach(function (a) { arm.appendChild(el("option", { value: a, texte: a })); });
-    arm.value = M.armeeDeLigne(l, IDX);
-    arm.addEventListener("change", function () { l.armee = arm.value; changer(); });
-    tr.appendChild(el("td", null, [arm]));
-
-    // Années
-    M.ANNEES.forEach(function (a) {
-      var max = (l.type === "dorese" || l.type === "retrait") ? 1 : 99;
-      var i = el("input", { classe: "qte", type: "number", min: 0, max: max, step: 1, value: (l.qte || {})[a] || 0, "aria-label": "Quantité " + a });
-      i.addEventListener("input", function () {
-        var v = Math.max(0, Math.min(max, Math.round(Number(i.value) || 0)));
-        l.qte = l.qte || {}; l.qte[a] = v;
-        changer();
-      });
-      tr.appendChild(el("td", { classe: "num" }, [i]));
-    });
-
-    tr.appendChild(unitCellule);
-    tr.appendChild(totalCellule);
-
-    var just = el("textarea", { rows: 1, placeholder: "Pourquoi ce besoin ?", "aria-label": "Justification" });
-    just.value = l.justification || "";
-    just.addEventListener("input", function () { l.justification = just.value; enregistrer(l); });
-    tr.appendChild(el("td", null, [just]));
-
-    var sup = el("button", { classe: "suppr", type: "button", title: "Supprimer la ligne", "aria-label": "Supprimer la ligne", texte: "×" });
-    sup.addEventListener("click", function () {
-      if (sup.dataset.arme !== "1") { sup.dataset.arme = "1"; sup.textContent = "Confirmer"; setTimeout(function () { sup.dataset.arme = ""; sup.textContent = "×"; }, 3000); return; }
-      clearTimeout(enAttente[l.id]); delete enAttente[l.id];
-      etat.lignes = etat.lignes.filter(function (x) { return x.id !== l.id; });
-      S.supprimerLigne(etat.partie.nom, etat.mdp, l.id).then(function () { toast("Ligne supprimée"); }).catch(function (e) { toast(e.message); });
-      rendreDemande();
-    });
-    tr.appendChild(el("td", null, [sup]));
-
-    majChiffres();
-    return tr;
-  }
-
-  function rendreBilan() {
-    var b = $("bilan-role");
-    vider(b);
-    var mien = M.synthese(PIONS, etat.lignes, params(), function (l) { return l.role === etat.role; });
-    var tout = M.synthese(PIONS, etat.lignes, params());
-    M.ANNEES.forEach(function (a) {
-      var m = mien[a], t = tout[a];
-      var d = m.dorese;
-      b.appendChild(el("div", { classe: "bilan-an" }, [
-        el("span", { classe: "an", texte: String(a) }),
-        el("span", { classe: "l" }, ["Ma demande", el("b", { texte: md(m.totalDemandes) })]),
-        el("span", { classe: "l" }, ["DORESE", el("b", { texte: (d.ao + d.mco + d.rh) + " (" + d.ao + "/" + d.mco + "/" + d.rh + ")" })]),
-        el("span", { classe: "l" }, ["Partie entière", el("b", { texte: md(t.total) })]),
-        el("span", { classe: "l" }, ["Plafond", el("b", { texte: md(t.plafond) })]),
-        el("span", { classe: "etat " + (t.marge >= 0 ? "ok" : "ko"), texte: t.marge >= 0 ? "Marge " + md(t.marge) : "Dépassement " + md(-t.marge) })
-      ]));
-    });
-  }
-
-  // ---------- Synthèse ----------
-  function rendreSynthese() {
-    var syn = M.synthese(PIONS, etat.lignes, params());
-    // Trajectoire
-    var tr = $("trajectoire");
-    vider(tr);
-    var echelleMax = Math.max.apply(null, M.ANNEES.map(function (a) { return Math.max(syn[a].total, syn[a].table); }));
-    M.ANNEES.forEach(function (a) {
-      var s = syn[a];
-      var barre = el("div", { classe: "traj-barre", title: "Socle " + md(s.totalSocle) + ", demandes " + md(s.totalDemandes) });
-      barre.appendChild(el("span", { classe: "traj-socle", style: "width:" + (100 * s.totalSocle / echelleMax) + "%" }));
-      M.ARMEES.forEach(function (arm) {
-        var v = Math.max(0, s.demandes[arm]);
-        if (v) barre.appendChild(el("span", { style: "width:" + (100 * v / echelleMax) + "%;background:" + couleurArmee(arm), title: arm + " " + md(v) }));
-      });
-      barre.appendChild(el("span", { classe: "traj-plafond", style: "left:" + (100 * s.plafond / echelleMax) + "%", title: "Plafond " + md(s.plafond) }));
-      tr.appendChild(el("div", { classe: "traj-ligne" }, [
-        el("span", { classe: "traj-an", texte: String(a) }), barre,
-        el("span", { classe: "traj-val " + (s.marge < 0 ? "neg" : ""), texte: md(s.total) })
-      ]));
-    });
-    tr.appendChild(el("div", { classe: "traj-echelle" }, [el("span"), el("div", null, [el("span", { texte: "0" }), el("span", { texte: md(echelleMax / 2) }), el("span", { texte: md(echelleMax) })]), el("span")]));
-    var leg = el("div", { classe: "legende" }, [el("span", null, [el("span", { classe: "pastille n-gris" }), "Socle"])]
-      .concat(M.ARMEES.map(function (a) { return el("span", null, [el("span", { classe: "pastille " + classeArmee(a) }), "Demandes " + a]); }))
-      .concat([el("span", { texte: "Trait noir : plafond de l'année" })]));
-    tr.appendChild(leg);
-
-    // Tableau par année et par armée
-    var t = $("table-synthese");
-    vider(t);
-    t.appendChild(el("thead", null, [el("tr", null, [el("th", { texte: "M€" })].concat(M.ANNEES.map(function (a) { return el("th", { classe: "num", texte: String(a) }); })).concat([el("th", { classe: "num", texte: "Total" })]))]));
-    var corps = el("tbody");
-    function rangee(lib, f, classe) {
-      var tot = 0;
-      var cells = M.ANNEES.map(function (a) { var v = f(syn[a]); tot += v; return el("td", { classe: "num " + (classe ? classe(v) : ""), texte: md(v) }); });
-      corps.appendChild(el("tr", null, [el("td", null, lib)].concat(cells).concat([el("td", { classe: "num", texte: md(tot) })])));
-    }
-    rangee([el("span", { classe: "pastille n-gris" }), "Socle (pions posés d'office)"], function (s) { return s.totalSocle; });
-    M.ARMEES.forEach(function (arm) {
-      rangee([el("span", { classe: "pastille " + classeArmee(arm) }), "Demandes " + arm], function (s) { return s.demandes[arm]; });
-    });
-    rangee(["Total sur la table"], function (s) { return s.total; });
-    rangee(["Plafond"], function (s) { return s.plafond; });
-    rangee(["Marge (+) ou dépassement (−)"], function (s) { return s.marge; }, function (v) { return v < 0 ? "neg" : "pos"; });
-    var synArb = M.synthese(PIONS, M.lignesApresArbitrage(etat.lignes, params()), params());
-    rangee(["Total après arbitrage"], function (x) { return synArb[x.annee].total; });
-    rangee(["Marge après arbitrage"], function (x) { return synArb[x.annee].marge; }, function (v) { return v < 0 ? "neg" : "pos"; });
-    rangee(["dont DORESE demandées"], function (s) { return (s.dorese.ao + s.dorese.mco + s.dorese.rh) * M.CASE; });
-    t.appendChild(corps);
-
-    // Par rôle
-    var tr2 = $("table-roles");
-    vider(tr2);
-    tr2.appendChild(el("thead", null, [el("tr", null, [el("th", { texte: "Rôle" }), el("th", { classe: "num", texte: "Lignes" })].concat(M.ANNEES.map(function (a) { return el("th", { classe: "num", texte: String(a) }); })).concat([el("th", { classe: "num", texte: "Total" })]))]));
-    var c2 = el("tbody");
-    var rolesPresents = M.ROLES.filter(function (r) { return (vueComplete() || r.code === etat.role) && etat.lignes.some(function (l) { return l.role === r.code; }); });
-    $("note-vue").textContent = vueComplete() ? "" : "Vue limitée à vos postes de dépense : le détail des autres rôles est réservé au CEMA, au SC-Plans et à l'animateur. Les totaux par armée restent visibles.";
-    if (!rolesPresents.length) c2.appendChild(el("tr", null, [el("td", { colspan: 3 + M.ANNEES.length, classe: "vide-etat", texte: "Aucune demande saisie dans cette partie." })]));
-    rolesPresents.forEach(function (r) {
-      var s = M.synthese(PIONS, etat.lignes, params(), function (l) { return l.role === r.code; });
-      var tot = 0;
-      var n = etat.lignes.filter(function (l) { return l.role === r.code; }).length;
-      c2.appendChild(el("tr", null, [el("td", { texte: r.code }), el("td", { classe: "num", texte: String(n) })]
-        .concat(M.ANNEES.map(function (a) { tot += s[a].totalDemandes; return el("td", { classe: "num", texte: md(s[a].totalDemandes) }); }))
-        .concat([el("td", { classe: "num", texte: md(tot) })])));
-    });
-    tr2.appendChild(c2);
-
-    // Toutes les lignes
-    var t3 = $("table-toutes");
-    vider(t3);
-    t3.appendChild(el("thead", null, [el("tr", null, [el("th", { texte: "Rôle" }), el("th", { texte: "Type" }), el("th", { texte: "Objet" }), el("th", { texte: "Armée" })]
-      .concat(M.ANNEES.map(function (a) { return el("th", { classe: "num", texte: String(a) }); })).concat([el("th", { classe: "num", texte: "Total" }), el("th", { texte: "Justification" })]))]));
-    var c3 = el("tbody");
-    var lignesVisibles = etat.lignes.filter(visible);
-    if (!lignesVisibles.length) c3.appendChild(el("tr", null, [el("td", { colspan: 6 + M.ANNEES.length, classe: "vide-etat", texte: vueComplete() ? "Les lignes des joueurs apparaîtront ici." : "Vos lignes apparaîtront ici." })]));
-    lignesVisibles.forEach(function (l) {
-      var c = M.coutLigne(l, IDX);
-      c3.appendChild(el("tr", null, [el("td", { texte: l.role }), el("td", { texte: M.TYPES_LIGNE[l.type] || l.type }), el("td", { texte: libelleLigne(l) }), el("td", { texte: M.armeeDeLigne(l, IDX) })]
-        .concat(M.ANNEES.map(function (a) { return el("td", { classe: "num", texte: c.annees[a].cout ? md(c.annees[a].cout) : "·" }); }))
-        .concat([el("td", { classe: "num", texte: md(c.total) }), el("td", { texte: l.justification || "" })])));
-    });
-    t3.appendChild(c3);
-  }
-
-  // ---------- Arbitrage ----------
   var fileParams = Promise.resolve();
   function modifierParams(fn) {
-    // Lecture puis écriture, à la suite, pour ne pas écraser un arbitrage voisin.
     fileParams = fileParams.then(function () {
       return S.lireEtat(etat.partie.nom, etat.mdp).then(function (e) {
         var p = e.partie.params && e.partie.params.plafonds ? e.partie.params : M.parametresParDefaut();
@@ -500,286 +170,587 @@
     return fileParams;
   }
 
-  function rendreArbitrage() {
-    var p = params();
-    var edit = ROLES_ARBITRAGE.indexOf(etat.role) !== -1;
-    $("aide-arbitrage").textContent = (edit
-      ? "Pour chaque ligne : retenue, différée d'une à trois années, ou renoncée. "
-      : "Lecture seule : seuls le CEMA et l'animateur arbitrent. ")
-      + "Un différé décale la ligne ; ce qui dépasse 2032 est reporté hors LPM.";
-    var dem = M.synthese(PIONS, etat.lignes, p);
-    var arb = M.synthese(PIONS, M.lignesApresArbitrage(etat.lignes, p), p);
-    var t = $("table-arb-annees");
-    vider(t);
-    t.appendChild(el("thead", null, [el("tr", null, [el("th", { texte: "M€" })].concat(M.ANNEES.map(function (a) { return el("th", { classe: "num", texte: String(a) }); })))]));
-    var c = el("tbody");
-    [["Total demandé", function (a) { return dem[a].total; }],
-     ["Total après arbitrage", function (a) { return arb[a].total; }],
-     ["Plafond", function (a) { return arb[a].plafond; }],
-     ["Marge après arbitrage", function (a) { return arb[a].marge; }, true]].forEach(function (r) {
-      c.appendChild(el("tr", null, [el("td", { texte: r[0] })].concat(M.ANNEES.map(function (a) {
-        var v = r[1](a); return el("td", { classe: "num " + (r[2] ? (v < 0 ? "neg" : "pos") : ""), texte: md(v) });
-      }))));
-    });
-    t.appendChild(c);
+  // ---------- Rendu ----------
+  function rendre(complet) {
+    var actif = document.activeElement;
+    rendreJauges();
+    if (etat.onglet === "composer") {
+      rendreArsenal();
+      if (complet || !$("fiches").contains(actif)) rendreFiches(); else rendreTotalDossier();
+    }
+    if (etat.onglet === "table") rendreTable();
+    if (etat.onglet === "arbitrage") rendreArbitrage();
+    if (etat.onglet === "bilan") rendreBilan();
+    if (etat.onglet === "reglages" && (complet || !$("form-parametres").contains(actif))) rendreReglages();
+  }
 
-    var tl = $("table-arb-lignes");
-    vider(tl);
-    tl.appendChild(el("thead", null, [el("tr", null, ["Rôle", "Objet", "Armée", "Demandé (6 ans)", "Décision", "Après arbitrage", "Sur mesure"].map(function (h, i) { return el("th", { classe: i === 3 || i === 5 ? "num" : "", texte: h }); }))]));
-    var cl = el("tbody");
-    var aArbitrer = etat.lignes.filter(visible);
-    if (!aArbitrer.length) cl.appendChild(el("tr", null, [el("td", { colspan: 7, classe: "vide-etat", texte: "Aucune demande à arbitrer pour l'instant." })]));
-    aArbitrer.forEach(function (l) {
-      var a = M.arbitrageDe(l, p);
-      var avant = M.coutLigne(l, IDX).total;
-      var la = M.ligneArbitree(l, p);
-      var apres = la ? M.coutLigne(la, IDX).total : 0;
-      var st = el("select", { "aria-label": "Décision", disabled: edit ? null : "disabled" });
-      Object.keys(M.STATUTS).forEach(function (k) { st.appendChild(el("option", { value: k, texte: M.STATUTS[k] })); });
-      st.value = a.statut;
-      var dec = el("select", { "aria-label": "Décalage", disabled: edit ? null : "disabled", hidden: a.statut === "differe" ? null : "hidden" });
-      [1, 2, 3].forEach(function (n) { dec.appendChild(el("option", { value: n, texte: "de " + n + " an" + (n > 1 ? "s" : "") })); });
-      dec.value = String(a.decalage || 1);
-      function enreg() {
-        var val = { statut: st.value, decalage: st.value === "differe" ? Number(dec.value) : 0 };
-        modifierParams(function (pp) { pp.arbitrages = pp.arbitrages || {}; pp.arbitrages[l.id] = val; });
-      }
-      st.addEventListener("change", function () { dec.hidden = st.value !== "differe"; enreg(); });
-      dec.addEventListener("change", enreg);
-      var celMesure = el("td");
-      if (l.type === "libre" && !l.modele) {
-        var cb = el("input", { type: "checkbox", id: "valide-" + l.id, disabled: edit ? null : "disabled" });
-        cb.checked = !!(p.validations || {})[l.id];
-        cb.addEventListener("change", function () { modifierParams(function (pp) { pp.validations = pp.validations || {}; pp.validations[l.id] = cb.checked; }); });
-        celMesure.appendChild(el("label", { for: cb.id }, [cb, " validé"]));
-      }
-      var report = M.reportHorsLpm(l, p, IDX);
-      cl.appendChild(el("tr", { classe: "arb-ligne" }, [
-        el("td", { texte: l.role }),
-        el("td", { classe: "statut-" + a.statut, texte: libelleLigne(l) }),
-        el("td", { texte: M.armeeDeLigne(l, IDX) }),
-        el("td", { classe: "num", texte: md(avant) }),
-        el("td", null, [st, " ", dec]),
-        el("td", { classe: "num", texte: md(apres) + (report ? " (+" + md(report) + " hors LPM)" : "") }),
-        celMesure
+  function changerOnglet(nom) {
+    etat.onglet = nom;
+    document.querySelectorAll(".parcours button").forEach(function (b) { b.setAttribute("aria-selected", b.getAttribute("data-onglet") === nom ? "true" : "false"); });
+    ["composer", "table", "arbitrage", "bilan", "reglages"].forEach(function (v) { $("vue-" + v).hidden = v !== nom; });
+    memoriser();
+    rendre(true);
+  }
+
+  // Jauges : une par année, toujours visibles.
+  function rendreJauges() {
+    var j = $("jauges");
+    vider(j);
+    var syn = M.synthese(PIONS, etat.lignes, params());
+    var max = Math.max.apply(null, M.ANNEES.map(function (a) { return Math.max(syn[a].total, syn[a].table); }));
+    M.ANNEES.forEach(function (a) {
+      var s = syn[a];
+      var barre = el("div", { classe: "jauge-barre" });
+      barre.appendChild(el("span", { style: "width:" + (100 * s.totalSocle / max) + "%;background:var(--gris)" }));
+      M.ARMEES.forEach(function (arm) { var v = Math.max(0, s.demandes[arm]); if (v) barre.appendChild(el("span", { style: "width:" + (100 * v / max) + "%;background:" + couleur(arm) })); });
+      barre.appendChild(el("span", { classe: "jauge-plafond", style: "left:" + (100 * s.plafond / max) + "%" }));
+      j.appendChild(el("button", { classe: "jauge", type: "button", "aria-pressed": a === etat.annee ? "true" : "false", title: "Voir la table " + a,
+        onclick: function () { etat.annee = a; changerOnglet("table"); } }, [
+        el("div", { classe: "jauge-tete" }, [el("span", { classe: "jauge-an", texte: String(a) }), el("span", { classe: "jauge-val", texte: md(s.total) + " / " + md(s.plafond) })]),
+        barre,
+        el("span", { classe: "jauge-etat " + (s.marge >= 0 ? "pos" : "neg"), texte: s.marge >= 0 ? "Marge " + md(s.marge) : "Dépassement " + md(-s.marge) })
       ]));
     });
-    tl.appendChild(cl);
-
-    var tr = $("table-renoncements");
-    vider(tr);
-    var ren = etat.lignes.filter(function (l) { return visible(l) && M.arbitrageDe(l, p).statut === "renonce"; });
-    tr.appendChild(el("thead", null, [el("tr", null, ["Rôle", "Objet", "Armée", "Montant renoncé (6 ans)", "Justification du demandeur"].map(function (h, i) { return el("th", { classe: i === 3 ? "num" : "", texte: h }); }))]));
-    var cr = el("tbody");
-    if (!ren.length) cr.appendChild(el("tr", null, [el("td", { colspan: 5, classe: "vide-etat", texte: "Aucun renoncement pour l'instant." })]));
-    var totalRen = 0;
-    ren.forEach(function (l) {
-      var v = M.coutLigne(l, IDX).total; totalRen += v;
-      cr.appendChild(el("tr", null, [el("td", { texte: l.role }), el("td", { texte: libelleLigne(l) }), el("td", { texte: M.armeeDeLigne(l, IDX) }), el("td", { classe: "num", texte: md(v) }), el("td", { texte: l.justification || "" })]));
-    });
-    tr.appendChild(cr);
-    if (ren.length) tr.appendChild(el("tfoot", null, [el("tr", null, [el("td", { colspan: 3, texte: "Total renoncé" }), el("td", { classe: "num", texte: md(totalRen) }), el("td")])]));
   }
 
-  function libelleLigne(l) {
-    if (l.type === "libre") return l.libelle || "Ligne libre";
+  // ---------- 1. Composer : l'arsenal ----------
+  var FILTRES = [
+    ["renforcer", "Renforcer"],
+    ["creer", "Créer une capacité"],
+    ["options", "Options de ma fiche"],
+    ["dissoudre", "Dissoudre"],
+    ["mesure", "Sur mesure"]
+  ];
+
+  function armeeDuRole() { return role(etat.role).armee; }
+  function pionDeMonPerimetre(p) {
+    if (vueComplete()) return true;
+    var a = armeeDuRole();
+    return a === "Interarmées" ? true : p.armee === a;
+  }
+
+  function forme(p) {
+    var f = el("span", { classe: "forme", style: "grid-template-columns:repeat(" + Math.min(p.l || 1, 6) + ",8px);--c:" + (p.type === "violet" ? "var(--violet)" : p.type === "gris" ? "var(--gris)" : couleur(p.armee)) });
+    for (var i = 0; i < Math.min((p.l || 1) * (p.h || 1), 24); i++) f.appendChild(el("i"));
+    return f;
+  }
+  function pips(n) { var s = el("span", { classe: "pips", title: n + " DORESE" }); for (var i = 0; i < n; i++) s.appendChild(el("i")); return s; }
+
+  function rendreArsenal() {
+    var f = $("filtres");
+    vider(f);
+    FILTRES.forEach(function (x) {
+      f.appendChild(el("button", { classe: "filtre", type: "button", "aria-pressed": etat.filtre === x[0] ? "true" : "false", texte: x[1], onclick: function () { etat.filtre = x[0]; rendreArsenal(); } }));
+    });
+    var a = $("arsenal");
+    vider(a);
+    var q = etat.recherche.trim().toLowerCase();
+    function correspond(txt) { return !q || txt.toLowerCase().indexOf(q) !== -1; }
+    var cartes = [];
+
+    if (etat.filtre === "renforcer") {
+      PIONS.filter(function (p) { return p.type === "capacite" && M.nbManquantes(p) > 0 && pionDeMonPerimetre(p) && correspond(p.nom); }).forEach(function (p) {
+        var deja = etat.lignes.some(function (l) { return l.type === "dorese" && l.pion === p.id && l.role === etat.role; });
+        var mq = M.doreseManquantes(p);
+        cartes.push(carte(p, p.nom, [md(M.nbManquantes(p) * M.CASE) + " par an", pips(M.nbManquantes(p)), "manque " + mq.ao + " AO · " + mq.mco + " MCO · " + mq.rh + " RH"],
+          deja ? "✓" : "+", function () { ajouter({ type: "dorese", pion: p.id, toutes: true }); }, "Passer " + p.nom + " de 50 % à 100 % en ajoutant ses DORESE"));
+      });
+    } else if (etat.filtre === "creer") {
+      PIONS.filter(function (p) { return (p.type === "capacite" || p.type === "violet") && pionDeMonPerimetre(p) && correspond(p.nom); }).forEach(function (p) {
+        var info = p.type === "capacite" && M.nbDorese(p)
+          ? ["À 50 % : " + md(p.cout50), "À 100 % : " + md(p.cout100)]
+          : [md(p.cout50) + " par an"];
+        cartes.push(carte(p, p.nom.replace(/ \d$/, ""), info, "+", function () { ajouter({ type: "ajout", pion: p.id, niveau: p.type === "capacite" && M.nbDorese(p) ? 100 : 50 }); }, "Créer un nouvel exemplaire de " + p.nom));
+      });
+    } else if (etat.filtre === "dissoudre") {
+      PIONS.filter(function (p) { return (p.type === "capacite" || p.type === "violet") && pionDeMonPerimetre(p) && correspond(p.nom); }).forEach(function (p) {
+        cartes.push(carte(p, p.nom, ["Libère " + md(M.coutSocle(p)) + " par an"], "−", function () { ajouter({ type: "retrait", pion: p.id }); }, "Dissoudre " + p.nom));
+      });
+    } else if (etat.filtre === "options") {
+      var opts = CATALOGUE.filter(function (o) { return (vueComplete() || o.role === etat.role) && correspond(o.libelle + " " + (o.categorie || "")); });
+      opts.forEach(function (o) {
+        var p = { l: 2, h: 1, armee: o.armee, type: /Violet/.test(o.type_pion || "") ? "violet" : "capacite" };
+        cartes.push(carte(p, o.libelle, [fourchette(o), vueComplete() ? "Fiche " + o.role : (o.categorie || "")], "+", function () { ajouter({ type: "libre", modele: o.code }); }, o.description || o.libelle));
+      });
+      if (!opts.length) a.appendChild(el("p", { classe: "vide-arsenal", texte: "Votre fiche ne propose pas d'option chiffrée. Utilisez « Sur mesure » pour créer un pion." }));
+    } else if (etat.filtre === "mesure") {
+      a.appendChild(el("div", { classe: "dossier-vide" }, [
+        el("b", { texte: "Un besoin hors catalogue ?" }),
+        el("p", { texte: "Créez votre propre pion : intitulé, prix, années, DORESE. Il restera « à valider » jusqu'à l'accord de l'animateur." }),
+        el("button", { classe: "btn-laiton", type: "button", texte: "Créer un pion sur mesure", onclick: function () { ajouter({ type: "libre" }); } })
+      ]));
+    }
+    cartes.forEach(function (c) { a.appendChild(c); });
+    if (!cartes.length && etat.filtre !== "mesure" && etat.filtre !== "options") a.appendChild(el("p", { classe: "vide-arsenal", texte: etat.filtre === "renforcer" && !etat.recherche ? "Toutes vos capacités sont déjà à 100 % dans la situation de départ." : "Aucun pion ne correspond." }));
+  }
+
+  function carte(p, nom, infos, signe, action, titre) {
+    return el("button", { classe: "carte-pion", type: "button", title: titre, onclick: action }, [
+      forme(p),
+      el("span", null, [el("span", { classe: "carte-pion-nom", texte: nom }), el("span", { classe: "carte-pion-info" }, infos.map(function (i) { return typeof i === "string" ? el("span", { texte: i }) : i; }))]),
+      el("span", { classe: "plus", "aria-hidden": "true", texte: signe })
+    ]);
+  }
+
+  function ajouter(o) {
+    var r = role(etat.role);
+    var l = { id: nouvelId(), role: etat.role, type: o.type, qte: {}, justification: "", cree_le: new Date().toISOString() };
+    if (o.type === "libre") {
+      var opt = optionDe(o.modele);
+      l.modele = opt ? opt.code : null;
+      l.libelle = opt ? opt.libelle : "";
+      l.armee = opt ? opt.armee : r.armee;
+      l.source = opt ? opt.source : null;
+      l.cout_unitaire = opt && opt.cout ? M.arrondiCase(opt.cout) : 0;
+      l.dorese = opt && opt.dorese ? { ao: opt.dorese.ao || 0, mco: opt.dorese.mco || 0, rh: opt.dorese.rh || 0 } : { ao: 0, mco: 0, rh: 0 };
+      M.ANNEES.forEach(function (a) { l.qte[a] = opt && opt.annuel ? 1 : 0; });
+      if (!opt || !opt.annuel) l.qte[M.ANNEES[0]] = 1;
+    } else {
+      var p = IDX[o.pion];
+      l.pion = p.id;
+      l.niveau = o.niveau || 100;
+      l.armee = r.armee !== "Interarmées" ? r.armee : p.armee;
+      M.ANNEES.forEach(function (a) { l.qte[a] = 1; });
+    }
+    etat.lignes.push(l);
+    etat.ouverte = l.id;
+    enregistrer(l);
+    rendreFiches();
+    rendreJauges();
+    var f = document.querySelector('[data-fiche="' + l.id + '"]');
+    if (f) f.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    toast(natureLigne(l) === libelleLigne(l) ? "Fiche ajoutée : " + libelleLigne(l) : natureLigne(l) + " : " + libelleLigne(l));
+  }
+
+  // ---------- 1. Composer : les fiches ----------
+  function rendreTotalDossier() {
+    var mien = M.synthese(PIONS, etat.lignes, params(), function (l) { return l.role === etat.role; });
+    var tot = 0, dor = 0;
+    M.ANNEES.forEach(function (a) { tot += mien[a].totalDemandes; dor += mien[a].dorese.ao + mien[a].dorese.mco + mien[a].dorese.rh; });
+    var t = $("dossier-total");
+    vider(t);
+    t.appendChild(el("div", null, [el("b", { texte: md(tot) }), el("small", { texte: "Ma demande sur 6 ans" })]));
+    t.appendChild(el("div", null, [el("b", { texte: String(dor) }), el("small", { texte: "DORESE" })]));
+  }
+
+  function rendreFiches() {
+    var r = role(etat.role);
+    $("titre-dossier").textContent = "Demande " + r.code;
+    rendreTotalDossier();
+    var f = $("fiches");
+    vider(f);
+    var miennes = etat.lignes.filter(function (l) { return l.role === etat.role; });
+    if (!miennes.length) {
+      f.appendChild(el("div", { classe: "dossier-vide" }, [
+        el("b", { texte: "Votre dossier est vide" }),
+        el("p", { texte: "Choisissez dans le catalogue : renforcez une capacité existante, créez-en une, retenez une option de votre fiche ou dissolvez ce qui ne sert plus." })
+      ]));
+      return;
+    }
+    miennes.slice().reverse().forEach(function (l) { f.appendChild(fiche(l)); });
+  }
+
+  function fiche(l) {
     var p = IDX[l.pion];
-    var nom = p ? p.nom : l.pion;
-    if (l.type === "ajout") return nom + " à " + (l.niveau || 50) + " %";
-    return nom;
-  }
+    var o = optionDe(l.modele);
+    var armee = M.armeeDeLigne(l, IDX);
+    var boite = el("article", { classe: "fiche", "data-fiche": l.id, style: "--c:" + couleur(armee) });
+    var cout = el("div", { classe: "fiche-cout" });
+    var calendrier = el("div", { classe: "calendrier" });
+    var notePrix = el("div", { classe: "alerte-texte" });
 
-  function csv() {
-    var sep = ";";
-    var ent = ["Rôle", "Type", "Objet", "Armée imputée"].concat(M.ANNEES.map(String)).concat(["Total (M€)", "Justification"]);
-    var lignes = [ent.join(sep)];
-    etat.lignes.filter(visible).forEach(function (l) {
+    function majCout() {
       var c = M.coutLigne(l, IDX);
-      var v = [l.role, M.TYPES_LIGNE[l.type], libelleLigne(l), M.armeeDeLigne(l, IDX)]
-        .concat(M.ANNEES.map(function (a) { return c.annees[a].cout; })).concat([c.total, (l.justification || "").replace(/\s+/g, " ")]);
-      lignes.push(v.map(function (x) { var s = String(x); return /[";\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }).join(sep));
+      var u = M.unitaire(l, IDX);
+      vider(cout);
+      cout.appendChild(el("b", { texte: md(c.total) }));
+      cout.appendChild(el("small", { texte: (u.cout ? md(u.cout) + " par an posé" : "prix à fixer") + (c.totalDorese ? " · " + c.totalDorese + " DORESE" : "") }));
+      rendreTotalDossier();
+      rendreJauges();
+    }
+    function changer() { majCout(); enregistrer(l); }
+
+    // En-tête
+    var titre = el("div", { classe: "fiche-titre" }, [el("span", { classe: "fiche-type", texte: natureLigne(l) })]);
+    if (l.type === "libre" && !o) {
+      var lib = el("input", { value: l.libelle || "", placeholder: "Intitulé du pion", "aria-label": "Intitulé" });
+      lib.addEventListener("input", function () { l.libelle = lib.value; enregistrer(l); });
+      titre.appendChild(el("div", { classe: "fiche-nom" }, [lib]));
+    } else {
+      titre.appendChild(el("div", { classe: "fiche-nom", texte: libelleLigne(l) }));
+    }
+    var sous = [];
+    if (p && l.type === "dorese") { var mq2 = M.doreseManquantes(p); sous.push("Ajoute les " + M.nbManquantes(p) + " DORESE qui manquent (" + mq2.ao + " AO, " + mq2.mco + " MCO, " + mq2.rh + " RH) pour passer la capacité à 100 %"); }
+    if (p && l.type === "retrait") sous.push("Retire la capacité de la table les années cochées");
+    if (p && l.type === "ajout") sous.push("Nouvel exemplaire, en plus du socle");
+    if (o) sous.push("Fiche : " + fourchette(o) + (o.periodicite ? " · " + o.periodicite : ""));
+    if (sous.length) titre.appendChild(el("div", { classe: "fiche-sous", texte: sous.join(" · ") }));
+    if (l.type === "libre" && !o) {
+      var val = (params().validations || {})[l.id];
+      titre.appendChild(el("span", null, [el("span", { classe: "badge " + (val ? "badge-ok" : "badge-attente"), texte: val ? "Validé par l'animateur" : "À valider par l'animateur" })]));
+    }
+    var arb = M.arbitrageDe(l, params());
+    if (arb.statut !== "attente") titre.appendChild(el("span", null, [el("span", { classe: "badge " + (arb.statut === "retenu" ? "badge-ok" : arb.statut === "renonce" ? "badge-alerte" : "badge-attente"), texte: "CEMA : " + M.STATUTS[arb.statut] + (arb.statut === "differe" ? " de " + arb.decalage + " an" + (arb.decalage > 1 ? "s" : "") : "") })]));
+
+    var suppr = el("button", { classe: "suppr", type: "button", texte: "Retirer de ma demande" });
+    suppr.addEventListener("click", function () {
+      if (suppr.dataset.arme !== "1") { suppr.dataset.arme = "1"; suppr.textContent = "Confirmer le retrait"; setTimeout(function () { suppr.dataset.arme = ""; suppr.textContent = "Retirer de ma demande"; }, 3000); return; }
+      clearTimeout(enAttente[l.id]); delete enAttente[l.id];
+      etat.lignes = etat.lignes.filter(function (x) { return x.id !== l.id; });
+      S.supprimerLigne(etat.partie.nom, etat.mdp, l.id).then(function () { toast("Fiche retirée"); }).catch(function (e) { toast(e.message); });
+      rendreFiches(); rendreJauges(); rendreArsenal();
     });
-    return lignes.join("\n");
+    boite.appendChild(el("div", { classe: "fiche-tete" }, [titre, cout, suppr]));
+
+    // Réglages
+    var reg = el("div", { classe: "fiche-reglages" });
+    if (l.type === "ajout" && p && p.type === "capacite" && M.nbDorese(p)) {
+      var seg = el("div", { classe: "segment", role: "group", "aria-label": "Niveau" });
+      [[50, "À 50 % · " + md(p.cout50)], [100, "À 100 % · " + md(p.cout100)]].forEach(function (x) {
+        seg.appendChild(el("button", { type: "button", "aria-pressed": Number(l.niveau) === x[0] ? "true" : "false", texte: x[1], onclick: function () { l.niveau = x[0]; changer(); rendreFiches(); } }));
+      });
+      reg.appendChild(seg);
+    }
+    if (l.type === "libre") {
+      var prix = el("input", { classe: "prix", type: "number", min: 0, step: 100, value: l.cout_unitaire || "", placeholder: "0", "aria-label": "Prix fixé en M€" });
+      function majNote(brut) {
+        var t = [];
+        if (!l.cout_unitaire) t.push("Fixez le prix : la fiche ne compte pas tant qu'il est vide.");
+        else if (brut !== undefined && Number(brut) !== l.cout_unitaire) t.push("Arrondi à la case : " + md(l.cout_unitaire) + ".");
+        else if (brut === undefined && o && o.cout && o.cout % M.CASE) t.push("Prix de la fiche " + md(o.cout) + ", arrondi à " + md(l.cout_unitaire) + " : à confirmer.");
+        if (o && o.cout && l.cout_unitaire && (l.cout_unitaire < M.arrondiCase(o.cout) || l.cout_unitaire > Math.max(M.arrondiCase(o.cout_max || o.cout), o.cout_max || o.cout))) t.push("Hors fourchette de la fiche (" + fourchette(o) + ").");
+        notePrix.textContent = t.join(" ");
+      }
+      prix.addEventListener("input", function () { l.cout_unitaire = M.arrondiCase(prix.value); changer(); majNote(prix.value); });
+      prix.addEventListener("change", function () { prix.value = l.cout_unitaire || ""; majNote(); });
+      reg.appendChild(el("label", null, ["Prix fixé, M€ par an posé", prix]));
+      var d = l.dorese || { ao: 0, mco: 0, rh: 0 };
+      ["ao", "mco", "rh"].forEach(function (k) {
+        var i = el("input", { classe: "dor", type: "number", min: 0, step: 1, value: d[k] || 0, "aria-label": "DORESE " + k.toUpperCase() });
+        i.addEventListener("input", function () { l.dorese = l.dorese || {}; l.dorese[k] = Number(i.value) || 0; changer(); });
+        reg.appendChild(el("label", null, ["DORESE " + k.toUpperCase(), i]));
+      });
+      majNote();
+    }
+    var arm = el("select", { "aria-label": "Armée qui porte le projet" });
+    M.ARMEES.forEach(function (a) { arm.appendChild(el("option", { value: a, texte: a })); });
+    arm.value = armee;
+    arm.addEventListener("change", function () { l.armee = arm.value; boite.style.setProperty("--c", couleur(arm.value)); changer(); });
+    reg.appendChild(el("label", null, ["Imputé à", arm]));
+    boite.appendChild(reg);
+    if (l.type === "libre") boite.appendChild(notePrix);
+
+    // Calendrier
+    var unique = l.type === "dorese" || l.type === "retrait";
+    M.ANNEES.forEach(function (a) {
+      var q = M.quantite(l, a);
+      var c = el("div", { classe: "an-case" + (q ? " actif" : "") }, [el("small", { texte: String(a) })]);
+      if (unique) {
+        c.appendChild(el("button", { classe: "coche", type: "button", "aria-pressed": q ? "true" : "false", texte: q ? (l.type === "retrait" ? "Retiré" : "À 100 %") : "—",
+          onclick: function () { l.qte[a] = q ? 0 : 1; changer(); remplacer(); } }));
+      } else {
+        var out = el("output", { texte: String(q) });
+        c.appendChild(el("div", { classe: "pas" }, [
+          el("button", { type: "button", "aria-label": "Moins en " + a, texte: "−", onclick: function () { l.qte[a] = Math.max(0, q - 1); changer(); remplacer(); } }),
+          out,
+          el("button", { type: "button", "aria-label": "Plus en " + a, texte: "+", onclick: function () { l.qte[a] = q + 1; changer(); remplacer(); } })
+        ]));
+      }
+      calendrier.appendChild(c);
+    });
+    boite.appendChild(calendrier);
+    function remplacer() { var n = fiche(l); boite.replaceWith(n); }
+
+    // Justification et conditions
+    var just = el("textarea", { placeholder: "Pourquoi ce besoin ? Votre argument pour l'arbitrage.", "aria-label": "Justification" });
+    just.value = l.justification || "";
+    just.addEventListener("input", function () { l.justification = just.value; enregistrer(l); });
+    boite.appendChild(just);
+    if (o && (o.conditions || o.alerte)) {
+      boite.appendChild(el("details", null, [el("summary", { texte: "Ce que dit la fiche" }),
+        o.alerte ? el("p", { classe: "alerte-texte", texte: o.alerte }) : null,
+        o.conditions ? el("p", { texte: o.conditions }) : null,
+        el("p", { texte: [o.source, o.edition].filter(Boolean).join(" · ") })]));
+    }
+    majCout();
+    return boite;
   }
 
-  // ---------- Table ----------
+  // ---------- 2. La table ----------
   function rendreTable() {
-    var sel = $("table-annee");
-    if (!sel.options.length) M.ANNEES.forEach(function (a) { sel.appendChild(el("option", { value: a, texte: String(a) })); });
-    sel.value = String(etat.anneeTable);
-    var a = etat.anneeTable;
+    var ans = $("annees-table");
+    vider(ans);
+    M.ANNEES.forEach(function (a) { ans.appendChild(el("button", { type: "button", "aria-pressed": a === etat.annee ? "true" : "false", texte: String(a), onclick: function () { etat.annee = a; rendreTable(); rendreJauges(); } })); });
+    document.querySelectorAll(".bascule button").forEach(function (b) { b.setAttribute("aria-pressed", b.getAttribute("data-vue") === etat.vueTable ? "true" : "false"); });
     var p = params();
-    var lignesVues = etat.vueTable === "arbitrage" ? M.lignesApresArbitrage(etat.lignes, p) : etat.lignes;
-    var t = M.placerAnnee(PIONS, lignesVues, p, a);
-    var syn = M.synthese(PIONS, lignesVues, p)[a];
+    var lignes = etat.vueTable === "arbitrage" ? M.lignesApresArbitrage(etat.lignes, p) : etat.lignes;
+    var t = M.placerAnnee(PIONS, lignes, p, etat.annee);
+    var syn = M.synthese(PIONS, lignes, p)[etat.annee];
 
-    var ch = $("table-chiffres");
-    vider(ch);
-    [["Cases occupées", t.occupees + " sur " + t.plafond + " autorisées"], ["Montant", md(syn.total)], [syn.marge >= 0 ? "Marge" : "Dépassement", md(Math.abs(syn.marge))]].forEach(function (x, i) {
-      ch.appendChild(el("span", { classe: i === 2 ? (syn.marge >= 0 ? "pos" : "neg") : "" }, [x[0] + " : ", el("b", { texte: x[1] })]));
+    var rel = $("table-releve");
+    vider(rel);
+    [["Année", String(etat.annee), ""], ["Cases posées", t.occupees + " / " + t.plafond, ""], ["Montant", md(syn.total), ""], [syn.marge >= 0 ? "Marge" : "Dépassement", md(Math.abs(syn.marge)), syn.marge >= 0 ? "pos" : "neg"]].forEach(function (x) {
+      rel.appendChild(el("div", { classe: "releve" }, [el("small", { texte: x[0] }), el("b", { classe: x[2], texte: x[1] })]));
     });
 
     var pl = $("plateau");
     vider(pl);
     pl.style.gridTemplateRows = "repeat(" + t.hauteur + ", var(--case))";
-    // Fond : une case par emplacement, rouge pâle au-delà du plafond, hachurée hors table.
     for (var k = 0; k < t.hauteur * t.largeur; k++) {
-      var cl = "fond";
-      if (k >= t.table) cl += " fond-horstable";
-      else if (k >= t.plafond) cl += " fond-hors";
-      pl.appendChild(el("div", { classe: cl, style: "grid-row:" + (Math.floor(k / t.largeur) + 1) + ";grid-column:" + (k % t.largeur + 1) }));
+      pl.appendChild(el("div", { classe: "fond" + (k >= t.table ? " fond-horstable" : k >= t.plafond ? " fond-hors" : ""), style: "grid-row:" + (Math.floor(k / t.largeur) + 1) + ";grid-column:" + (k % t.largeur + 1) }));
     }
-    function depasse(r, c, w, h) {
-      for (var i = r; i < r + h; i++) for (var j = c; j < c + w; j++) if (i * t.largeur + j >= t.plafond) return true;
-      return false;
-    }
+    function depasse(r, c, w, h) { for (var i = r; i < r + h; i++) for (var j = c; j < c + w; j++) if (i * t.largeur + j >= t.plafond) return true; return false; }
+    function masque(x) { return x.role && !vueComplete() && x.role !== etat.role; }
     t.pieces.forEach(function (x) {
-      var couleur = x.groupe === "Fixes" ? "var(--gris)" : x.nature === "violet" ? "var(--violet)" : couleurArmee(x.armee);
-      var classes = ["pion"];
-      if (x.niveau === 50) classes.push("pion-50");
-      if (depasse(x.r, x.c, x.w, x.h)) classes.push("pion-debord");
-      if (x.w * x.h <= 2) classes.push("pion-petit");
-      if (x.role && !vueComplete() && x.role !== etat.role) x.libelle = "Demande " + x.armee;
-      var titre = x.libelle + " · " + x.armee + " · " + x.cases + " case" + (x.cases > 1 ? "s" : "") + (x.niveau ? " · " + x.niveau + " %" : "") + (x.role && (vueComplete() || x.role === etat.role) ? " · demande " + x.role : "");
-      pl.appendChild(el("div", { classe: classes.join(" "), title: titre,
-        style: "grid-row:" + (x.r + 1) + " / span " + x.h + ";grid-column:" + (x.c + 1) + " / span " + x.w + ";background:" + couleur }, [
-        el("span", { texte: x.libelle.replace(/^Capacité /, "").replace(/^Brigade /, "Bde ") })
-      ]));
+      var c = x.groupe === "Fixes" ? "var(--gris)" : x.nature === "violet" ? "var(--violet)" : couleur(x.armee);
+      var cl = ["pion"];
+      if (x.niveau === 50) cl.push("pion-50");
+      if (depasse(x.r, x.c, x.w, x.h)) cl.push("pion-debord");
+      if (x.w * x.h <= 2) cl.push("pion-petit");
+      if (x.role && x.role === etat.role) cl.push("pion-mien");
+      var nom = masque(x) ? "Demande " + x.armee : x.libelle;
+      pl.appendChild(el("div", { classe: cl.join(" "), title: nom + " · " + x.cases + " case" + (x.cases > 1 ? "s" : "") + (x.niveau ? " · " + x.niveau + " %" : "") + (x.role && !masque(x) ? " · " + x.role : ""),
+        style: "grid-row:" + (x.r + 1) + " / span " + x.h + ";grid-column:" + (x.c + 1) + " / span " + x.w + ";background:" + c }, [
+        el("span", { texte: nom.replace(/^Capacité /, "").replace(/^Brigade /, "Bde ") })]));
     });
     t.cellules.forEach(function (x) {
-      var classes = ["pion", "pion-case"];
-      if (x.nature === "dorese") classes.push("pion-dorese");
-      if (x.horsCatalogue) classes.push("pion-mesure");
-      if (x.r * t.largeur + x.c >= t.plafond) classes.push("pion-debord");
-      if (x.role && !vueComplete() && x.role !== etat.role) x.libelle = x.nature === "dorese" ? "DORESE" : "Demande " + x.armee;
-      pl.appendChild(el("div", { classe: classes.join(" "), title: x.libelle + " · " + x.armee + (x.role && (vueComplete() || x.role === etat.role) ? " · demande " + x.role : ""),
-        style: "grid-row:" + (x.r + 1) + ";grid-column:" + (x.c + 1) + ";background:" + couleurArmee(x.armee) }, [
-        el("span", { texte: x.nature === "dorese" ? { ao: "AO", mco: "M", rh: "RH" }[x.type] : "" })
-      ]));
+      var cl = ["pion", "pion-case"];
+      if (x.nature === "dorese") cl.push("pion-dorese");
+      if (x.horsCatalogue) cl.push("pion-mesure");
+      if (x.r * t.largeur + x.c >= t.plafond) cl.push("pion-debord");
+      if (x.role && x.role === etat.role) cl.push("pion-mien");
+      var nom = masque(x) ? (x.nature === "dorese" ? "DORESE" : "Demande " + x.armee) : x.libelle;
+      pl.appendChild(el("div", { classe: cl.join(" "), title: nom, style: "grid-row:" + (x.r + 1) + ";grid-column:" + (x.c + 1) + ";background:" + couleur(x.armee) }, [
+        el("span", { texte: x.nature === "dorese" ? { ao: "AO", mco: "M", rh: "RH" }[x.type] : "" })]));
     });
 
     var lg = $("legende");
     vider(lg);
-    function puce(style, classe, texte) { return el("span", null, [el("span", { classe: "puce-legende " + (classe || ""), style: style }), texte]); }
+    function puce(style, cl, txt) { return el("span", null, [el("span", { classe: "puce-legende " + (cl || ""), style: style }), txt]); }
     lg.appendChild(puce("background:var(--gris)", "", "Dépense fixe"));
     lg.appendChild(puce("background:var(--violet)", "", "Investissement"));
-    M.ARMEES.forEach(function (arm) { lg.appendChild(puce("background:" + couleurArmee(arm), "", arm)); });
+    M.ARMEES.forEach(function (a) { lg.appendChild(puce("background:" + couleur(a), "", a)); });
     lg.appendChild(puce("background:var(--terre)", "pion-50", "Capacité à 50 %"));
-    lg.appendChild(puce("background:var(--terre)", "pion-dorese", "DORESE (AO, MCO, RH)"));
-    lg.appendChild(puce("background:var(--terre)", "pion-mesure", "Pion sur mesure"));
-    lg.appendChild(puce("", "fond-hors", "Au-delà du plafond"));
-    lg.appendChild(puce("background:var(--marine)", "pion-debord", "Pion au-delà du plafond"));
+    lg.appendChild(puce("background:var(--terre)", "pion-dorese", "DORESE"));
+    lg.appendChild(puce("background:var(--terre)", "pion-mien", "Ma demande"));
+    lg.appendChild(puce("background:var(--hors)", "", "Au-delà du plafond"));
   }
 
-  // ---------- Paramètres ----------
-  function rendreParametres() {
+  // ---------- 3. Arbitrage ----------
+  function rendreArbitrage() {
     var p = params();
-    var edit = peutEditerParams();
-    $("aide-parametres").textContent = edit
-      ? "Les plafonds et les pions de scénario s'appliquent à toute la partie."
-      : "Lecture seule : seuls l'animateur, le SC-Plans et le CEMA modifient ces paramètres.";
+    var edit = ROLES_ARBITRAGE.indexOf(etat.role) !== -1;
+    $("aide-arbitrage").textContent = edit
+      ? "Pour chaque demande : retenir, différer d'une à trois années, ou renoncer. Un différé qui dépasse 2032 sort de la LPM."
+      : "Le CEMA et l'animateur tranchent. Vous voyez ici les décisions sur vos demandes.";
+    var dem = M.synthese(PIONS, etat.lignes, p);
+    var arb = M.synthese(PIONS, M.lignesApresArbitrage(etat.lignes, p), p);
+    var ra = $("arb-annees");
+    vider(ra);
+    M.ANNEES.forEach(function (a) {
+      ra.appendChild(el("div", { classe: "arb-an" }, [
+        el("span", { classe: "an", texte: String(a) }),
+        el("span", { classe: "l" }, ["Demandé", el("b", { texte: md(dem[a].total) })]),
+        el("span", { classe: "l" }, ["Retenu", el("b", { texte: md(arb[a].total) })]),
+        el("span", { classe: "l" }, ["Plafond", el("b", { texte: md(arb[a].plafond) })]),
+        el("span", { classe: "l " + (arb[a].marge >= 0 ? "pos" : "neg") }, [arb[a].marge >= 0 ? "Marge" : "Dépassement", el("b", { classe: arb[a].marge >= 0 ? "pos" : "neg", texte: md(Math.abs(arb[a].marge)) })])
+      ]));
+    });
+
+    var zl = $("arb-lignes");
+    vider(zl);
+    var lignes = etat.lignes.filter(visible);
+    if (!lignes.length) zl.appendChild(el("p", { classe: "vide", texte: "Aucune demande pour l'instant." }));
+    lignes.forEach(function (l) {
+      var a = M.arbitrageDe(l, p);
+      var avant = M.coutLigne(l, IDX).total;
+      var la = M.ligneArbitree(l, p);
+      var apres = la ? M.coutLigne(la, IDX).total : 0;
+      var report = M.reportHorsLpm(l, p, IDX);
+      var choix = el("div", { classe: "choix" });
+      Object.keys(M.STATUTS).forEach(function (k) {
+        choix.appendChild(el("button", { type: "button", "data-statut": k, "aria-pressed": a.statut === k ? "true" : "false", disabled: edit ? null : "disabled", texte: M.STATUTS[k],
+          onclick: function () { modifierParams(function (pp) { pp.arbitrages = pp.arbitrages || {}; pp.arbitrages[l.id] = { statut: k, decalage: k === "differe" ? (a.decalage || 1) : 0 }; }); } }));
+      });
+      if (a.statut === "differe") {
+        var dec = el("select", { "aria-label": "Décalage", disabled: edit ? null : "disabled" });
+        [1, 2, 3].forEach(function (n) { dec.appendChild(el("option", { value: n, texte: "de " + n + " an" + (n > 1 ? "s" : "") })); });
+        dec.value = String(a.decalage || 1);
+        dec.addEventListener("change", function () { modifierParams(function (pp) { pp.arbitrages = pp.arbitrages || {}; pp.arbitrages[l.id] = { statut: "differe", decalage: Number(dec.value) }; }); });
+        choix.appendChild(dec);
+      }
+      if (l.type === "libre" && !l.modele && edit) {
+        var cb = el("input", { type: "checkbox", id: "val-" + l.id });
+        cb.checked = !!(p.validations || {})[l.id];
+        cb.addEventListener("change", function () { modifierParams(function (pp) { pp.validations = pp.validations || {}; pp.validations[l.id] = cb.checked; }); });
+        choix.appendChild(el("label", { for: cb.id, style: "font-size:.8rem;color:var(--sourdine);margin-left:.5rem" }, [cb, " pion sur mesure validé"]));
+      }
+      zl.appendChild(el("div", { classe: "decision", style: "--c:" + couleur(M.armeeDeLigne(l, IDX)) }, [
+        el("div", { classe: "decision-tete" }, [
+          el("span", { classe: "decision-nom" }, [libelleLigne(l), el("small", { texte: l.role + " · " + natureLigne(l) + " · " + M.armeeDeLigne(l, IDX) + (l.justification ? " · « " + l.justification + " »" : "") })]),
+          el("span", { classe: "num" }, [md(avant), apres !== avant ? el("small", { classe: "fiche-sous", texte: " → " + md(apres) + (report ? " (+" + md(report) + " après 2032)" : "") }) : null])
+        ]),
+        choix
+      ]));
+    });
+
+    var zr = $("arb-renoncements");
+    vider(zr);
+    var ren = etat.lignes.filter(function (l) { return visible(l) && M.arbitrageDe(l, p).statut === "renonce"; });
+    if (!ren.length) zr.appendChild(el("p", { classe: "vide", texte: "Aucun renoncement." }));
+    var tot = 0;
+    ren.forEach(function (l) {
+      var v = M.coutLigne(l, IDX).total; tot += v;
+      zr.appendChild(el("div", { classe: "renonce" }, [el("div", { texte: libelleLigne(l) }), el("small", { classe: "fiche-sous", texte: l.role + " · " }), el("b", { texte: md(v) })]));
+    });
+    if (ren.length) zr.appendChild(el("p", { classe: "fiche-sous", texte: "Total renoncé sur la période : " + md(tot) }));
+  }
+
+  // ---------- Bilan ----------
+  function rendreBilan() {
+    var p = params();
+    $("note-vue").textContent = vueComplete() ? "Vue complète de la partie." : "Vue limitée à vos postes de dépense ; les totaux par armée restent visibles.";
+    var syn = M.synthese(PIONS, etat.lignes, p);
+    var arb = M.synthese(PIONS, M.lignesApresArbitrage(etat.lignes, p), p);
+    var tr = $("trajectoire");
+    vider(tr);
+    var max = Math.max.apply(null, M.ANNEES.map(function (a) { return Math.max(syn[a].total, syn[a].table); }));
+    M.ANNEES.forEach(function (a) {
+      var s = syn[a];
+      var b = el("div", { classe: "traj-barre" });
+      b.appendChild(el("span", { style: "width:" + (100 * s.totalSocle / max) + "%;background:var(--gris)" }));
+      M.ARMEES.forEach(function (arm) { var v = Math.max(0, s.demandes[arm]); if (v) b.appendChild(el("span", { style: "width:" + (100 * v / max) + "%;background:" + couleur(arm), title: arm + " " + md(v) })); });
+      b.appendChild(el("span", { classe: "traj-plafond", style: "left:" + (100 * s.plafond / max) + "%" }));
+      tr.appendChild(el("div", { classe: "traj-ligne" }, [el("span", { classe: "traj-an", texte: String(a) }), b, el("span", { classe: "num " + (s.marge < 0 ? "neg" : ""), texte: md(s.total) })]));
+    });
+    var t = $("table-synthese");
+    vider(t);
+    t.appendChild(el("thead", null, [el("tr", null, [el("th", { texte: "M€" })].concat(M.ANNEES.map(function (a) { return el("th", { classe: "num", texte: String(a) }); })).concat([el("th", { classe: "num", texte: "Total" })]))]));
+    var c = el("tbody");
+    function rangee(lib, f, cl) {
+      var tot = 0;
+      var cells = M.ANNEES.map(function (a) { var v = f(a); tot += v; return el("td", { classe: "num " + (cl ? cl(v) : ""), texte: md(v) }); });
+      c.appendChild(el("tr", null, [el("td", null, lib)].concat(cells).concat([el("td", { classe: "num", texte: md(tot) })])));
+    }
+    rangee([el("span", { classe: "pastille", style: "background:var(--gris)" }), "Socle"], function (a) { return syn[a].totalSocle; });
+    M.ARMEES.forEach(function (arm) { rangee([el("span", { classe: "pastille", style: "background:" + couleur(arm) }), "Demandes " + arm], function (a) { return syn[a].demandes[arm]; }); });
+    rangee(["Total demandé"], function (a) { return syn[a].total; });
+    rangee(["Total après arbitrage"], function (a) { return arb[a].total; });
+    rangee(["Plafond"], function (a) { return syn[a].plafond; });
+    rangee(["Marge après arbitrage"], function (a) { return arb[a].marge; }, function (v) { return v < 0 ? "neg" : "pos"; });
+    t.appendChild(c);
+
+    var t3 = $("table-toutes");
+    vider(t3);
+    t3.appendChild(el("thead", null, [el("tr", null, ["Pôle", "Action", "Objet", "Armée"].map(function (h) { return el("th", { texte: h }); }).concat(M.ANNEES.map(function (a) { return el("th", { classe: "num", texte: String(a) }); })).concat([el("th", { classe: "num", texte: "Total" }), el("th", { texte: "Décision" })]))]));
+    var c3 = el("tbody");
+    etat.lignes.filter(visible).forEach(function (l) {
+      var cl = M.coutLigne(l, IDX);
+      c3.appendChild(el("tr", null, [el("td", { texte: l.role }), el("td", { texte: natureLigne(l) }), el("td", { texte: libelleLigne(l) }), el("td", { texte: M.armeeDeLigne(l, IDX) })]
+        .concat(M.ANNEES.map(function (a) { return el("td", { classe: "num", texte: cl.annees[a].cout ? md(cl.annees[a].cout) : "·" }); }))
+        .concat([el("td", { classe: "num", texte: md(cl.total) }), el("td", { texte: M.STATUTS[M.arbitrageDe(l, p).statut] })])));
+    });
+    t3.appendChild(c3);
+  }
+
+  function csv() {
+    var p = params();
+    var ent = ["Pôle", "Action", "Objet", "Armée"].concat(M.ANNEES.map(String)).concat(["Total (M€)", "Décision", "Justification"]);
+    var out = [ent.join(";")];
+    etat.lignes.filter(visible).forEach(function (l) {
+      var c = M.coutLigne(l, IDX);
+      var v = [l.role, natureLigne(l), libelleLigne(l), M.armeeDeLigne(l, IDX)].concat(M.ANNEES.map(function (a) { return c.annees[a].cout; }))
+        .concat([c.total, M.STATUTS[M.arbitrageDe(l, p).statut], (l.justification || "").replace(/\s+/g, " ")]);
+      out.push(v.map(function (x) { var s = String(x); return /[";\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }).join(";"));
+    });
+    return out.join("\n");
+  }
+
+  // ---------- Réglages ----------
+  function rendreReglages() {
+    var p = params();
+    var edit = ROLES_REGLAGES.indexOf(etat.role) !== -1;
+    $("aide-parametres").textContent = edit ? "Plafonds et pions de scénario valent pour toute la partie." : "Lecture seule.";
     var pf = $("plafonds");
     vider(pf);
     M.ANNEES.forEach(function (a) {
       var i = el("input", { id: "plafond-" + a, type: "number", min: 0, max: 2000, step: 1, value: p.plafonds[a], disabled: edit ? null : "disabled" });
-      var aide = el("span", { classe: "sous", texte: md((Number(p.plafonds[a]) || 0) * M.CASE) });
-      i.addEventListener("input", function () { aide.textContent = md((Number(i.value) || 0) * M.CASE); });
-      pf.appendChild(el("label", { for: "plafond-" + a }, [String(a), i, aide]));
+      var s = el("small", { texte: md((Number(p.plafonds[a]) || 0) * M.CASE) });
+      i.addEventListener("input", function () { s.textContent = md((Number(i.value) || 0) * M.CASE); });
+      pf.appendChild(el("label", { for: i.id }, [String(a), i, s]));
     });
     var al = $("aleas");
     vider(al);
     PIONS.filter(function (x) { return x.type === "orange"; }).forEach(function (o) {
-      var annees = (p.aleas || {})[o.id] || [];
-      var boites = M.ANNEES.map(function (a) {
+      var an = ((p.aleas || {})[o.id] || []).map(Number);
+      al.appendChild(el("div", { classe: "alea" }, [el("span", { texte: o.nom + " (" + o.cout50 / M.CASE + " cases par an)" }), el("div", { classe: "alea-annees" }, M.ANNEES.map(function (a) {
         var cb = el("input", { type: "checkbox", id: "alea-" + o.id + "-" + a, "data-pion": o.id, "data-annee": a, disabled: edit ? null : "disabled" });
-        cb.checked = annees.map(Number).indexOf(a) !== -1;
+        cb.checked = an.indexOf(a) !== -1;
         return el("label", { for: cb.id }, [cb, " " + a]);
-      });
-      al.appendChild(el("div", { classe: "alea" }, [el("span", { texte: o.nom + " (" + o.cout50 / M.CASE + " cases par an)" }), el("div", { classe: "alea-annees" }, boites)]));
+      }))]));
     });
     $("btn-parametres").hidden = !edit;
   }
 
-  function enregistrerParametres(ev) {
+  function enregistrerReglages(ev) {
     ev.preventDefault();
-    if (!peutEditerParams()) return;
-    var p = JSON.parse(JSON.stringify(params()));
-    M.ANNEES.forEach(function (a) { p.plafonds[a] = Math.max(0, Number($("plafond-" + a).value) || 0); });
-    p.aleas = {};
+    var plaf = {}, aleas = {};
+    M.ANNEES.forEach(function (a) { plaf[a] = Math.max(0, Number($("plafond-" + a).value) || 0); });
     document.querySelectorAll("#aleas input[type=checkbox]").forEach(function (cb) {
-      var id = cb.getAttribute("data-pion");
-      p.aleas[id] = p.aleas[id] || [];
-      if (cb.checked) p.aleas[id].push(Number(cb.getAttribute("data-annee")));
+      var id = cb.getAttribute("data-pion"); aleas[id] = aleas[id] || [];
+      if (cb.checked) aleas[id].push(Number(cb.getAttribute("data-annee")));
     });
-    S.majParams(etat.partie.nom, etat.mdp, p).then(function () {
-      etat.partie.params = p;
-      $("param-etat").textContent = "Paramètres enregistrés.";
-      toast("Paramètres enregistrés");
-      rendre(true);
-    }).catch(function (e) { $("param-etat").textContent = e.message; });
+    modifierParams(function (pp) { pp.plafonds = plaf; pp.aleas = aleas; }).then(function () { $("param-etat").textContent = "Réglages enregistrés."; toast("Réglages enregistrés"); });
   }
 
   // ---------- Démarrage ----------
   function demarrer() {
     $("mode").textContent = S.mode === "partage" ? "Base partagée" : "Mode local";
     $("note-mode").textContent = S.mode === "partage"
-      ? "Les parties sont enregistrées dans la base partagée : elles restent disponibles d'une séance à l'autre, et chaque joueur voit les demandes des autres en quelques secondes."
-      : "Mode local : les parties restent dans ce navigateur. Pour jouer à plusieurs, ouvrez l'outil par le lien que donne l'animateur.";
-    remplirRoles($("rej-role"), "EMAT");
-    var ty = $("ajout-type");
-    Object.keys(M.TYPES_LIGNE).forEach(function (k) { ty.appendChild(el("option", { value: k, texte: M.TYPES_LIGNE[k] })); });
-
+      ? "Les parties sont conservées d'une séance à l'autre ; chaque pôle voit les autres avancer en quelques secondes."
+      : "Mode local : les parties restent dans ce navigateur.";
     $("form-rejoindre").addEventListener("submit", function (ev) {
       ev.preventDefault();
       $("rej-erreur").textContent = "";
       var nom = $("rej-partie").value, mdp = $("rej-mdp").value;
-      if (!nom) { $("rej-erreur").textContent = "Créez d'abord une partie, ou demandez son nom à l'animateur."; return; }
-      S.ouvrirPartie(nom, mdp).then(function (p) { return entrer(p, mdp, $("rej-role").value); })
-        .catch(function (e) { $("rej-erreur").textContent = e.message; });
+      if (!nom) { $("rej-erreur").textContent = "Ouvrez d'abord une partie, ou demandez son nom à l'animateur."; return; }
+      S.ouvrirPartie(nom, mdp).then(function (p) { montrerRoles(p, mdp); }).catch(function (e) { $("rej-erreur").textContent = e.message; });
     });
     $("form-creer").addEventListener("submit", function (ev) {
       ev.preventDefault();
       $("cre-erreur").textContent = "";
       var nom = $("cre-nom").value.trim(), mdp = $("cre-mdp").value;
       if (mdp !== $("cre-mdp2").value) { $("cre-erreur").textContent = "Les deux mots de passe diffèrent."; return; }
-      S.creerPartie(nom, mdp, M.parametresParDefaut()).then(function (p) { toast("Partie « " + p.nom + " » créée"); return entrer(p, mdp, "Animateur"); })
+      S.creerPartie(nom, mdp, M.parametresParDefaut()).then(function (p) { toast("Partie « " + p.nom + " » ouverte"); montrerRoles(p, mdp); })
         .catch(function (e) { $("cre-erreur").textContent = e.message; });
     });
+    $("btn-retour-partie").addEventListener("click", quitter);
     $("btn-quitter").addEventListener("click", quitter);
-    $("session-role").addEventListener("change", function () { etat.role = $("session-role").value; memoriser(); rendre(true); });
-    document.querySelectorAll(".onglets button").forEach(function (b) {
-      b.addEventListener("click", function () { changerOnglet(b.getAttribute("data-onglet")); });
+    $("btn-role").addEventListener("click", function () {
+      $("ecran-partie").hidden = true; $("ecran-accueil").hidden = false; montrerRoles(etat.partie, etat.mdp);
     });
-    $("btn-ajouter").addEventListener("click", function () {
-      var l = nouvelleLigne($("ajout-type").value);
-      etat.lignes.push(l);
-      enregistrer(l);
-      rendreDemande();
-    });
-    $("table-vue").addEventListener("change", function () { etat.vueTable = $("table-vue").value; rendreTable(); });
-    $("table-annee").addEventListener("change", function () { etat.anneeTable = Number($("table-annee").value); rendreTable(); });
-    $("form-parametres").addEventListener("submit", enregistrerParametres);
+    document.querySelectorAll(".parcours button").forEach(function (b) { b.addEventListener("click", function () { changerOnglet(b.getAttribute("data-onglet")); }); });
+    document.querySelectorAll(".bascule button").forEach(function (b) { b.addEventListener("click", function () { etat.vueTable = b.getAttribute("data-vue"); rendreTable(); }); });
+    $("recherche").addEventListener("input", function () { etat.recherche = $("recherche").value; rendreArsenal(); });
+    $("form-parametres").addEventListener("submit", enregistrerReglages);
     $("btn-copier-csv").addEventListener("click", function () {
-      var texte = csv();
-      try {
-        navigator.clipboard.writeText(texte).then(function () { toast("CSV copié : collez-le dans Excel"); }, function () { toast("Copie refusée par le navigateur"); });
-      } catch (e) { toast("Copie refusée par le navigateur"); }
+      try { navigator.clipboard.writeText(csv()).then(function () { toast("CSV copié : collez-le dans Excel"); }, function () { toast("Copie refusée par le navigateur"); }); }
+      catch (e) { toast("Copie refusée par le navigateur"); }
     });
     $("btn-telecharger-csv").addEventListener("click", function () {
-      var blob = new Blob(["﻿" + csv()], { type: "text/csv;charset=utf-8" });
-      var a = el("a", { href: URL.createObjectURL(blob), download: "strategikon-" + (etat.partie ? etat.partie.nom : "partie") + ".csv" });
+      var a = el("a", { href: URL.createObjectURL(new Blob(["﻿" + csv()], { type: "text/csv;charset=utf-8" })), download: "strategikon-" + (etat.partie ? etat.partie.nom : "partie") + ".csv" });
       document.body.appendChild(a); a.click(); a.remove();
     });
-
-    setInterval(function () { if (etat.partie && !Object.keys(enAttente).length) rechargerLignes(false); }, S.mode === "partage" ? 8000 : 5000);
+    setInterval(function () { if (etat.partie && etat.role && !Object.keys(enAttente).length) recharger(false); }, S.mode === "partage" ? 6000 : 5000);
 
     chargerParties().then(function () {
       var mem = null;
-      try { mem = JSON.parse(sessionStorage.getItem("strategikon.session")); } catch (e) { mem = null; }
-      if (mem && mem.nom) {
+      try { mem = JSON.parse(sessionStorage.getItem("strategikon.v2")); } catch (e) { mem = null; }
+      if (mem && mem.nom && mem.role) {
         S.ouvrirPartie(mem.nom, mem.mdp).then(function (p) {
-          return entrer(p, mem.mdp, mem.role).then(function () { if (mem.onglet) changerOnglet(mem.onglet); });
-        }).catch(function () { memoriser(); });
+          etat.partie = p; etat.mdp = mem.mdp;
+          return entrer(mem.role).then(function () { if (mem.onglet) changerOnglet(mem.onglet); });
+        }).catch(function () { etat.partie = null; memoriser(); });
       }
     });
   }

@@ -8,7 +8,7 @@ Mise en ligne : [INSTALLATION-SUPABASE.md](INSTALLATION-SUPABASE.md) (Supabase e
 
 - 1 case = 100 M€ ; 1 pion DORESE = 1 case ; la table compte 600 cases (60 Md€) par année.
 - Plafonds par défaut (en cases, modifiables dans l'onglet Paramètres) : 2027 = 590, 2028 = 580, 2029 = 570, 2030 à 2032 = 590.
-- Socle posé d'office chaque année : pions gris, violets et capacités à 50 %. Les pions orange (SMV, munitions) sont posés par l'animateur, année par année.
+- Situation de départ : la photo de la table 2027 (39,9 Md€), répétée chaque année jusqu'en 2032. Toutes les capacités y sont à 100 % sauf l'A400M, à qui il manque 1 DORESE activité. Les pions orange (SMV, munitions) sont posés d'office dans une nouvelle partie ; l'animateur peut les retirer année par année dans les Réglages.
 - Une capacité passe à 100 % en ajoutant ses DORESE (AO, MCO, RH). Sur la table, les DORESE sont posées juste après leur capacité (règle « Au contact »).
 - Chaque ligne porte une armée imputée : le surcoût est compté à l'armée qui porte le projet.
 
@@ -16,9 +16,9 @@ Mise en ligne : [INSTALLATION-SUPABASE.md](INSTALLATION-SUPABASE.md) (Supabase e
 
 | Type | Coût par exemplaire et par an |
 |---|---|
-| Passer à 100 % | nombre de DORESE × 100 M€ (un exemplaire au plus, le pion est unique) |
-| Ajouter un pion | coût à 50 % ou coût à 100 % du pion |
-| Retirer un pion du socle | moins le coût à 50 % |
+| Renforcer (passer à 100 %) | DORESE manquantes × 100 M€ (un exemplaire au plus, le pion est unique) |
+| Créer une capacité | coût à 50 % ou coût à 100 % du pion |
+| Dissoudre | moins le coût du pion tel qu'il est posé au départ |
 | Ligne libre | montant saisi (modèles tirés des fiches DGRIS et DGA) |
 
 ## Organisation du code

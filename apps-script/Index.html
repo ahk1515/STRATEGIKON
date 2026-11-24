@@ -6,367 +6,465 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600;700&display=swap">
 <style>
-/* Mise en page : bandeau d'état-major, puis espace de travail en onglets ; tableaux de saisie denses. */
+/* Style de cabinet ministériel : papier, bleu marine, filet tricolore discret.
+   Les chiffres en colonnes alignées, comme un rapport annexé à la loi. */
 :root {
-  --fond: #eef1f3;
-  --surface: #ffffff;
-  --encre: #17212b;
-  --sourdine: #5b6875;
-  --trait: #d5dbe0;
-  --accent: #1f4e79;
-  --accent-encre: #ffffff;
-  --alerte: #b8322a;
-  --ok: #2e7d4f;
-  --terre: #4d7a3a;
-  --marine: #1d3f73;
-  --air: #3a8fc9;
-  --inter: #d9822b;
-  --gris: #8a8f94;
-  --violet: #7a4fa3;
-  --vide: #f7f8f9;
-  --hors: #e3c9c6;
-  --f-titre: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
-  --f-texte: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
-  --f-chiffre: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --fond: #12171c; --surface: #1a2128; --encre: #e6ebef; --sourdine: #9aa7b3; --trait: #2c3640;
-    --accent: #7fb0e0; --accent-encre: #0e1a26; --alerte: #ef7a70; --ok: #6cc28f;
-    --terre: #78a862; --marine: #4f78b8; --air: #5fb3ea; --inter: #eb9b4a; --gris: #7d848b; --violet: #a37fcc;
-    --vide: #20282f; --hors: #4a2b29;
-    color-scheme: dark;
-  }
-}
-:root[data-theme="dark"] {
-  --fond: #12171c; --surface: #1a2128; --encre: #e6ebef; --sourdine: #9aa7b3; --trait: #2c3640;
-  --accent: #7fb0e0; --accent-encre: #0e1a26; --alerte: #ef7a70; --ok: #6cc28f;
-  --terre: #78a862; --marine: #4f78b8; --air: #5fb3ea; --inter: #eb9b4a; --gris: #7d848b; --violet: #a37fcc;
-  --vide: #20282f; --hors: #4a2b29;
-  color-scheme: dark;
+  --nuit: #f5f4ef;          /* fond de page : papier */
+  --pupitre: #ffffff;
+  --panneau: #ffffff;
+  --panneau-haut: #eef1f6;
+  --trait: #d6dbe4;
+  --texte: #161b2e;
+  --sourdine: #5a6375;
+  --laiton: #1b2a6b;        /* accent : bleu marine institutionnel */
+  --laiton-fonce: #1b2a6b;
+  --accent-doux: rgba(27, 42, 107, .07);
+  --rouge: #c8102e;
+  --alerte: #b3261e;
+  --ok: #1d7a46;
+  --attente: #a65a00;
+  --terre: #5f7f3b;
+  --marine: #24468f;
+  --air: #3d8cc4;
+  --inter: #c2701f;
+  --gris: #8b919b;
+  --violet: #6d52a8;
+  --case-vide: #eceef3;
+  --hors: #f6dada;
+  --f-logo: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --f-titre: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --f-texte: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --f-chiffre: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  color-scheme: light;
 }
 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
-body { margin: 0; background: var(--fond); color: var(--encre); font: 15px/1.5 var(--f-texte); }
-h1, h2, h3 { font-family: var(--f-titre); font-weight: 600; letter-spacing: .01em; text-wrap: balance; margin: 0; }
-h1 { font-size: 2.4rem; line-height: 1.05; }
-h2 { font-size: 1.6rem; }
-h3 { font-size: 1.25rem; margin-top: 1.75rem; margin-bottom: .5rem; }
+html, body { background: var(--nuit); color: var(--texte); }
+body { margin: 0; font: 15px/1.5 var(--f-texte); }
+h1, h2, h3 { font-family: var(--f-titre); font-weight: 600; letter-spacing: .02em; margin: 0; text-wrap: balance; }
+h2 { font-size: 1.55rem; }
+h3 { font-family: var(--f-texte); font-size: .82rem; color: var(--sourdine); text-transform: uppercase; letter-spacing: .12em; margin: 1.5rem 0 .6rem; }
 p { margin: 0; }
-.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
-:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-
-body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--accent); }
-.bandeau { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--accent); color: var(--accent-encre); }
-.bandeau-in {
-  display: flex; flex-wrap: wrap; align-items: center; gap: .75rem 1.5rem; padding-block: .6rem;
-  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
-}
-.marque { display: flex; flex-direction: column; line-height: 1.1; margin-right: auto; }
-.marque-nom { font-family: var(--f-titre); font-weight: 700; font-size: 1.5rem; letter-spacing: .14em; }
-.marque-sous { font-size: .78rem; letter-spacing: .06em; text-transform: uppercase; opacity: .85; }
-.session { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
-.session select { background: transparent; color: inherit; border: 1px solid currentColor; border-radius: 4px; padding: .25rem .4rem; font: inherit; }
-.session select option { color: var(--encre); background: var(--surface); }
-.puce { font-family: var(--f-titre); font-size: 1.15rem; font-weight: 600; letter-spacing: .04em; }
-.mode { font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; border: 1px solid currentColor; border-radius: 99px; padding: .1rem .6rem; opacity: .9; }
-
-.page {
-  max-width: 1400px; margin: 0 auto; padding-block: 1.5rem 4rem;
-  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
-}
-.accueil { display: grid; gap: 1.5rem; }
-.accueil-intro { max-width: 65ch; display: grid; gap: .75rem; }
-.accueil-intro p { color: var(--sourdine); }
-.accueil-cartes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 1rem; }
-.carte { background: var(--surface); border: 1px solid var(--trait); border-radius: 6px; padding: 1.25rem; display: grid; gap: .4rem; align-content: start; }
-.carte h2 { margin-bottom: .5rem; }
-.carte label { font-size: .85rem; color: var(--sourdine); margin-top: .35rem; }
-input, select, textarea { font: inherit; color: var(--encre); background: var(--surface); border: 1px solid var(--trait); border-radius: 4px; padding: .4rem .5rem; min-width: 0; }
-.btn, .btn-discret { font: inherit; font-weight: 600; border-radius: 4px; cursor: pointer; padding: .5rem .9rem; }
-.btn { background: var(--accent); color: var(--accent-encre); border: 1px solid var(--accent); margin-top: .6rem; }
-.btn-second { background: transparent; color: var(--accent); }
-.btn-discret { background: transparent; color: inherit; border: 1px solid var(--trait); font-weight: 500; padding: .35rem .7rem; }
-.bandeau .btn-discret { border-color: currentColor; }
+button { font: inherit; color: inherit; }
+input, select, textarea { font: inherit; color: var(--texte); background: var(--pupitre); border: 1px solid var(--trait); border-radius: 4px; padding: .45rem .55rem; min-width: 0; }
+input:focus, select:focus, textarea:focus { border-color: var(--laiton); outline: none; }
+:focus-visible { outline: 2px solid var(--laiton); outline-offset: 2px; }
+.aide { color: var(--sourdine); font-size: .9rem; max-width: 70ch; margin-top: .2rem; }
 .erreur { color: var(--alerte); font-size: .9rem; min-height: 1.2em; }
-.note { color: var(--sourdine); font-size: .85rem; max-width: 75ch; }
-.aide { color: var(--sourdine); font-size: .9rem; max-width: 75ch; margin-top: .25rem; }
-
-.onglets { display: flex; gap: .25rem; border-bottom: 1px solid var(--trait); margin-bottom: 1.25rem; overflow-x: auto; }
-.onglets button {
-  font-family: var(--f-titre); font-size: 1.15rem; font-weight: 600; letter-spacing: .03em;
-  background: none; border: 0; border-bottom: 3px solid transparent; color: var(--sourdine);
-  padding: .5rem .9rem; cursor: pointer; white-space: nowrap;
-}
-.onglets button[aria-selected="true"] { color: var(--encre); border-bottom-color: var(--accent); }
-.entete-vue { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; align-items: flex-end; margin-bottom: 1rem; }
-.entete-vue > div:first-child { min-width: 0; flex: 1 1 320px; }
-.ajout { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
-.ajout .btn { margin-top: 0; }
-
-.defile { overflow-x: auto; background: var(--surface); border: 1px solid var(--trait); border-radius: 6px; }
-table { border-collapse: collapse; width: 100%; font-size: .88rem; }
-th, td { padding: .4rem .5rem; border-bottom: 1px solid var(--trait); text-align: left; vertical-align: middle; }
-th { font-weight: 600; font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; color: var(--sourdine); white-space: nowrap; }
-.num { text-align: right; font-family: var(--f-chiffre); font-variant-numeric: tabular-nums; white-space: nowrap; }
-tbody tr:last-child td { border-bottom: 0; }
-tfoot td { font-weight: 600; border-top: 2px solid var(--trait); border-bottom: 0; }
-
-.grille-saisie select, .grille-saisie input { font-size: .85rem; padding: .25rem .35rem; }
-.grille-saisie .objet { min-width: 220px; }
-.grille-saisie .objet select, .grille-saisie .objet input { width: 100%; }
-.grille-saisie input.qte { width: 3.4rem; text-align: right; font-family: var(--f-chiffre); }
-.grille-saisie input.court { width: 5.5rem; text-align: right; font-family: var(--f-chiffre); }
-.grille-saisie textarea { width: 100%; min-width: 160px; font-size: .82rem; resize: vertical; min-height: 2.1rem; padding: .25rem .35rem; }
-.grille-saisie .sous { font-size: .75rem; color: var(--sourdine); margin-top: .15rem; }
-.grille-saisie .dor { display: flex; gap: .25rem; align-items: center; font-size: .75rem; color: var(--sourdine); margin-top: .25rem; flex-wrap: wrap; }
-.grille-saisie .dor input { width: 2.6rem; }
-.grille-saisie .dor input.court { width: 5.5rem; }
-.suppr { background: none; border: 0; color: var(--sourdine); cursor: pointer; font-size: 1.1rem; padding: .2rem .4rem; border-radius: 4px; }
-.suppr:hover { color: var(--alerte); }
-.vide-etat { padding: 1.5rem; color: var(--sourdine); text-align: center; }
-
-.pastille { display: inline-block; width: .7rem; height: .7rem; border-radius: 2px; margin-right: .35rem; vertical-align: -1px; }
-.a-Terre { background: var(--terre); }
-.a-Marine { background: var(--marine); }
-.a-Air { background: var(--air); }
-.a-Inter { background: var(--inter); }
-.n-gris { background: var(--gris); }
-.n-violet { background: var(--violet); }
-
-.bilan { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); gap: .5rem; margin-top: 1rem; }
-.bilan-an { background: var(--surface); border: 1px solid var(--trait); border-radius: 6px; padding: .6rem .75rem; display: grid; gap: .15rem; }
-.bilan-an .an { font-family: var(--f-titre); font-weight: 600; font-size: 1.1rem; }
-.bilan-an .l { display: flex; justify-content: space-between; gap: .5rem; font-size: .82rem; color: var(--sourdine); }
-.bilan-an .l b { font-family: var(--f-chiffre); font-weight: 500; color: var(--encre); }
-.etat { font-size: .78rem; font-weight: 600; border-radius: 99px; padding: .05rem .5rem; justify-self: start; margin-top: .25rem; }
-.etat.ok { color: var(--ok); border: 1px solid var(--ok); }
-.etat.ko { color: var(--alerte); border: 1px solid var(--alerte); }
+.note-mode { color: var(--sourdine); font-size: .82rem; margin-top: 1rem; }
+.num { font-family: var(--f-chiffre); font-variant-numeric: tabular-nums lining-nums; text-align: right; white-space: nowrap; }
 .neg { color: var(--alerte); }
 .pos { color: var(--ok); }
 
-.trajectoire { display: grid; gap: .35rem; margin-bottom: 1.25rem; background: var(--surface); border: 1px solid var(--trait); border-radius: 6px; padding: 1rem; }
-.traj-ligne { display: grid; grid-template-columns: 3.2rem 1fr 6.5rem; gap: .6rem; align-items: center; font-size: .82rem; }
-.traj-an { font-family: var(--f-titre); font-weight: 600; font-size: 1.05rem; }
-.traj-barre { position: relative; height: 1.4rem; background: var(--vide); border-radius: 3px; display: flex; overflow: hidden; }
-.traj-barre span { height: 100%; }
-.traj-socle { background: var(--gris); }
-.traj-plafond { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--encre); }
-.traj-val { text-align: right; font-family: var(--f-chiffre); }
-.traj-echelle { display: grid; grid-template-columns: 3.2rem 1fr 6.5rem; gap: .6rem; font-size: .72rem; color: var(--sourdine); }
-.traj-echelle div { display: flex; justify-content: space-between; font-family: var(--f-chiffre); }
+.btn-laiton, .btn-contour, .btn-lien { cursor: pointer; border-radius: 4px; font-weight: 600; }
+.btn-laiton { background: var(--laiton); color: #ffffff; border: 0; padding: .65rem 1.2rem; letter-spacing: .02em; }
+.btn-laiton:hover { background: #2a3d8f; }
+.btn-contour { background: transparent; border: 1px solid var(--trait); padding: .5rem .9rem; }
+.btn-contour:hover { border-color: var(--laiton); }
+.btn-lien { background: none; border: 0; color: var(--sourdine); text-decoration: underline; text-underline-offset: 3px; padding: .3rem; }
+.btn-lien:hover { color: var(--texte); }
 
-.table-chiffres { display: flex; flex-wrap: wrap; gap: .5rem 1.5rem; margin-bottom: .75rem; font-size: .9rem; }
-.table-chiffres b { font-family: var(--f-chiffre); font-weight: 500; }
-.plateau { --case: 1.75rem; display: grid; grid-template-columns: repeat(30, var(--case)); gap: 2px; padding: .75rem; width: max-content; }
-.fond { background: var(--vide); border: 1px solid var(--trait); border-radius: 2px; }
+/* ---------- Accueil ---------- */
+.accueil { position: relative; min-height: 100%; overflow: hidden; }
+.accueil-fond { position: absolute; inset: 0 0 auto; height: 6px; background: linear-gradient(90deg, #1b2a6b 0 33.3%, #ffffff 33.3% 66.6%, var(--rouge) 66.6%); border-bottom: 1px solid var(--trait); }
+.accueil-in {
+  position: relative; max-width: 980px; margin: 0 auto; padding-block: 4rem 3rem;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 1.2rem; justify-items: center; text-align: center;
+}
+.surtitre { color: var(--sourdine); text-transform: uppercase; letter-spacing: .18em; font-size: .76rem; font-weight: 600; }
+.surtitre::after { content: ""; display: block; width: 3rem; height: 3px; margin: .9rem auto 0; background: linear-gradient(90deg, #1b2a6b 0 33.3%, #e3e6ec 33.3% 66.6%, var(--rouge) 66.6%); }
+.logo { font-family: var(--f-logo); font-weight: 600; font-size: clamp(2.4rem, 7vw, 4.4rem); letter-spacing: .14em; line-height: 1; color: var(--texte); }
+.accroche { color: var(--sourdine); max-width: 56ch; font-family: var(--f-titre); font-style: italic; font-size: 1.1rem; }
+.etapes-accueil { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 1rem; width: 100%; margin-top: 1.5rem; text-align: left; }
+.carte-acces { background: var(--panneau); border: 1px solid var(--trait); border-top: 3px solid var(--laiton); border-radius: 2px; box-shadow: 0 1px 3px rgba(22, 27, 46, .05); padding: 1.4rem; }
+.carte-discrete { border-top-color: var(--trait); background: var(--pupitre); }
+.carte-acces form { display: grid; gap: .35rem; margin-top: .8rem; }
+.carte-acces label { font-size: .82rem; color: var(--sourdine); margin-top: .35rem; }
+.carte-acces button { margin-top: .8rem; justify-self: start; }
+.deux { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+.deux > div { display: grid; gap: .35rem; }
+.titre-roles { margin-top: 1.5rem; }
+.titre-roles span { color: var(--laiton); }
+.roles { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: .6rem; width: 100%; margin: 1rem 0; text-align: left; }
+.role-tuile {
+  cursor: pointer; background: var(--panneau); border: 1px solid var(--trait); border-radius: 6px; padding: .8rem .9rem;
+  display: grid; gap: .2rem; text-align: left; position: relative; overflow: hidden; transition: border-color .15s, transform .15s;
+}
+.role-tuile::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--couleur, var(--inter)); }
+.role-tuile:hover { border-color: var(--laiton); box-shadow: 0 4px 14px rgba(22, 27, 46, .08); }
+.role-tuile b { font-family: var(--f-titre); font-size: 1.35rem; color: var(--laiton); }
+.role-tuile small { color: var(--sourdine); font-size: .78rem; line-height: 1.3; }
+.role-tuile .role-mission { color: var(--sourdine); font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; }
+
+/* ---------- Poste de commandement ---------- */
+.poste { box-shadow: 0 1px 0 var(--trait); position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: rgba(255, 255, 255, .97); border-bottom: 1px solid var(--trait); backdrop-filter: blur(6px); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--nuit); }
+.poste-in, .jauges, .parcours, .scene { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.poste-in { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1.25rem; padding-block: .6rem; }
+.logo-petit { font-family: var(--f-logo); font-weight: 600; font-size: 1.15rem; letter-spacing: .16em; color: var(--laiton); }
+.poste-partie { font-family: var(--f-titre); font-size: 1.1rem; color: var(--sourdine); margin-right: auto; }
+.poste-partie::before { content: "Partie "; color: var(--sourdine); text-transform: uppercase; font-size: .75rem; letter-spacing: .14em; margin-right: .35rem; }
+.insigne { cursor: pointer; display: flex; align-items: baseline; gap: .5rem; background: var(--panneau-haut); border: 1px solid var(--trait); border-radius: 4px; padding: .25rem .9rem; }
+.insigne span { font-family: var(--f-titre); font-weight: 700; font-size: 1.1rem; color: var(--laiton); letter-spacing: .05em; }
+.insigne small { color: var(--sourdine); font-size: .75rem; max-width: 22ch; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mode { font-size: .7rem; text-transform: uppercase; letter-spacing: .1em; color: var(--sourdine); border: 1px solid var(--trait); border-radius: 99px; padding: .1rem .6rem; }
+
+.jauges { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: .5rem; padding-block: .1rem .7rem; }
+.jauge { cursor: pointer; background: none; border: 0; padding: 0; display: grid; gap: .25rem; text-align: left; }
+.jauge-tete { display: flex; justify-content: space-between; align-items: baseline; gap: .3rem; }
+.jauge-an { font-family: var(--f-titre); font-weight: 600; font-size: 1rem; }
+.jauge-val { font-family: var(--f-chiffre); font-size: .72rem; color: var(--sourdine); }
+.jauge-barre { position: relative; height: .45rem; border-radius: 1px; background: var(--case-vide); overflow: visible; display: flex; }
+.jauge-barre span { height: 100%; }
+
+.jauge-plafond { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--texte); border-radius: 1px; }
+.jauge-etat { font-size: .7rem; font-weight: 600; }
+.jauge[aria-pressed="true"] .jauge-an { color: var(--laiton); }
+
+.parcours { display: flex; gap: .25rem; overflow-x: auto; border-bottom: 1px solid var(--trait); padding-block: .35rem 0; background: var(--nuit); }
+.parcours button {
+  cursor: pointer; background: none; border: 0; border-bottom: 3px solid transparent; padding: .6rem .9rem; white-space: nowrap;
+  font-family: var(--f-titre); font-size: 1.1rem; font-weight: 600; color: var(--sourdine); letter-spacing: .02em;
+}
+.parcours button b { display: inline-grid; place-items: center; width: 1.45rem; height: 1.45rem; border-radius: 50%; border: 1px solid currentColor; font-size: .8rem; margin-right: .35rem; }
+.parcours button[aria-selected="true"] { color: var(--texte); border-bottom-color: var(--laiton); }
+.parcours button[aria-selected="true"] b { background: var(--laiton); color: #ffffff; border-color: var(--laiton); }
+
+.scene { max-width: 1500px; margin: 0 auto; padding-block: 1.25rem 4rem; }
+
+/* ---------- Composer ---------- */
+.vue-composer { display: grid; grid-template-columns: minmax(280px, 380px) minmax(0, 1fr); gap: 1.25rem; align-items: start; }
+.arsenal { background: var(--pupitre); border: 1px solid var(--trait); border-radius: 8px; position: sticky; top: 10.5rem; max-height: calc(100vh - 12rem); display: flex; flex-direction: column; }
+.arsenal-tete { padding: 1rem; display: grid; gap: .6rem; border-bottom: 1px solid var(--trait); }
+.filtres { display: flex; flex-wrap: wrap; gap: .35rem; }
+.filtre { cursor: pointer; background: none; border: 1px solid var(--trait); border-radius: 99px; padding: .2rem .65rem; font-size: .8rem; color: var(--sourdine); }
+.filtre[aria-pressed="true"] { border-color: var(--laiton); color: var(--texte); background: var(--accent-doux); }
+.cartes-pions { overflow-y: auto; padding: .75rem; display: grid; gap: .5rem; }
+.carte-pion {
+  display: grid; grid-template-columns: auto 1fr auto; gap: .65rem; align-items: center; background: var(--panneau);
+  border: 1px solid var(--trait); border-radius: 6px; padding: .55rem .6rem; text-align: left; cursor: pointer; width: 100%;
+}
+.carte-pion:hover { border-color: var(--laiton); }
+.forme { display: grid; gap: 2px; }
+.forme i { display: block; width: 8px; height: 8px; border-radius: 1px; background: var(--c); }
+.carte-pion-nom { font-weight: 600; font-size: .88rem; line-height: 1.25; }
+.carte-pion-info { font-size: .74rem; color: var(--sourdine); display: flex; flex-wrap: wrap; gap: .2rem .6rem; margin-top: .15rem; }
+.pips { display: inline-flex; gap: 2px; vertical-align: middle; }
+.pips i { width: .55rem; height: .55rem; border-radius: 50%; background: var(--inter); display: block; }
+.plus { font-size: 1.3rem; color: var(--laiton); font-weight: 600; width: 1.8rem; text-align: center; }
+.vide-arsenal { color: var(--sourdine); font-size: .85rem; padding: 1rem; text-align: center; }
+
+.dossier-tete { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem; align-items: flex-end; margin-bottom: 1rem; }
+.dossier-tete > div:first-child { min-width: 0; flex: 1 1 300px; }
+.dossier-total { display: flex; gap: 1.25rem; }
+.dossier-total div { display: grid; text-align: right; }
+.dossier-total b { font-family: var(--f-titre); font-size: 1.5rem; font-weight: 600; font-variant-numeric: lining-nums tabular-nums; }
+.dossier-total small { color: var(--sourdine); font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; }
+#fiches { display: grid; gap: .75rem; }
+.fiche { background: var(--panneau); border: 1px solid var(--trait); border-left: 4px solid var(--c, var(--inter)); border-radius: 6px; padding: .9rem 1rem; display: grid; gap: .7rem; }
+.fiche-tete { display: flex; flex-wrap: wrap; gap: .4rem 1rem; align-items: flex-start; }
+.fiche-titre { flex: 1 1 260px; min-width: 0; display: grid; gap: .15rem; }
+.fiche-type { color: var(--sourdine); font-size: .7rem; text-transform: uppercase; letter-spacing: .12em; font-weight: 600; }
+.fiche-nom { font-family: var(--f-titre); font-size: 1.3rem; font-weight: 600; line-height: 1.15; }
+.fiche-nom input { width: 100%; font-family: var(--f-titre); font-size: 1.15rem; }
+.fiche-sous { color: var(--sourdine); font-size: .8rem; }
+.fiche-cout { text-align: right; display: grid; }
+.fiche-cout b { font-family: var(--f-chiffre); font-size: 1.15rem; font-weight: 500; }
+.fiche-cout small { color: var(--sourdine); font-size: .74rem; }
+.suppr { cursor: pointer; background: none; border: 1px solid transparent; color: var(--sourdine); border-radius: 4px; padding: .2rem .5rem; font-size: .8rem; }
+.suppr:hover { color: var(--alerte); border-color: var(--alerte); }
+.fiche-reglages { display: flex; flex-wrap: wrap; gap: .6rem 1rem; align-items: center; font-size: .85rem; }
+.fiche-reglages label { color: var(--sourdine); display: flex; align-items: center; gap: .4rem; }
+.fiche-reglages select, .fiche-reglages input { padding: .3rem .45rem; font-size: .85rem; }
+.fiche-reglages input.prix { width: 6.5rem; font-family: var(--f-chiffre); text-align: right; }
+.fiche-reglages input.dor { width: 3rem; text-align: right; }
+.segment { display: inline-flex; border: 1px solid var(--trait); border-radius: 4px; overflow: hidden; }
+.segment button { cursor: pointer; background: none; border: 0; padding: .3rem .7rem; font-size: .82rem; color: var(--sourdine); }
+.segment button[aria-pressed="true"] { background: var(--laiton); color: #ffffff; font-weight: 600; }
+.calendrier { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: .4rem; }
+.an-case { border: 1px solid var(--trait); border-radius: 5px; padding: .35rem .3rem; display: grid; justify-items: center; gap: .15rem; background: var(--pupitre); }
+.an-case.actif { border-color: var(--laiton); background: var(--accent-doux); }
+.an-case small { font-family: var(--f-titre); font-size: .85rem; color: var(--sourdine); }
+.an-case.actif small { color: var(--laiton); }
+.pas { display: flex; align-items: center; gap: .15rem; }
+.pas button { cursor: pointer; width: 1.5rem; height: 1.5rem; border-radius: 50%; border: 1px solid var(--trait); background: none; line-height: 1; padding: 0; }
+.pas button:hover { border-color: var(--laiton); }
+.pas output { font-family: var(--f-chiffre); min-width: 1.3rem; text-align: center; }
+.coche { cursor: pointer; width: 100%; background: none; border: 0; padding: .15rem 0; font-size: .78rem; color: var(--sourdine); }
+.an-case.actif .coche { color: var(--texte); font-weight: 600; }
+.fiche textarea { width: 100%; min-height: 2.3rem; resize: vertical; font-size: .85rem; }
+.badge { display: inline-block; font-size: .7rem; font-weight: 600; border-radius: 99px; padding: .05rem .55rem; border: 1px solid currentColor; }
+.badge-attente { color: var(--attente); }
+.badge-ok { color: var(--ok); }
+.badge-alerte { color: var(--alerte); }
+.alerte-texte { color: var(--alerte); font-size: .8rem; }
+details summary { cursor: pointer; color: var(--sourdine); font-size: .8rem; }
+details p { font-size: .82rem; color: var(--sourdine); margin-top: .3rem; max-width: 70ch; }
+.dossier-vide { border: 1px dashed var(--trait); border-radius: 8px; padding: 2.5rem 1.5rem; text-align: center; color: var(--sourdine); display: grid; gap: .5rem; justify-items: center; }
+.dossier-vide b { font-family: var(--f-titre); font-size: 1.3rem; color: var(--texte); }
+
+/* ---------- Table ---------- */
+.table-tete { display: flex; flex-wrap: wrap; gap: .75rem; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+.annees { display: flex; gap: .35rem; flex-wrap: wrap; }
+.annees button, .bascule button { cursor: pointer; background: var(--pupitre); border: 1px solid var(--trait); border-radius: 4px; padding: .35rem .8rem; font-family: var(--f-titre); font-size: 1.05rem; color: var(--sourdine); }
+.annees button[aria-pressed="true"], .bascule button[aria-pressed="true"] { border-color: var(--laiton); color: var(--texte); background: var(--accent-doux); }
+.bascule { display: flex; gap: .35rem; }
+.bascule button { font-family: var(--f-texte); font-size: .85rem; }
+.table-cadre {
+  background: radial-gradient(ellipse at 50% 0%, transparent, transparent 65%), var(--pupitre);
+  border: 1px solid var(--trait); border-radius: 10px; padding: 1rem; box-shadow: 0 1px 2px rgba(22, 27, 46, .06);
+}
+.table-releve { display: flex; flex-wrap: wrap; gap: .5rem 2rem; margin-bottom: .8rem; }
+.releve { display: grid; }
+.releve small { color: var(--sourdine); font-size: .7rem; text-transform: uppercase; letter-spacing: .1em; }
+.releve b { font-family: var(--f-titre); font-weight: 600; font-size: 1.4rem; font-variant-numeric: lining-nums tabular-nums; }
+.defile { overflow-x: auto; }
+.plateau { --case: 1.85rem; display: grid; grid-template-columns: repeat(30, var(--case)); gap: 2px; width: max-content; margin: 0 auto; }
+.fond { background: var(--case-vide); border-radius: 2px; }
 .fond-hors { background: var(--hors); }
-.fond-horstable { background: repeating-linear-gradient(135deg, var(--hors) 0 4px, var(--vide) 4px 8px); }
+.fond-horstable { background: repeating-linear-gradient(135deg, var(--hors) 0 4px, var(--case-vide) 4px 8px); }
 .pion {
   position: relative; z-index: 1; border-radius: 3px; overflow: hidden; display: flex; align-items: center; justify-content: center;
   color: #fff; font-size: .68rem; line-height: 1.1; font-weight: 600; text-align: center; padding: 2px;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .25);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .12);
 }
 .pion span { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; text-shadow: 0 1px 1px rgba(0, 0, 0, .35); }
 .pion-petit { font-size: .55rem; }
-.pion-50::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(135deg, transparent 0 5px, rgba(184, 50, 42, .5) 5px 8px); pointer-events: none; }
+.pion-50::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(135deg, transparent 0 5px, rgba(179, 38, 30, .45) 5px 8px); pointer-events: none; }
 .pion-case { font-size: .55rem; }
-.pion-dorese { border-radius: 50%; box-shadow: inset 0 0 0 2px var(--surface); }
-.pion-mesure { background-image: radial-gradient(rgba(255, 255, 255, .55) 1px, transparent 1.5px) !important; background-size: 5px 5px; }
+.pion-dorese { border-radius: 50%; box-shadow: inset 0 0 0 2px var(--pupitre); }
+.pion-mesure { background-image: radial-gradient(rgba(255, 255, 255, .5) 1px, transparent 1.5px) !important; background-size: 5px 5px; }
 .pion-debord { outline: 2px solid var(--alerte); outline-offset: -2px; }
-.legende { display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; margin-top: .75rem; font-size: .82rem; color: var(--sourdine); align-items: center; }
-.puce-legende { display: inline-block; vertical-align: middle; margin-right: .35rem; width: 1rem; height: 1rem; border-radius: 3px; position: relative; overflow: hidden; border: 1px solid var(--trait); }
+.pion-mien { box-shadow: 0 0 0 2px var(--texte), 0 2px 6px rgba(0, 0, 0, .3); z-index: 2; }
+.legende { display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; margin-top: 1rem; font-size: .8rem; color: var(--sourdine); align-items: center; }
+.puce-legende { display: inline-block; vertical-align: middle; margin-right: .35rem; width: 1rem; height: 1rem; border-radius: 3px; position: relative; overflow: hidden; }
 
-.parametres { display: grid; gap: 1rem; max-width: 760px; margin-top: 1rem; }
-fieldset { border: 1px solid var(--trait); border-radius: 6px; padding: .75rem 1rem 1rem; background: var(--surface); }
-legend { font-weight: 600; padding: 0 .35rem; }
+/* ---------- Arbitrage ---------- */
+.arb-tete { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem; align-items: flex-end; margin-bottom: 1rem; }
+.actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+.arb-annees { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .5rem; }
+.arb-an { background: var(--panneau); border: 1px solid var(--trait); border-radius: 6px; padding: .7rem .8rem; display: grid; gap: .1rem; }
+.arb-an .an { font-family: var(--f-titre); font-size: 1.15rem; font-weight: 600; }
+.arb-an .l { display: flex; justify-content: space-between; font-size: .8rem; color: var(--sourdine); }
+.arb-an .l b { font-family: var(--f-chiffre); font-weight: 500; color: var(--texte); }
+.arb-colonnes { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 1.25rem; }
+.decision { background: var(--panneau); border: 1px solid var(--trait); border-left: 4px solid var(--c, var(--inter)); border-radius: 6px; padding: .7rem .85rem; display: grid; gap: .5rem; margin-bottom: .5rem; }
+.decision-tete { display: flex; justify-content: space-between; gap: 1rem; align-items: baseline; }
+.decision-nom { font-weight: 600; }
+.decision-nom small { display: block; color: var(--sourdine); font-weight: 400; font-size: .78rem; }
+.choix { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; }
+.choix button { cursor: pointer; background: var(--pupitre); border: 1px solid var(--trait); border-radius: 4px; padding: .3rem .7rem; font-size: .82rem; color: var(--sourdine); }
+.choix button[aria-pressed="true"][data-statut="retenu"] { border-color: var(--ok); color: var(--ok); background: rgba(29, 122, 70, .08); }
+.choix button[aria-pressed="true"][data-statut="differe"] { border-color: var(--attente); color: var(--attente); background: rgba(166, 90, 0, .08); }
+.choix button[aria-pressed="true"][data-statut="renonce"] { border-color: var(--alerte); color: var(--alerte); background: rgba(179, 38, 30, .07); }
+.choix button[aria-pressed="true"][data-statut="attente"] { border-color: var(--sourdine); color: var(--texte); }
+.choix select { padding: .25rem .4rem; font-size: .82rem; }
+.renonce { background: var(--pupitre); border: 1px dashed var(--alerte); border-radius: 6px; padding: .6rem .75rem; margin-bottom: .5rem; font-size: .85rem; }
+.renonce b { font-family: var(--f-chiffre); font-weight: 500; color: var(--alerte); }
+.vide { color: var(--sourdine); font-size: .85rem; padding: 1rem; border: 1px dashed var(--trait); border-radius: 6px; text-align: center; }
+
+/* ---------- Bilan ---------- */
+.trajectoire { display: grid; gap: .45rem; background: var(--pupitre); border: 1px solid var(--trait); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+.traj-ligne { display: grid; grid-template-columns: 3.2rem 1fr 6.5rem; gap: .6rem; align-items: center; font-size: .82rem; }
+.traj-an { font-family: var(--f-titre); font-weight: 600; font-size: 1.05rem; }
+.traj-barre { position: relative; height: 1.3rem; background: var(--case-vide); border-radius: 3px; display: flex; }
+.traj-barre span { height: 100%; }
+.traj-plafond { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--texte); }
+.cadre { background: var(--pupitre); border: 1px solid var(--trait); border-radius: 8px; }
+table { border-collapse: collapse; width: 100%; font-size: .85rem; }
+th, td { padding: .45rem .6rem; border-bottom: 1px solid var(--trait); text-align: left; }
+th { background: var(--panneau-haut); font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--sourdine); font-weight: 600; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+.pastille { display: inline-block; width: .7rem; height: .7rem; border-radius: 2px; margin-right: .4rem; vertical-align: -1px; }
+
+/* ---------- Réglages ---------- */
+.reglages { display: grid; gap: 1rem; max-width: 760px; margin-top: 1rem; }
+fieldset { border: 1px solid var(--trait); border-radius: 8px; padding: .8rem 1rem 1rem; background: var(--pupitre); }
+legend { padding: 0 .4rem; font-weight: 600; }
 .plafonds { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: .75rem; }
 .plafonds label { display: grid; gap: .2rem; font-size: .85rem; color: var(--sourdine); }
-.plafonds input { font-family: var(--f-chiffre); }
-.alea { display: grid; gap: .35rem; margin-top: .5rem; }
+.plafonds small { font-family: var(--f-chiffre); }
+.alea { display: grid; gap: .3rem; margin-top: .6rem; }
 .alea-annees { display: flex; flex-wrap: wrap; gap: .25rem .9rem; font-size: .85rem; }
 
-.toast {
-  position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
-  background: var(--encre); color: var(--fond); padding: .5rem 1rem; border-radius: 4px; font-size: .9rem; z-index: 20; max-width: calc(100% - 32px);
-}
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(1rem + env(safe-area-inset-bottom, 0px)); background: var(--texte); color: #ffffff; box-shadow: 0 6px 20px rgba(22, 27, 46, .2); font-weight: 600; padding: .55rem 1.1rem; border-radius: 4px; z-index: 20; max-width: calc(100% - 32px); }
 
+@media (max-width: 900px) {
+  .vue-composer, .arb-colonnes { grid-template-columns: 1fr; }
+  .arsenal { position: static; max-height: 60vh; }
+  .jauges { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
 @media (max-width: 600px) {
-  h1 { font-size: 1.9rem; }
-  .plateau { --case: 1.1rem; }
+  .plateau { --case: 1.15rem; }
   .pion span { display: none; }
+  .calendrier { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .insigne small { display: none; }
+  .deux { grid-template-columns: 1fr; }
 }
-@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 
-.badge { display: inline-block; font-size: .72rem; font-weight: 600; border-radius: 99px; padding: .05rem .5rem; margin-top: .3rem; }
-.badge-attente { color: var(--inter); border: 1px solid var(--inter); }
-.badge-ok { color: var(--ok); border: 1px solid var(--ok); }
-.alerte-texte { color: var(--alerte); }
-details.sous summary { cursor: pointer; }
-details.sous p { margin-top: .25rem; max-width: 50ch; }
-.statut-retenu { color: var(--ok); }
-.statut-differe { color: var(--inter); }
-.statut-renonce { color: var(--alerte); text-decoration: line-through; }
-.arb-ligne select { font-size: .85rem; padding: .2rem .3rem; }
+.etape-role-large, #etape-role { width: min(100%, 920px); margin-inline: auto; }
+@media (max-width: 640px) { .jauge-val { display: none; } }
+
+body { border-top: 4px solid transparent; border-image: linear-gradient(90deg, #1b2a6b 0 33.3%, #ffffff 33.3% 66.6%, #c8102e 66.6%) 1; }
+.accueil-fond { display: none; }
+.plateau .fond { background: var(--case-vide); }
 
 </style>
-
 </head>
 <body>
-<header class="bandeau">
-  <div class="bandeau-in">
-    <div class="marque">
-      <span class="marque-nom">STRATEGIKON</span>
-      <span class="marque-sous">LPM 2027-2032 · table budgétaire</span>
-    </div>
-    <div class="session" id="session" hidden>
-      <span class="puce" id="session-partie"></span>
-      <label class="sr" for="session-role">Rôle</label>
-      <select id="session-role"></select>
-      <button class="btn-discret" id="btn-quitter" type="button">Changer de partie</button>
-    </div>
-    <span class="mode" id="mode"></span>
-  </div>
-</header>
 
-<main class="page">
-  <!-- Accueil : choisir ou créer une partie -->
-  <section id="ecran-accueil" class="accueil">
-    <div class="accueil-intro">
-      <h1>Construire la LPM, case par case</h1>
-      <p>Chaque pôle compose sa demande année par année. L'outil calcule en direct les cases occupées et les DORESE, et confronte la somme des demandes au plafond de chaque année. Une case vaut 100 M€ ; la table compte 600 cases, soit 60 Md€.</p>
-    </div>
-    <div class="accueil-cartes">
-      <form class="carte" id="form-rejoindre" autocomplete="off">
+<!-- ===== Accueil ===== -->
+<section id="ecran-accueil" class="accueil">
+  <div class="accueil-fond" aria-hidden="true"></div>
+  <div class="accueil-in">
+    <p class="surtitre">École de guerre · Loi de programmation militaire 2027-2032</p>
+    <h1 class="logo">STRATEGIKON</h1>
+    <p class="accroche">Construire la programmation 2027-2032 sous plafond : chaque pôle présente ses besoins, le CEMA arbitre.</p>
+
+    <div class="etapes-accueil" id="etape-partie">
+      <div class="carte-acces">
         <h2>Rejoindre une partie</h2>
-        <label for="rej-partie">Partie</label>
-        <select id="rej-partie" required></select>
-        <label for="rej-mdp">Mot de passe de la partie</label>
-        <input id="rej-mdp" type="password" required>
-        <label for="rej-role">Votre rôle</label>
-        <select id="rej-role" required></select>
-        <button class="btn" type="submit">Entrer dans la partie</button>
-        <p class="erreur" id="rej-erreur" role="alert"></p>
-      </form>
-      <form class="carte" id="form-creer" autocomplete="off">
-        <h2>Créer une partie</h2>
-        <label for="cre-nom">Nom de la partie</label>
-        <input id="cre-nom" placeholder="Bageia 5" maxlength="80" required>
-        <label for="cre-mdp">Mot de passe (4 caractères minimum)</label>
-        <input id="cre-mdp" type="password" minlength="4" required>
-        <label for="cre-mdp2">Confirmer le mot de passe</label>
-        <input id="cre-mdp2" type="password" minlength="4" required>
-        <button class="btn btn-second" type="submit">Créer et entrer comme animateur</button>
-        <p class="erreur" id="cre-erreur" role="alert"></p>
-      </form>
-    </div>
-    <p class="note" id="note-mode"></p>
-  </section>
-
-  <!-- Partie en cours -->
-  <section id="ecran-partie" hidden>
-    <nav class="onglets" role="tablist">
-      <button role="tab" data-onglet="demande" aria-selected="true">Ma demande</button>
-      <button role="tab" data-onglet="synthese" aria-selected="false">Synthèse</button>
-      <button role="tab" data-onglet="table" aria-selected="false">Table</button>
-      <button role="tab" data-onglet="arbitrage" aria-selected="false">Arbitrage</button>
-      <button role="tab" data-onglet="parametres" aria-selected="false">Paramètres</button>
-    </nav>
-
-    <div class="vue" id="vue-demande">
-      <div class="entete-vue">
-        <div>
-          <h2 id="titre-demande">Demande</h2>
-          <p class="aide">Une ligne par objet. Indiquez dans chaque année le nombre d'exemplaires posés sur la table cette année-là. Les modifications sont enregistrées aussitôt.</p>
-        </div>
-        <div class="ajout">
-          <label for="ajout-type" class="sr">Type de ligne</label>
-          <select id="ajout-type"></select>
-          <button class="btn" id="btn-ajouter" type="button">Ajouter la ligne</button>
-        </div>
+        <form id="form-rejoindre" autocomplete="off">
+          <label for="rej-partie">Partie</label>
+          <select id="rej-partie" required></select>
+          <label for="rej-mdp">Mot de passe</label>
+          <input id="rej-mdp" type="password" required>
+          <button class="btn-laiton" type="submit">Entrer</button>
+          <p class="erreur" id="rej-erreur" role="alert"></p>
+        </form>
       </div>
-      <div class="defile">
-        <table class="grille-saisie" id="table-demande"></table>
+      <div class="carte-acces carte-discrete">
+        <h2>Ouvrir une nouvelle partie</h2>
+        <form id="form-creer" autocomplete="off">
+          <label for="cre-nom">Nom de la partie</label>
+          <input id="cre-nom" placeholder="Bageia 5" maxlength="80" required>
+          <div class="deux">
+            <div><label for="cre-mdp">Mot de passe</label><input id="cre-mdp" type="password" minlength="4" required></div>
+            <div><label for="cre-mdp2">Confirmation</label><input id="cre-mdp2" type="password" minlength="4" required></div>
+          </div>
+          <button class="btn-contour" type="submit">Ouvrir la partie</button>
+          <p class="erreur" id="cre-erreur" role="alert"></p>
+        </form>
       </div>
-      <div class="bilan" id="bilan-role"></div>
     </div>
 
-    <div class="vue" id="vue-synthese" hidden>
-      <div class="entete-vue">
-        <div>
-          <h2>Synthèse de la partie</h2>
-          <p class="aide">Socle (pions posés d'office) plus toutes les demandes, par année et par armée, face au plafond.</p>
+    <div id="etape-role" hidden>
+      <h2 class="titre-roles">Quel pôle incarnez-vous dans <span id="nom-partie-role"></span> ?</h2>
+      <div class="roles" id="grille-roles"></div>
+      <button class="btn-lien" id="btn-retour-partie" type="button">Choisir une autre partie</button>
+    </div>
+    <p class="note-mode" id="note-mode"></p>
+  </div>
+</section>
+
+<!-- ===== Partie ===== -->
+<section id="ecran-partie" hidden>
+  <header class="poste">
+    <div class="poste-in">
+      <span class="logo-petit">STRATEGIKON</span>
+      <span class="poste-partie" id="poste-partie"></span>
+      <button class="insigne" id="btn-role" type="button" title="Changer de pôle"><span id="insigne-code"></span><small id="insigne-nom"></small></button>
+      <span class="mode" id="mode"></span>
+      <button class="btn-lien" id="btn-quitter" type="button">Quitter</button>
+    </div>
+    <div class="jauges" id="jauges" aria-label="Budget par année"></div>
+  </header>
+
+  <nav class="parcours" role="tablist">
+    <button role="tab" data-onglet="composer" aria-selected="true"><b>1</b> Composer ma demande</button>
+    <button role="tab" data-onglet="table" aria-selected="false"><b>2</b> La table</button>
+    <button role="tab" data-onglet="arbitrage" aria-selected="false"><b>3</b> Arbitrage</button>
+    <button role="tab" data-onglet="bilan" aria-selected="false">Bilan</button>
+    <button role="tab" data-onglet="reglages" aria-selected="false" id="onglet-reglages">Réglages</button>
+  </nav>
+
+  <main class="scene">
+    <!-- 1. Composer -->
+    <div class="vue vue-composer" id="vue-composer">
+      <aside class="arsenal">
+        <div class="arsenal-tete">
+          <h2>Catalogue</h2>
+          <input id="recherche" type="search" placeholder="Chercher un pion, une option…" aria-label="Chercher">
+          <div class="filtres" id="filtres" role="group" aria-label="Filtrer"></div>
         </div>
-        <div class="ajout">
-          <button class="btn-discret" id="btn-copier-csv" type="button">Copier en CSV</button>
-          <button class="btn-discret" id="btn-telecharger-csv" type="button">Télécharger le CSV</button>
+        <div class="cartes-pions" id="arsenal"></div>
+      </aside>
+      <section class="dossier">
+        <div class="dossier-tete">
+          <div>
+            <h2 id="titre-dossier">Ma demande</h2>
+            <p class="aide">Chaque fiche se pose sur la table les années cochées. Tout est enregistré au fil de l'eau.</p>
+          </div>
+          <div class="dossier-total" id="dossier-total"></div>
         </div>
-      </div>
-      <div class="trajectoire" id="trajectoire"></div>
-      <div class="defile"><table class="tableau" id="table-synthese"></table></div>
-      <p class="note" id="note-vue"></p>
-      <h3>Demandes par rôle</h3>
-      <div class="defile"><table class="tableau" id="table-roles"></table></div>
-      <h3>Toutes les lignes</h3>
-      <div class="defile"><table class="tableau" id="table-toutes"></table></div>
+        <div id="fiches"></div>
+      </section>
     </div>
 
+    <!-- 2. Table -->
     <div class="vue" id="vue-table" hidden>
-      <div class="entete-vue">
-        <div>
-          <h2>Table budgétaire</h2>
-          <p class="aide">Chaque carré est une case de 100 M€. Le socle est posé d'abord, puis les demandes armée par armée ; les DORESE sont posées au contact de leur capacité. Survolez une case pour voir le pion.</p>
-        </div>
-        <div class="ajout">
-          <label for="table-vue">Afficher</label>
-          <select id="table-vue">
-            <option value="demandes">Toutes les demandes</option>
-            <option value="arbitrage">Après arbitrage</option>
-          </select>
-          <label for="table-annee">Année</label>
-          <select id="table-annee"></select>
+      <div class="table-tete">
+        <div class="annees" id="annees-table" role="group" aria-label="Année"></div>
+        <div class="bascule" role="group" aria-label="Vue">
+          <button type="button" data-vue="demandes" aria-pressed="true">Toutes les demandes</button>
+          <button type="button" data-vue="arbitrage" aria-pressed="false">Après arbitrage</button>
         </div>
       </div>
-      <div class="table-chiffres" id="table-chiffres"></div>
-      <div class="defile"><div class="plateau" id="plateau"></div></div>
-      <div class="legende" id="legende"></div>
+      <div class="table-cadre">
+        <div class="table-releve" id="table-releve"></div>
+        <div class="defile"><div class="plateau" id="plateau"></div></div>
+        <div class="legende" id="legende"></div>
+      </div>
     </div>
 
+    <!-- 3. Arbitrage -->
     <div class="vue" id="vue-arbitrage" hidden>
-      <div class="entete-vue">
+      <div class="arb-tete">
         <div>
           <h2>Arbitrage du CEMA</h2>
           <p class="aide" id="aide-arbitrage"></p>
         </div>
       </div>
-      <div class="defile"><table class="tableau" id="table-arb-annees"></table></div>
-      <h3>Lignes à arbitrer</h3>
-      <div class="defile"><table class="tableau" id="table-arb-lignes"></table></div>
-      <h3>Renoncements</h3>
-      <div class="defile"><table class="tableau" id="table-renoncements"></table></div>
+      <div class="arb-annees" id="arb-annees"></div>
+      <div class="arb-colonnes">
+        <div><h3>Demandes</h3><div id="arb-lignes"></div></div>
+        <div><h3>Renoncements</h3><div id="arb-renoncements"></div></div>
+      </div>
     </div>
 
-    <div class="vue" id="vue-parametres" hidden>
-      <h2>Paramètres de la partie</h2>
+    <!-- Bilan -->
+    <div class="vue" id="vue-bilan" hidden>
+      <div class="arb-tete">
+        <div><h2>Bilan de la partie</h2><p class="aide" id="note-vue"></p></div>
+        <div class="actions">
+          <button class="btn-contour" id="btn-copier-csv" type="button">Copier en CSV</button>
+          <button class="btn-contour" id="btn-telecharger-csv" type="button">Télécharger le CSV</button>
+        </div>
+      </div>
+      <div class="trajectoire" id="trajectoire"></div>
+      <div class="defile cadre"><table class="tableau" id="table-synthese"></table></div>
+      <h3>Toutes les lignes visibles</h3>
+      <div class="defile cadre"><table class="tableau" id="table-toutes"></table></div>
+    </div>
+
+    <!-- Réglages -->
+    <div class="vue" id="vue-reglages" hidden>
+      <h2>Réglages de la partie</h2>
       <p class="aide" id="aide-parametres"></p>
-      <form id="form-parametres" class="parametres">
-        <fieldset>
-          <legend>Plafond annuel (en cases de 100 M€)</legend>
-          <div class="plafonds" id="plafonds"></div>
-        </fieldset>
-        <fieldset>
-          <legend>Pions de scénario (orange) posés sur la table</legend>
-          <div id="aleas"></div>
-        </fieldset>
-        <button class="btn" type="submit" id="btn-parametres">Enregistrer les paramètres</button>
-        <p class="note" id="param-etat" role="status"></p>
+      <form id="form-parametres" class="reglages">
+        <fieldset><legend>Plafond annuel (cases de 100 M€)</legend><div class="plafonds" id="plafonds"></div></fieldset>
+        <fieldset><legend>Pions de scénario posés sur la table</legend><div id="aleas"></div></fieldset>
+        <button class="btn-laiton" type="submit" id="btn-parametres">Enregistrer</button>
+        <p class="note-mode" id="param-etat" role="status"></p>
       </form>
     </div>
-  </section>
-</main>
+  </main>
+</section>
 
 <div class="toast" id="toast" role="status" hidden></div>
 
@@ -404,6 +502,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 1000,
+  "depart": {
+   "ao": 0,
+   "mco": 0,
+   "rh": 0
+  },
   "remarque": "Lisible. 6 pions identiques de 5x2."
  },
  {
@@ -420,6 +523,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 1000,
+  "depart": {
+   "ao": 0,
+   "mco": 0,
+   "rh": 0
+  },
   "remarque": "Lisible."
  },
  {
@@ -436,6 +544,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 1000,
+  "depart": {
+   "ao": 0,
+   "mco": 0,
+   "rh": 0
+  },
   "remarque": "Lisible."
  },
  {
@@ -452,6 +565,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 1000,
+  "depart": {
+   "ao": 0,
+   "mco": 0,
+   "rh": 0
+  },
   "remarque": "Lisible."
  },
  {
@@ -468,6 +586,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 1000,
+  "depart": {
+   "ao": 0,
+   "mco": 0,
+   "rh": 0
+  },
   "remarque": "Lisible."
  },
  {
@@ -484,6 +607,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 1000,
+  "depart": {
+   "ao": 0,
+   "mco": 0,
+   "rh": 0
+  },
   "remarque": "Lisible."
  },
  {
@@ -500,7 +628,12 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 1500,
-  "remarque": "Lisible. Taille comptée sur la grille."
+  "depart": {
+   "ao": 0,
+   "mco": 0,
+   "rh": 0
+  },
+  "remarque": "Lisible. Taille comptée sur la grille. En 2027, un second pion gris semble glissé dessous (texte visible entre Infrastructures et SGA) : à vérifier."
  },
  {
   "id": "P8",
@@ -516,6 +649,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 600,
+  "depart": {
+   "ao": 0,
+   "mco": 0,
+   "rh": 0
+  },
   "remarque": "Lisible."
  },
  {
@@ -532,6 +670,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 900,
+  "depart": {
+   "ao": 0,
+   "mco": 0,
+   "rh": 0
+  },
   "remarque": "Lisible."
  },
  {
@@ -548,6 +691,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 900,
+  "depart": {
+   "ao": 0,
+   "mco": 0,
+   "rh": 0
+  },
   "remarque": "Bandeau violet = investissement selon le guide, mais posé d'office : à traiter comme fixe ? À confirmer."
  },
  {
@@ -564,6 +712,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 2000,
+  "depart": {
+   "ao": 0,
+   "mco": 0,
+   "rh": 0
+  },
   "remarque": "Bandeau violet, pas de DORESE. Taille 5x4 comptée sur la grille (±1 rangée)."
  },
  {
@@ -580,6 +733,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 2500,
+  "depart": {
+   "ao": 0,
+   "mco": 0,
+   "rh": 0
+  },
   "remarque": "Montant écrit sur le pion (2,5 Md€ = 25 cases, cohérent)."
  },
  {
@@ -596,6 +754,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 1500,
+  "depart": {
+   "ao": 0,
+   "mco": 0,
+   "rh": 0
+  },
   "remarque": "Montant lu sur le Figuratif (1,5 Md€ = 15 cases, cohérent avec le pointillé 3x5)."
  },
  {
@@ -609,10 +772,15 @@ window.STRAT_PIONS = [
   "dorese": {
    "ao": 1,
    "mco": 1,
-   "rh": 0
+   "rh": 1
   },
-  "cout100": 500,
-  "remarque": "Lisible."
+  "cout100": 600,
+  "depart": {
+   "ao": 1,
+   "mco": 1,
+   "rh": 1
+  },
+  "remarque": "Lisible. Face verte 2027 : RH = 1 (0 sur la face rouge) ; c'est la valeur retenue."
  },
  {
   "id": "P15",
@@ -625,10 +793,15 @@ window.STRAT_PIONS = [
   "dorese": {
    "ao": 0,
    "mco": 0,
-   "rh": 0
+   "rh": 1
   },
-  "cout100": 300,
-  "remarque": "Lisible : 0/0/0, donc déjà à 100 % ?"
+  "cout100": 400,
+  "depart": {
+   "ao": 0,
+   "mco": 0,
+   "rh": 1
+  },
+  "remarque": "Lisible. Face rouge 0/0/0. Face verte 2027 : RH = 1 (0 sur la face rouge) ; c'est la valeur retenue."
  },
  {
   "id": "P16",
@@ -641,10 +814,15 @@ window.STRAT_PIONS = [
   "dorese": {
    "ao": 1,
    "mco": 0,
-   "rh": 0
+   "rh": 1
   },
-  "cout100": 400,
-  "remarque": "Lisible."
+  "cout100": 500,
+  "depart": {
+   "ao": 1,
+   "mco": 0,
+   "rh": 1
+  },
+  "remarque": "Lisible. Face verte 2027 : RH = 1 (0 sur la face rouge) ; c'est la valeur retenue."
  },
  {
   "id": "P17",
@@ -657,10 +835,15 @@ window.STRAT_PIONS = [
   "dorese": {
    "ao": 1,
    "mco": 0,
-   "rh": 0
+   "rh": 1
   },
-  "cout100": 400,
-  "remarque": "Lisible."
+  "cout100": 500,
+  "depart": {
+   "ao": 1,
+   "mco": 0,
+   "rh": 1
+  },
+  "remarque": "Lisible. Face verte 2027 : RH = 1 (0 sur la face rouge) ; c'est la valeur retenue."
  },
  {
   "id": "P18",
@@ -673,10 +856,15 @@ window.STRAT_PIONS = [
   "dorese": {
    "ao": 1,
    "mco": 0,
-   "rh": 0
+   "rh": 1
   },
-  "cout100": 400,
-  "remarque": "Lisible."
+  "cout100": 500,
+  "depart": {
+   "ao": 1,
+   "mco": 0,
+   "rh": 1
+  },
+  "remarque": "Lisible. Face verte 2027 : RH = 1 (0 sur la face rouge) ; c'est la valeur retenue."
  },
  {
   "id": "P19",
@@ -689,10 +877,15 @@ window.STRAT_PIONS = [
   "dorese": {
    "ao": 0,
    "mco": 0,
-   "rh": 0
+   "rh": 1
   },
-  "cout100": 300,
-  "remarque": "Lisible : 0/0/0. Le logo du pion ressemble à celui de l'Armée de l'Air : à vérifier."
+  "cout100": 400,
+  "depart": {
+   "ao": 0,
+   "mco": 0,
+   "rh": 1
+  },
+  "remarque": "Lisible. Face rouge 0/0/0. Face verte 2027 : RH = 1 (0 sur la face rouge) ; c'est la valeur retenue."
  },
  {
   "id": "P20",
@@ -705,10 +898,15 @@ window.STRAT_PIONS = [
   "dorese": {
    "ao": 1,
    "mco": 1,
-   "rh": 0
+   "rh": 1
   },
-  "cout100": 500,
-  "remarque": "Lisible. Identique à l'exemple du guide."
+  "cout100": 600,
+  "depart": {
+   "ao": 1,
+   "mco": 1,
+   "rh": 1
+  },
+  "remarque": "Lisible. Identique à l'exemple du guide. Face verte 2027 : RH = 1 (0 sur la face rouge) ; c'est la valeur retenue."
  },
  {
   "id": "P21",
@@ -721,10 +919,15 @@ window.STRAT_PIONS = [
   "dorese": {
    "ao": 1,
    "mco": 1,
-   "rh": 0
+   "rh": 1
   },
-  "cout100": 500,
-  "remarque": "Lisible."
+  "cout100": 600,
+  "depart": {
+   "ao": 1,
+   "mco": 1,
+   "rh": 1
+  },
+  "remarque": "Lisible. Face verte 2027 : RH = 1 (0 sur la face rouge) ; c'est la valeur retenue."
  },
  {
   "id": "P22",
@@ -737,10 +940,15 @@ window.STRAT_PIONS = [
   "dorese": {
    "ao": 1,
    "mco": 1,
-   "rh": 0
+   "rh": 1
   },
-  "cout100": 500,
-  "remarque": "Lisible."
+  "cout100": 600,
+  "depart": {
+   "ao": 1,
+   "mco": 1,
+   "rh": 1
+  },
+  "remarque": "Lisible. Face verte 2027 : RH = 1 (0 sur la face rouge) ; c'est la valeur retenue."
  },
  {
   "id": "P23",
@@ -753,10 +961,15 @@ window.STRAT_PIONS = [
   "dorese": {
    "ao": 1,
    "mco": 1,
-   "rh": 0
+   "rh": 1
   },
-  "cout100": 500,
-  "remarque": "Lisible."
+  "cout100": 600,
+  "depart": {
+   "ao": 1,
+   "mco": 1,
+   "rh": 1
+  },
+  "remarque": "Lisible. Face verte 2027 : RH = 1 (0 sur la face rouge) ; c'est la valeur retenue."
  },
  {
   "id": "P24",
@@ -769,10 +982,15 @@ window.STRAT_PIONS = [
   "dorese": {
    "ao": 1,
    "mco": 1,
-   "rh": 0
+   "rh": 1
   },
-  "cout100": 500,
-  "remarque": "Lisible."
+  "cout100": 600,
+  "depart": {
+   "ao": 1,
+   "mco": 1,
+   "rh": 1
+  },
+  "remarque": "Lisible. Face verte 2027 : RH = 1 (0 sur la face rouge) ; c'est la valeur retenue."
  },
  {
   "id": "P25",
@@ -785,10 +1003,15 @@ window.STRAT_PIONS = [
   "dorese": {
    "ao": 1,
    "mco": 1,
-   "rh": 0
+   "rh": 1
   },
-  "cout100": 500,
-  "remarque": "Lisible."
+  "cout100": 600,
+  "depart": {
+   "ao": 1,
+   "mco": 1,
+   "rh": 1
+  },
+  "remarque": "Lisible. Face verte 2027 : RH = 1 (0 sur la face rouge) ; c'est la valeur retenue."
  },
  {
   "id": "P26",
@@ -801,10 +1024,15 @@ window.STRAT_PIONS = [
   "dorese": {
    "ao": 1,
    "mco": 1,
-   "rh": 0
+   "rh": 1
   },
-  "cout100": 600,
-  "remarque": "Lisible. Porte le logo Armée de l'Air et de l'Espace : armée de rattachement à confirmer."
+  "cout100": 700,
+  "depart": {
+   "ao": 1,
+   "mco": 1,
+   "rh": 1
+  },
+  "remarque": "Lisible. Face verte : logo Armée de Terre. Face verte 2027 : RH = 1 (0 sur la face rouge) ; c'est la valeur retenue."
  },
  {
   "id": "P27",
@@ -820,7 +1048,12 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 600,
-  "remarque": "Lisible."
+  "depart": {
+   "ao": 0,
+   "mco": 2,
+   "rh": 0
+  },
+  "remarque": "Lisible. En 2027 : resté sur la face rouge, il manque 1 DORESE activité. Les 2 MCO posés en surplus dans la zone Air lui sont attribués."
  },
  {
   "id": "P28",
@@ -836,6 +1069,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 300,
+  "depart": {
+   "ao": 0,
+   "mco": 1,
+   "rh": 0
+  },
   "remarque": "Lisible."
  },
  {
@@ -852,6 +1090,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 300,
+  "depart": {
+   "ao": 0,
+   "mco": 1,
+   "rh": 0
+  },
   "remarque": "Lisible."
  },
  {
@@ -868,6 +1111,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 300,
+  "depart": {
+   "ao": 0,
+   "mco": 1,
+   "rh": 0
+  },
   "remarque": "Lisible."
  },
  {
@@ -884,6 +1132,11 @@ window.STRAT_PIONS = [
    "rh": 1
   },
   "cout100": 400,
+  "depart": {
+   "ao": 1,
+   "mco": 1,
+   "rh": 1
+  },
   "remarque": "Petits chiffres : lisibles mais pictogramme MCO différent (clé). Vérifier sur le pion."
  },
  {
@@ -900,6 +1153,11 @@ window.STRAT_PIONS = [
    "rh": 2
   },
   "cout100": 1000,
+  "depart": {
+   "ao": 0,
+   "mco": 0,
+   "rh": 2
+  },
   "remarque": "Lisible."
  },
  {
@@ -916,6 +1174,11 @@ window.STRAT_PIONS = [
    "rh": 1
   },
   "cout100": 1300,
+  "depart": {
+   "ao": 1,
+   "mco": 3,
+   "rh": 1
+  },
   "remarque": "Lisible."
  },
  {
@@ -932,6 +1195,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 300,
+  "depart": {
+   "ao": 0,
+   "mco": 1,
+   "rh": 0
+  },
   "remarque": "Lisible."
  },
  {
@@ -948,6 +1216,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 500,
+  "depart": {
+   "ao": 0,
+   "mco": 2,
+   "rh": 0
+  },
   "remarque": "Lisible."
  },
  {
@@ -964,6 +1237,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 300,
+  "depart": {
+   "ao": 0,
+   "mco": 1,
+   "rh": 0
+  },
   "remarque": "Lisible."
  },
  {
@@ -980,6 +1258,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 300,
+  "depart": {
+   "ao": 0,
+   "mco": 1,
+   "rh": 0
+  },
   "remarque": "Lisible."
  },
  {
@@ -996,6 +1279,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 400,
+  "depart": {
+   "ao": 0,
+   "mco": 2,
+   "rh": 0
+  },
   "remarque": "Lisible."
  },
  {
@@ -1012,6 +1300,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 300,
+  "depart": {
+   "ao": 0,
+   "mco": 1,
+   "rh": 0
+  },
   "remarque": "Lisible."
  },
  {
@@ -1028,6 +1321,11 @@ window.STRAT_PIONS = [
    "rh": 1
   },
   "cout100": 800,
+  "depart": {
+   "ao": 1,
+   "mco": 2,
+   "rh": 1
+  },
   "remarque": "Lisible."
  },
  {
@@ -1044,6 +1342,11 @@ window.STRAT_PIONS = [
    "rh": 1
   },
   "cout100": 800,
+  "depart": {
+   "ao": 1,
+   "mco": 2,
+   "rh": 1
+  },
   "remarque": "Lisible."
  },
  {
@@ -1060,6 +1363,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 600,
+  "depart": {
+   "ao": 1,
+   "mco": 1,
+   "rh": 0
+  },
   "remarque": "Lisible."
  },
  {
@@ -1076,7 +1384,12 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 100,
-  "remarque": "Petit pion, lisible au zoom : 0/0/0."
+  "depart": {
+   "ao": 0,
+   "mco": 0,
+   "rh": 0
+  },
+  "remarque": "Petit pion, lisible au zoom : 0/0/0 sur les deux faces (aucun DORESE requis)."
  },
  {
   "id": "P44",
@@ -1092,6 +1405,11 @@ window.STRAT_PIONS = [
    "rh": 1
   },
   "cout100": 200,
+  "depart": {
+   "ao": 0,
+   "mco": 0,
+   "rh": 1
+  },
   "remarque": "Petit pion, lisible au zoom."
  },
  {
@@ -1108,6 +1426,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 200,
+  "depart": {
+   "ao": 0,
+   "mco": 1,
+   "rh": 0
+  },
   "remarque": "Petit pion, lisible au zoom."
  },
  {
@@ -1124,6 +1447,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 200,
+  "depart": {
+   "ao": 0,
+   "mco": 1,
+   "rh": 0
+  },
   "remarque": "Petit pion, lisible au zoom."
  },
  {
@@ -1140,6 +1468,11 @@ window.STRAT_PIONS = [
    "rh": 0
   },
   "cout100": 200,
+  "depart": {
+   "ao": 0,
+   "mco": 1,
+   "rh": 0
+  },
   "remarque": "Petit pion, lisible au zoom."
  },
  {
@@ -1156,6 +1489,11 @@ window.STRAT_PIONS = [
    "rh": 1
   },
   "cout100": 400,
+  "depart": {
+   "ao": 0,
+   "mco": 1,
+   "rh": 1
+  },
   "remarque": "Lisible."
  },
  {
@@ -1172,6 +1510,11 @@ window.STRAT_PIONS = [
    "rh": 1
   },
   "cout100": 700,
+  "depart": {
+   "ao": 1,
+   "mco": 1,
+   "rh": 1
+  },
   "remarque": "Lisible."
  },
  {
@@ -1188,6 +1531,11 @@ window.STRAT_PIONS = [
    "rh": 2
   },
   "cout100": 800,
+  "depart": {
+   "ao": 0,
+   "mco": 0,
+   "rh": 2
+  },
   "remarque": "Lisible."
  },
  {
@@ -1204,6 +1552,11 @@ window.STRAT_PIONS = [
    "rh": 2
   },
   "cout100": 1600,
+  "depart": {
+   "ao": 0,
+   "mco": 2,
+   "rh": 2
+  },
   "remarque": "Lisible. Valeurs identiques à l'exemple du guide."
  },
  {
@@ -1220,7 +1573,33 @@ window.STRAT_PIONS = [
    "rh": 3
   },
   "cout100": 3000,
+  "depart": {
+   "ao": 0,
+   "mco": 3,
+   "rh": 3
+  },
   "remarque": "Lisible."
+ },
+ {
+  "id": "P53",
+  "armee": "Marine",
+  "nom": "PA-NG (tranche 1/6)",
+  "type": "violet",
+  "l": 2,
+  "h": 5,
+  "cout50": 1000,
+  "dorese": {
+   "ao": 0,
+   "mco": 0,
+   "rh": 0
+  },
+  "cout100": 1000,
+  "depart": {
+   "ao": 0,
+   "mco": 0,
+   "rh": 0
+  },
+  "remarque": "Investissement étalé : tranche N1 sur 6, posée en 2027. Absent des premières photos. Taille 2x5 comptée sur la grille."
  }
 ];
 
@@ -5380,7 +5759,8 @@ window.STRAT_CATALOGUE_ROLES = [
     return {
       table: 600, // cases par année (60 Md€)
       plafonds: { 2027: 590, 2028: 580, 2029: 570, 2030: 590, 2031: 590, 2032: 590 }, // cases
-      aleas: {} // id de pion orange -> liste des années où il est posé
+      // id de pion orange -> années où il est posé. Photo 2027 : SMV et munitions posés, répétés jusqu'en 2032.
+      aleas: { P12: ANNEES.slice(), P13: ANNEES.slice() }
     };
   }
 
@@ -5392,6 +5772,27 @@ window.STRAT_CATALOGUE_ROLES = [
 
   function nbDorese(pion) {
     return pion ? pion.dorese.ao + pion.dorese.mco + pion.dorese.rh : 0;
+  }
+
+  // Situation de départ (photo 2027) : DORESE déjà posées sur chaque capacité du socle.
+  function doreseDepart(pion) {
+    var d = (pion && pion.depart) || {};
+    return { ao: d.ao || 0, mco: d.mco || 0, rh: d.rh || 0 };
+  }
+  function nbDepart(pion) { var d = doreseDepart(pion); return d.ao + d.mco + d.rh; }
+  // DORESE qui manquent à une capacité du socle pour être à 100 %.
+  function doreseManquantes(pion) {
+    if (!pion) return { ao: 0, mco: 0, rh: 0 };
+    var d = doreseDepart(pion);
+    return { ao: Math.max(0, pion.dorese.ao - d.ao), mco: Math.max(0, pion.dorese.mco - d.mco), rh: Math.max(0, pion.dorese.rh - d.rh) };
+  }
+  function nbManquantes(pion) { var m = doreseManquantes(pion); return m.ao + m.mco + m.rh; }
+  // Coût annuel d'un pion du socle tel qu'il est posé au départ.
+  function coutSocle(pion) { return pion.cout50 + nbDepart(pion) * CASE; }
+  function typesDorese(d) {
+    var t = [];
+    ["ao", "mco", "rh"].forEach(function (k) { for (var n = 0; n < (d[k] || 0); n++) t.push(k); });
+    return t;
   }
 
   // Le socle : ce qui est posé d'office chaque année (gris, violets, capacités à 50 %,
@@ -5411,14 +5812,14 @@ window.STRAT_CATALOGUE_ROLES = [
     switch (ligne.type) {
       case "dorese":
         if (!pion) return vide;
-        return { cout: nbDorese(pion) * CASE, dorese: copie(pion.dorese) };
+        return { cout: nbManquantes(pion) * CASE, dorese: doreseManquantes(pion) };
       case "ajout":
         if (!pion) return vide;
         if (Number(ligne.niveau) === 100) return { cout: pion.cout100, dorese: copie(pion.dorese) };
         return { cout: pion.cout50, dorese: { ao: 0, mco: 0, rh: 0 } };
       case "retrait":
         if (!pion) return vide;
-        return { cout: -pion.cout50, dorese: { ao: 0, mco: 0, rh: 0 } };
+        return { cout: -coutSocle(pion), dorese: { ao: 0, mco: 0, rh: 0 } };
       case "libre":
         return {
           cout: Number(ligne.cout_unitaire) || 0,
@@ -5478,7 +5879,7 @@ window.STRAT_CATALOGUE_ROLES = [
       var socle = zeroArmees();
       var demandes = zeroArmees();
       pions.forEach(function (p) {
-        if (estDansSocle(p, a, params)) socle[p.armee] = (socle[p.armee] || 0) + p.cout50;
+        if (estDansSocle(p, a, params)) socle[p.armee] = (socle[p.armee] || 0) + coutSocle(p);
       });
       var dorese = { ao: 0, mco: 0, rh: 0 };
       lignes.forEach(function (l) {
@@ -5537,10 +5938,12 @@ window.STRAT_CATALOGUE_ROLES = [
       return ordreType[a.type] - ordreType[b.type];
     });
     socle.forEach(function (p) {
-      blocs.push({ armee: p.armee, nature: p.type, libelle: p.nom, cases: p.cout50 / CASE, niveau: 50 });
-      if (passes100[p.id]) {
-        blocs[blocs.length - 1].niveau = 100;
-        blocs.push({ armee: armeeDeLigne(passes100[p.id], idx), nature: "dorese", libelle: "DORESE " + p.nom, cases: nbDorese(p) });
+      var plein = p.type === "capacite" && nbManquantes(p) === 0;
+      blocs.push({ armee: p.armee, nature: p.type, libelle: p.nom, cases: p.cout50 / CASE, niveau: plein || passes100[p.id] ? 100 : 50 });
+      if (nbDepart(p)) blocs.push({ armee: p.armee, nature: "dorese", libelle: "DORESE " + p.nom, cases: nbDepart(p) });
+      if (passes100[p.id] && nbManquantes(p)) {
+        blocs[blocs.length - 1 - (nbDepart(p) ? 1 : 0)].niveau = 100;
+        blocs.push({ armee: armeeDeLigne(passes100[p.id], idx), nature: "dorese", libelle: "DORESE " + p.nom, cases: nbManquantes(p) });
       }
     });
     lignes.forEach(function (l) {
@@ -5632,10 +6035,12 @@ window.STRAT_CATALOGUE_ROLES = [
     function groupe(nom) { return groupes[nom] || groupes["Interarmées"]; }
     pions.forEach(function (p) {
       if (!estDansSocle(p, annee, params) || retires[p.id]) return;
-      var l100 = passes100[p.id];
+      var l100 = passes100[p.id] && nbManquantes(p) ? passes100[p.id] : null;
       var g = p.type === "gris" ? "Fixes" : (l100 ? armeeDeLigne(l100, idx) : p.armee);
+      var types = typesDorese(doreseDepart(p)).concat(l100 ? typesDorese(doreseManquantes(p)) : []);
+      var plein = types.length >= nbDorese(p);
       groupe(g).rigides.push({ pion: p, w: p.l || 1, h: p.h || 1, armee: g === "Fixes" ? p.armee : g, nature: p.type,
-        libelle: p.nom, niveau: l100 ? 100 : 50, dorese: l100 ? nbDorese(p) : 0, detailDorese: p.dorese, socle: true });
+        libelle: p.nom, niveau: plein ? 100 : 50, dorese: types.length, types: types, socle: true });
     });
     lignes.forEach(function (l) {
       var q = quantite(l, annee);
@@ -5681,8 +6086,7 @@ window.STRAT_CATALOGUE_ROLES = [
         pieces.push({ r: pos.r, c: pos.c, w: pos.w, h: pos.h, armee: it.armee, nature: it.nature, libelle: it.libelle,
           niveau: it.nature === "capacite" ? it.niveau : null, role: it.role || null, groupe: nomG, cases: pos.w * pos.h });
         // DORESE au contact : cases libres voisines de la capacité (ou de ses DORESE déjà posées).
-        var types = [];
-        ["ao", "mco", "rh"].forEach(function (k) { for (var n = 0; n < (it.detailDorese || {})[k]; n++) types.push(k); });
+        var types = it.types || typesDorese(it.detailDorese || {});
         var amas = [{ r: pos.r, c: pos.c, w: pos.w, h: pos.h }];
         types.slice(0, it.dorese).forEach(function (t) {
           var cand = voisinLibre(plateau, amas);
@@ -5788,6 +6192,11 @@ window.STRAT_CATALOGUE_ROLES = [
     parametresParDefaut: parametresParDefaut,
     indexPions: indexPions,
     nbDorese: nbDorese,
+    doreseDepart: doreseDepart,
+    nbDepart: nbDepart,
+    doreseManquantes: doreseManquantes,
+    nbManquantes: nbManquantes,
+    coutSocle: coutSocle,
     unitaire: unitaire,
     quantite: quantite,
     coutLigne: coutLigne,
@@ -5977,7 +6386,8 @@ window.STRAT_CATALOGUE_ROLES = [
 
 </script>
 <script>
-// Interface STRATEGIKON : accueil (parties), saisie par rôle, synthèse, table, paramètres.
+// STRATEGIKON, interface « salle d'état-major ».
+// Même moteur (js/moteur.js), même stockage (js/stockage.js), mêmes données que la version en ligne.
 (function () {
   "use strict";
 
@@ -5985,490 +6395,159 @@ window.STRAT_CATALOGUE_ROLES = [
   var S = window.STRAT_STOCKAGE;
   var PIONS = window.STRAT_PIONS || [];
   var CATALOGUE = window.STRAT_CATALOGUE_ROLES || [];
-  function optionDe(code) { return code ? CATALOGUE.filter(function (o) { return o.code === code; })[0] || null : null; }
-  function fourchette(o) {
-    var u = o.annuel ? "/an" : (o.periodicite && o.periodicite !== "non précisée" ? " (" + o.periodicite + ")" : "");
-    if (o.cout === null || o.cout === undefined) return o.statut_cout === "a_definir" ? "coût à définir" : "non chiffré";
-    if (o.cout_max && o.cout_max !== o.cout) return o.cout + " à " + o.cout_max + " M€" + u;
-    return o.cout + " M€" + u;
-  }
   var IDX = M.indexPions(PIONS);
-  var ROLES_EDITION_PARAMS = ["Animateur", "SC-Plans", "CEMA"];
+  var ROLES_REGLAGES = ["Animateur", "SC-Plans", "CEMA"];
   var ROLES_ARBITRAGE = ["CEMA", "Animateur"];
   var ROLES_VUE_COMPLETE = ["CEMA", "Animateur", "SC-Plans"];
-  function vueComplete() { return ROLES_VUE_COMPLETE.indexOf(etat.role) !== -1; }
-  function visible(l) { return vueComplete() || l.role === etat.role; }
-
-  var etat = {
-    partie: null, // { id, nom, params }
-    mdp: "",
-    role: "",
-    lignes: [],
-    onglet: "demande",
-    anneeTable: M.ANNEES[0],
-    vueTable: "demandes"
+  var MISSIONS = {
+    EMAT: "Défend les capacités Terre", EMM: "Défend les capacités Marine", EMAAE: "Défend les capacités Air et Espace",
+    COCA: "Porte les besoins opérationnels", "SC-Plans": "Tient la table budgétaire", CEMA: "Arbitre",
+    DGRIS: "Porte les partenariats", DGA: "Porte les programmes", SGA: "Porte l'humain et l'infrastructure",
+    MINARM: "Porte l'ambition politique", MEFR: "Tient les finances publiques", MEAE: "Porte la diplomatie",
+    Animateur: "Règle la partie"
   };
-  var enAttente = {}; // id de ligne -> minuteur d'enregistrement
-  var signatureLignes = "";
+
+  var etat = { partie: null, mdp: "", role: "", lignes: [], onglet: "composer", annee: M.ANNEES[0], vueTable: "demandes", filtre: "renforcer", recherche: "", ouverte: null };
+  var enAttente = {};
+  var signature = "";
 
   // ---------- Outils ----------
   function $(id) { return document.getElementById(id); }
   function el(tag, attrs, enfants) {
     var n = document.createElement(tag);
     if (attrs) Object.keys(attrs).forEach(function (k) {
-      if (k === "texte") n.textContent = attrs[k];
-      else if (k === "classe") n.className = attrs[k];
-      else if (k.slice(0, 2) === "on") n.addEventListener(k.slice(2), attrs[k]);
-      else if (attrs[k] !== undefined && attrs[k] !== null && attrs[k] !== false) n.setAttribute(k, attrs[k]);
+      var v = attrs[k];
+      if (k === "texte") n.textContent = v;
+      else if (k === "classe") n.className = v;
+      else if (k.slice(0, 2) === "on") n.addEventListener(k.slice(2), v);
+      else if (v !== undefined && v !== null && v !== false) n.setAttribute(k, v);
     });
-    (enfants || []).forEach(function (e) { if (e !== null && e !== undefined) n.appendChild(typeof e === "string" ? document.createTextNode(e) : e); });
+    (enfants || []).forEach(function (e) { if (e !== null && e !== undefined && e !== false) n.appendChild(typeof e === "string" ? document.createTextNode(e) : e); });
     return n;
   }
   function vider(n) { while (n.firstChild) n.removeChild(n.firstChild); }
-  function md(m) { // M€ -> « 5,9 Md€ » ou « 300 M€ »
+  function md(m) {
     var signe = m < 0 ? "−" : "";
     m = Math.abs(m);
     if (m >= 1000) return signe + (m / 1000).toLocaleString("fr-FR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " Md€";
     return signe + m.toLocaleString("fr-FR") + " M€";
   }
-  function cases(m) { return (m / M.CASE).toLocaleString("fr-FR", { maximumFractionDigits: 1 }); }
-  function classeArmee(a) { return { "Terre": "a-Terre", "Marine": "a-Marine", "Air et Espace": "a-Air", "Interarmées": "a-Inter" }[a] || "a-Inter"; }
-  function couleurArmee(a) { return { "Terre": "var(--terre)", "Marine": "var(--marine)", "Air et Espace": "var(--air)", "Interarmées": "var(--inter)" }[a] || "var(--inter)"; }
-  function nouvelId() {
-    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
-    return "l-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
-  }
+  function nCases(m) { var n = Math.round(m / M.CASE); return n + (Math.abs(n) > 1 ? " cases" : " case"); }
+  function couleur(a) { return { "Terre": "var(--terre)", "Marine": "var(--marine)", "Air et Espace": "var(--air)", "Interarmées": "var(--inter)" }[a] || "var(--inter)"; }
+  function nouvelId() { return window.crypto && crypto.randomUUID ? crypto.randomUUID() : "l-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
   function role(code) { return M.ROLES.filter(function (r) { return r.code === code; })[0] || M.ROLES[0]; }
-  var minuteurToast;
-  function toast(msg) {
-    var t = $("toast"); t.textContent = msg; t.hidden = false;
-    clearTimeout(minuteurToast); minuteurToast = setTimeout(function () { t.hidden = true; }, 2600);
+  function vueComplete() { return ROLES_VUE_COMPLETE.indexOf(etat.role) !== -1; }
+  function visible(l) { return vueComplete() || l.role === etat.role; }
+  function params() { return (etat.partie && etat.partie.params && etat.partie.params.plafonds) ? etat.partie.params : M.parametresParDefaut(); }
+  function optionDe(code) { return code ? CATALOGUE.filter(function (o) { return o.code === code; })[0] || null : null; }
+  function fourchette(o) {
+    var u = o.annuel ? "/an" : "";
+    if (o.cout === null || o.cout === undefined) return o.statut_cout === "a_definir" ? "coût à définir" : "non chiffré";
+    if (o.cout_max && o.cout_max !== o.cout) return o.cout + " à " + o.cout_max + " M€" + u;
+    return o.cout + " M€" + u;
   }
+  var minuteur;
+  function toast(msg) { var t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(minuteur); minuteur = setTimeout(function () { t.hidden = true; }, 2600); }
   function memoriser() {
     try {
-      if (etat.partie) sessionStorage.setItem("strategikon.session", JSON.stringify({ nom: etat.partie.nom, mdp: etat.mdp, role: etat.role, onglet: etat.onglet }));
-      else sessionStorage.removeItem("strategikon.session");
-    } catch (e) { /* session non mémorisée */ }
+      if (etat.partie) sessionStorage.setItem("strategikon.v2", JSON.stringify({ nom: etat.partie.nom, mdp: etat.mdp, role: etat.role, onglet: etat.onglet }));
+      else sessionStorage.removeItem("strategikon.v2");
+    } catch (e) { /* rien */ }
   }
-  function peutEditerParams() { return ROLES_EDITION_PARAMS.indexOf(etat.role) !== -1; }
-  function params() { return etat.partie.params || M.parametresParDefaut(); }
+  function libelleLigne(l) {
+    if (l.type === "libre") return l.libelle || "Pion sur mesure";
+    var p = IDX[l.pion];
+    return p ? p.nom : l.pion;
+  }
+  var ACTIONS = {
+    dorese: "Renforcer à 100 %",
+    ajout: "Créer",
+    retrait: "Dissoudre",
+    libre: "Option"
+  };
+  function natureLigne(l) {
+    if (l.type === "ajout") return "Créer à " + (Number(l.niveau) === 100 ? "100 %" : "50 %");
+    if (l.type === "libre") return l.modele ? "Option de la fiche " + (optionDe(l.modele) || {}).role : "Pion sur mesure";
+    return ACTIONS[l.type];
+  }
 
   // ---------- Accueil ----------
-  function remplirRoles(select, valeur) {
-    vider(select);
-    M.ROLES.forEach(function (r) {
-      select.appendChild(el("option", { value: r.code, texte: r.code + " · " + r.nom }));
-    });
-    if (valeur) select.value = valeur;
-  }
-
   function chargerParties() {
     var sel = $("rej-partie");
     vider(sel);
     return S.listerParties().then(function (liste) {
-      if (!liste.length) sel.appendChild(el("option", { value: "", texte: "Aucune partie pour l'instant" }));
+      if (!liste.length) sel.appendChild(el("option", { value: "", texte: "Aucune partie ouverte" }));
       liste.forEach(function (p) { sel.appendChild(el("option", { value: p.nom, texte: p.nom })); });
-    }).catch(function (e) {
-      sel.appendChild(el("option", { value: "", texte: "Liste indisponible" }));
-      $("rej-erreur").textContent = e.message;
+    }).catch(function (e) { sel.appendChild(el("option", { value: "", texte: "Liste indisponible" })); $("rej-erreur").textContent = e.message; });
+  }
+
+  function montrerRoles(partie, mdp) {
+    etat.partie = partie; etat.mdp = mdp;
+    $("etape-partie").hidden = true;
+    $("etape-role").hidden = false;
+    $("nom-partie-role").textContent = partie.nom;
+    var g = $("grille-roles");
+    vider(g);
+    M.ROLES.forEach(function (r) {
+      g.appendChild(el("button", { classe: "role-tuile", type: "button", style: "--couleur:" + couleur(r.armee), onclick: function () { entrer(r.code); } }, [
+        el("span", { classe: "role-mission", texte: MISSIONS[r.code] || "" }),
+        el("b", { texte: r.code }),
+        el("small", { texte: r.nom })
+      ]));
     });
   }
 
-  function entrer(partie, mdp, codeRole) {
-    etat.partie = partie;
-    if (!etat.partie.params || !etat.partie.params.plafonds) etat.partie.params = M.parametresParDefaut();
-    etat.mdp = mdp;
+  function entrer(codeRole) {
     etat.role = codeRole;
     $("ecran-accueil").hidden = true;
     $("ecran-partie").hidden = false;
-    $("session").hidden = false;
-    $("session-partie").textContent = partie.nom;
-    remplirRoles($("session-role"), codeRole);
+    $("poste-partie").textContent = etat.partie.nom;
+    var r = role(codeRole);
+    $("insigne-code").textContent = r.code;
+    $("insigne-nom").textContent = r.nom;
+    $("onglet-reglages").hidden = ROLES_REGLAGES.indexOf(codeRole) === -1;
+    etat.filtre = r.armee === "Interarmées" && CATALOGUE.some(function (o) { return o.role === codeRole; }) ? "options" : "renforcer";
     memoriser();
-    return rechargerLignes(true);
+    signature = "";
+    return recharger(true);
   }
 
   function quitter() {
-    etat.partie = null; etat.mdp = ""; etat.lignes = []; signatureLignes = "";
+    etat.partie = null; etat.mdp = ""; etat.lignes = []; signature = "";
     memoriser();
     $("ecran-partie").hidden = true;
-    $("session").hidden = true;
     $("ecran-accueil").hidden = false;
+    $("etape-partie").hidden = false;
+    $("etape-role").hidden = true;
     chargerParties();
   }
 
   // ---------- Données ----------
-  function rechargerLignes(forcer) {
+  function recharger(forcer) {
     if (!etat.partie) return Promise.resolve();
     var nom = etat.partie.nom;
     return S.lireEtat(nom, etat.mdp).then(function (e) {
       if (!etat.partie || etat.partie.nom !== nom) return;
-      var r = [e.lignes, e.partie];
-      var lignes = r[0].slice().sort(function (a, b) { return (a.cree_le || "") < (b.cree_le || "") ? -1 : 1; });
-      // On garde la version locale des lignes en cours d'enregistrement.
-      lignes = lignes.map(function (l) {
-        if (enAttente[l.id]) return etat.lignes.filter(function (x) { return x.id === l.id; })[0] || l;
-        return l;
-      });
-      etat.lignes.forEach(function (l) {
-        if (enAttente[l.id] && !lignes.some(function (x) { return x.id === l.id; })) lignes.push(l);
-      });
-      var sig = JSON.stringify(lignes) + JSON.stringify(r[1].params);
-      etat.partie.params = r[1].params && r[1].params.plafonds ? r[1].params : M.parametresParDefaut();
+      var lignes = e.lignes.slice().sort(function (a, b) { return (a.cree_le || "") < (b.cree_le || "") ? -1 : 1; });
+      lignes = lignes.map(function (l) { return enAttente[l.id] ? (etat.lignes.filter(function (x) { return x.id === l.id; })[0] || l) : l; });
+      etat.lignes.forEach(function (l) { if (enAttente[l.id] && !lignes.some(function (x) { return x.id === l.id; })) lignes.push(l); });
+      var sig = JSON.stringify(lignes) + JSON.stringify(e.partie.params);
+      etat.partie.params = e.partie.params;
       etat.lignes = lignes;
-      if (forcer || sig !== signatureLignes) {
-        signatureLignes = sig;
-        rendre(forcer);
-      }
+      if (forcer || sig !== signature) { signature = sig; rendre(forcer); }
     }).catch(function (e) { toast(e.message); });
   }
 
-  function enregistrer(ligne) {
-    clearTimeout(enAttente[ligne.id]);
-    enAttente[ligne.id] = setTimeout(function () {
-      S.ecrireLigne(etat.partie.nom, etat.mdp, ligne).then(function () {
-        delete enAttente[ligne.id];
-      }).catch(function (e) { delete enAttente[ligne.id]; toast("Non enregistré : " + e.message); });
+  function enregistrer(l) {
+    clearTimeout(enAttente[l.id]);
+    enAttente[l.id] = setTimeout(function () {
+      S.ecrireLigne(etat.partie.nom, etat.mdp, l).then(function () { delete enAttente[l.id]; })
+        .catch(function (e) { delete enAttente[l.id]; toast("Non enregistré : " + e.message); });
     }, 400);
   }
 
-  // ---------- Rendu général ----------
-  function rendre(complet) {
-    var actif = document.activeElement;
-    var saisieEnCours = actif && $("table-demande").contains(actif);
-    if (complet || !saisieEnCours) rendreDemande();
-    else rendreBilan();
-    if (etat.onglet === "synthese") rendreSynthese();
-    if (etat.onglet === "table") rendreTable();
-    if (etat.onglet === "arbitrage" && (complet || !$("vue-arbitrage").contains(actif))) rendreArbitrage();
-    if (etat.onglet === "parametres" && (complet || !$("form-parametres").contains(actif))) rendreParametres();
-  }
-
-  function changerOnglet(nom) {
-    etat.onglet = nom;
-    document.querySelectorAll(".onglets button").forEach(function (b) {
-      b.setAttribute("aria-selected", b.getAttribute("data-onglet") === nom ? "true" : "false");
-    });
-    ["demande", "synthese", "table", "arbitrage", "parametres"].forEach(function (v) { $("vue-" + v).hidden = v !== nom; });
-    memoriser();
-    rendre(true);
-  }
-
-  // ---------- Ma demande ----------
-  function pionsPour(type) {
-    return PIONS.filter(function (p) {
-      if (type === "dorese") return p.type === "capacite" && M.nbDorese(p) > 0;
-      if (type === "ajout") return p.type === "capacite" || p.type === "violet";
-      if (type === "retrait") return p.type !== "gris";
-      return false;
-    });
-  }
-
-  function selectPion(ligne) {
-    var s = el("select", { "aria-label": "Pion" });
-    var groupes = {};
-    pionsPour(ligne.type).forEach(function (p) {
-      if (!groupes[p.armee]) { groupes[p.armee] = el("optgroup", { label: p.armee }); s.appendChild(groupes[p.armee]); }
-      var txt = p.nom + " · " + p.cout50 / M.CASE + " c." + (M.nbDorese(p) ? " +" + M.nbDorese(p) + " DORESE" : "");
-      groupes[p.armee].appendChild(el("option", { value: p.id, texte: txt }));
-    });
-    s.value = ligne.pion;
-    return s;
-  }
-
-  function nouvelleLigne(type) {
-    var r = role(etat.role);
-    var l = { id: nouvelId(), role: etat.role, type: type, qte: {}, justification: "", cree_le: new Date().toISOString() };
-    if (type === "libre") {
-      l.libelle = ""; l.modele = null; l.cout_unitaire = 100; l.dorese = { ao: 0, mco: 0, rh: 0 }; l.armee = r.armee;
-    } else {
-      var candidats = pionsPour(type);
-      var duRole = candidats.filter(function (p) { return p.armee === r.armee; });
-      var p = (duRole[0] || candidats[0]);
-      l.pion = p.id;
-      l.niveau = 100;
-      l.armee = r.armee !== "Interarmées" ? r.armee : p.armee;
-      if (type !== "ajout") M.ANNEES.forEach(function (a) { l.qte[a] = 1; });
-      else l.qte[M.ANNEES[0]] = 1;
-    }
-    return l;
-  }
-
-  function rendreDemande() {
-    var r = role(etat.role);
-    $("titre-demande").textContent = "Demande " + r.code;
-    var t = $("table-demande");
-    vider(t);
-    var mesLignes = etat.lignes.filter(function (l) { return l.role === etat.role; });
-    var tete = el("tr", null, [el("th", { texte: "Type" }), el("th", { texte: "Objet" }), el("th", { texte: "Armée imputée" })]
-      .concat(M.ANNEES.map(function (a) { return el("th", { classe: "num", texte: String(a) }); }))
-      .concat([el("th", { classe: "num", texte: "Unitaire" }), el("th", { classe: "num", texte: "Total 6 ans" }), el("th", { texte: "Justification" }), el("th", { html: "" })]));
-    t.appendChild(el("thead", null, [tete]));
-    var corps = el("tbody");
-    if (!mesLignes.length) {
-      corps.appendChild(el("tr", null, [el("td", { colspan: 11 + M.ANNEES.length - 6, classe: "vide-etat", texte: "Aucune ligne pour " + r.code + ". Choisissez un type de ligne en haut à droite, puis « Ajouter la ligne »." })]));
-    }
-    mesLignes.forEach(function (l) { corps.appendChild(rangeeSaisie(l)); });
-    t.appendChild(corps);
-    rendreBilan();
-  }
-
-  function rangeeSaisie(l) {
-    var tr = el("tr");
-    var totalCellule = el("td", { classe: "num" });
-    var unitCellule = el("td", { classe: "num" });
-
-    function majChiffres() {
-      var u = M.unitaire(l, IDX);
-      var c = M.coutLigne(l, IDX);
-      unitCellule.textContent = md(u.cout);
-      vider(totalCellule);
-      totalCellule.appendChild(document.createTextNode(md(c.total)));
-      if (c.totalDorese) totalCellule.appendChild(el("div", { classe: "sous", texte: c.totalDorese + " DORESE" }));
-      rendreBilan();
-    }
-    function changer() { majChiffres(); enregistrer(l); }
-
-    tr.appendChild(el("td", null, [el("span", { texte: M.TYPES_LIGNE[l.type] })]));
-
-    // Objet
-    var objet = el("td", { classe: "objet" });
-    if (l.type === "libre") {
-      var choix = el("select", { "aria-label": "Option du catalogue" });
-      choix.appendChild(el("option", { value: "", texte: "Pion sur mesure (hors catalogue)" }));
-      var rolesCat = vueComplete()
-        ? [etat.role].concat(M.ROLES.map(function (r) { return r.code; }).filter(function (c) { return c !== etat.role; }))
-        : [etat.role];
-      rolesCat.forEach(function (rc) {
-        var opts = CATALOGUE.filter(function (o) { return o.role === rc; });
-        if (!opts.length) return;
-        var g = el("optgroup", { label: "Fiche " + rc });
-        opts.forEach(function (o) { g.appendChild(el("option", { value: o.code, texte: o.libelle + " · " + fourchette(o) })); });
-        choix.appendChild(g);
-      });
-      choix.value = l.modele || "";
-      var o = optionDe(l.modele);
-      var lib = el("input", { value: l.libelle || "", placeholder: "Intitulé du pion", "aria-label": "Intitulé" });
-      var cu = el("input", { classe: "court", type: "number", min: 0, step: 100, value: l.cout_unitaire, "aria-label": "Prix fixé en M€" });
-      var noteCu = el("div", { classe: "sous" });
-      var d = l.dorese || { ao: 0, mco: 0, rh: 0 };
-      function champDor(k, nomCourt) {
-        var i = el("input", { type: "number", min: 0, step: 1, value: d[k] || 0, "aria-label": "DORESE " + nomCourt });
-        i.addEventListener("input", function () { l.dorese = l.dorese || {}; l.dorese[k] = Number(i.value) || 0; changer(); });
-        return el("label", null, [nomCourt + " ", i]);
-      }
-      function majNote(brut) {
-        var txt = [];
-        if (!l.cout_unitaire) txt.push("Fixez le prix : la ligne ne compte pas tant qu'il est à 0");
-        if (brut !== undefined && Number(brut) !== l.cout_unitaire && l.cout_unitaire) txt.push("Arrondi à la case : " + md(l.cout_unitaire));
-        if (brut === undefined && o && o.cout && o.cout % M.CASE && l.cout_unitaire) txt.push("Prix de la fiche " + md(o.cout) + ", arrondi à " + md(l.cout_unitaire) + " : à confirmer");
-        if (o && o.cout !== null && o.cout !== undefined) {
-          var hautO = o.cout_max || o.cout;
-          if (l.cout_unitaire < M.arrondiCase(o.cout) && l.cout_unitaire < o.cout || l.cout_unitaire > Math.max(M.arrondiCase(hautO), hautO)) txt.push("Hors fourchette de la fiche (" + fourchette(o) + ")");
-        }
-        noteCu.textContent = txt.join(" · ");
-        noteCu.className = "sous" + (txt.length ? " alerte-texte" : "");
-      }
-      choix.addEventListener("change", function () {
-        var opt = optionDe(choix.value);
-        if (!opt) { l.modele = null; l.source = null; changer(); rendreDemande(); return; }
-        l.modele = opt.code; l.libelle = opt.libelle; l.armee = opt.armee; l.source = opt.source;
-        l.cout_unitaire = opt.cout ? M.arrondiCase(opt.cout) : 0;
-        l.dorese = opt.dorese ? { ao: opt.dorese.ao || 0, mco: opt.dorese.mco || 0, rh: opt.dorese.rh || 0 } : { ao: 0, mco: 0, rh: 0 };
-        changer(); rendreDemande();
-      });
-      lib.addEventListener("input", function () { l.libelle = lib.value; enregistrer(l); });
-      cu.addEventListener("input", function () { l.cout_unitaire = M.arrondiCase(cu.value); majChiffres(); majNote(cu.value); enregistrer(l); });
-      cu.addEventListener("change", function () { cu.value = l.cout_unitaire; majNote(); });
-      objet.appendChild(choix);
-      objet.appendChild(el("div", { style: "margin-top:.25rem" }, [lib]));
-      if (o) {
-        var infos = [fourchette(o) + (o.periodicite ? " · " + o.periodicite : "")];
-        if (o.etalement) infos.push("Étalement : " + o.etalement);
-        if (o.delai) infos.push("Délai : " + o.delai);
-        objet.appendChild(el("div", { classe: "sous", texte: "Fiche : " + infos.join(" · ") }));
-        if (o.alerte) objet.appendChild(el("div", { classe: "sous alerte-texte", texte: o.alerte }));
-        if (o.source || o.edition) objet.appendChild(el("div", { classe: "sous", texte: [o.source, o.edition].filter(Boolean).join(" · ") }));
-        if (o.conditions) objet.appendChild(el("details", { classe: "sous" }, [el("summary", { texte: "Conditions" }), el("p", { texte: o.conditions })]));
-      } else {
-        var val = ((params().validations || {})[l.id]);
-        objet.appendChild(el("div", { classe: "badge " + (val ? "badge-ok" : "badge-attente"), texte: val ? "Sur mesure · validé par l'animateur" : "Sur mesure · à valider par l'animateur" }));
-      }
-      objet.appendChild(el("div", { classe: "dor" }, [el("label", null, ["Prix fixé (M€ par an) ", cu])]));
-      objet.appendChild(noteCu);
-      objet.appendChild(el("div", { classe: "dor" }, ["DORESE incluses :", champDor("ao", "AO"), champDor("mco", "MCO"), champDor("rh", "RH")]));
-      objet.appendChild(el("div", { classe: "sous", texte: "Les cases des années indiquent combien de fois ce prix est posé. Pour un investissement étalé, posez une fois par année concernée." }));
-      majNote();
-    } else {
-      var sp = selectPion(l);
-      sp.addEventListener("change", function () { l.pion = sp.value; changer(); rendreDemande(); });
-      objet.appendChild(sp);
-      if (l.type === "ajout") {
-        var niv = el("select", { "aria-label": "Niveau" }, [el("option", { value: "50", texte: "à 50 % (face dégradée)" }), el("option", { value: "100", texte: "à 100 % (avec DORESE)" })]);
-        niv.value = String(l.niveau || 50);
-        niv.addEventListener("change", function () { l.niveau = Number(niv.value); changer(); });
-        objet.appendChild(el("div", { style: "margin-top:.25rem" }, [niv]));
-      }
-      var p = IDX[l.pion];
-      if (p) {
-        var info = l.type === "dorese"
-          ? "DORESE : " + p.dorese.ao + " AO · " + p.dorese.mco + " MCO · " + p.dorese.rh + " RH"
-          : l.type === "retrait" ? "Libère " + p.cout50 / M.CASE + " cases par année cochée"
-          : "50 % : " + p.cout50 / M.CASE + " c. · 100 % : " + p.cout100 / M.CASE + " c.";
-        objet.appendChild(el("div", { classe: "sous", texte: info }));
-      }
-    }
-    tr.appendChild(objet);
-
-    // Armée imputée
-    var arm = el("select", { "aria-label": "Armée imputée" });
-    M.ARMEES.forEach(function (a) { arm.appendChild(el("option", { value: a, texte: a })); });
-    arm.value = M.armeeDeLigne(l, IDX);
-    arm.addEventListener("change", function () { l.armee = arm.value; changer(); });
-    tr.appendChild(el("td", null, [arm]));
-
-    // Années
-    M.ANNEES.forEach(function (a) {
-      var max = (l.type === "dorese" || l.type === "retrait") ? 1 : 99;
-      var i = el("input", { classe: "qte", type: "number", min: 0, max: max, step: 1, value: (l.qte || {})[a] || 0, "aria-label": "Quantité " + a });
-      i.addEventListener("input", function () {
-        var v = Math.max(0, Math.min(max, Math.round(Number(i.value) || 0)));
-        l.qte = l.qte || {}; l.qte[a] = v;
-        changer();
-      });
-      tr.appendChild(el("td", { classe: "num" }, [i]));
-    });
-
-    tr.appendChild(unitCellule);
-    tr.appendChild(totalCellule);
-
-    var just = el("textarea", { rows: 1, placeholder: "Pourquoi ce besoin ?", "aria-label": "Justification" });
-    just.value = l.justification || "";
-    just.addEventListener("input", function () { l.justification = just.value; enregistrer(l); });
-    tr.appendChild(el("td", null, [just]));
-
-    var sup = el("button", { classe: "suppr", type: "button", title: "Supprimer la ligne", "aria-label": "Supprimer la ligne", texte: "×" });
-    sup.addEventListener("click", function () {
-      if (sup.dataset.arme !== "1") { sup.dataset.arme = "1"; sup.textContent = "Confirmer"; setTimeout(function () { sup.dataset.arme = ""; sup.textContent = "×"; }, 3000); return; }
-      clearTimeout(enAttente[l.id]); delete enAttente[l.id];
-      etat.lignes = etat.lignes.filter(function (x) { return x.id !== l.id; });
-      S.supprimerLigne(etat.partie.nom, etat.mdp, l.id).then(function () { toast("Ligne supprimée"); }).catch(function (e) { toast(e.message); });
-      rendreDemande();
-    });
-    tr.appendChild(el("td", null, [sup]));
-
-    majChiffres();
-    return tr;
-  }
-
-  function rendreBilan() {
-    var b = $("bilan-role");
-    vider(b);
-    var mien = M.synthese(PIONS, etat.lignes, params(), function (l) { return l.role === etat.role; });
-    var tout = M.synthese(PIONS, etat.lignes, params());
-    M.ANNEES.forEach(function (a) {
-      var m = mien[a], t = tout[a];
-      var d = m.dorese;
-      b.appendChild(el("div", { classe: "bilan-an" }, [
-        el("span", { classe: "an", texte: String(a) }),
-        el("span", { classe: "l" }, ["Ma demande", el("b", { texte: md(m.totalDemandes) })]),
-        el("span", { classe: "l" }, ["DORESE", el("b", { texte: (d.ao + d.mco + d.rh) + " (" + d.ao + "/" + d.mco + "/" + d.rh + ")" })]),
-        el("span", { classe: "l" }, ["Partie entière", el("b", { texte: md(t.total) })]),
-        el("span", { classe: "l" }, ["Plafond", el("b", { texte: md(t.plafond) })]),
-        el("span", { classe: "etat " + (t.marge >= 0 ? "ok" : "ko"), texte: t.marge >= 0 ? "Marge " + md(t.marge) : "Dépassement " + md(-t.marge) })
-      ]));
-    });
-  }
-
-  // ---------- Synthèse ----------
-  function rendreSynthese() {
-    var syn = M.synthese(PIONS, etat.lignes, params());
-    // Trajectoire
-    var tr = $("trajectoire");
-    vider(tr);
-    var echelleMax = Math.max.apply(null, M.ANNEES.map(function (a) { return Math.max(syn[a].total, syn[a].table); }));
-    M.ANNEES.forEach(function (a) {
-      var s = syn[a];
-      var barre = el("div", { classe: "traj-barre", title: "Socle " + md(s.totalSocle) + ", demandes " + md(s.totalDemandes) });
-      barre.appendChild(el("span", { classe: "traj-socle", style: "width:" + (100 * s.totalSocle / echelleMax) + "%" }));
-      M.ARMEES.forEach(function (arm) {
-        var v = Math.max(0, s.demandes[arm]);
-        if (v) barre.appendChild(el("span", { style: "width:" + (100 * v / echelleMax) + "%;background:" + couleurArmee(arm), title: arm + " " + md(v) }));
-      });
-      barre.appendChild(el("span", { classe: "traj-plafond", style: "left:" + (100 * s.plafond / echelleMax) + "%", title: "Plafond " + md(s.plafond) }));
-      tr.appendChild(el("div", { classe: "traj-ligne" }, [
-        el("span", { classe: "traj-an", texte: String(a) }), barre,
-        el("span", { classe: "traj-val " + (s.marge < 0 ? "neg" : ""), texte: md(s.total) })
-      ]));
-    });
-    tr.appendChild(el("div", { classe: "traj-echelle" }, [el("span"), el("div", null, [el("span", { texte: "0" }), el("span", { texte: md(echelleMax / 2) }), el("span", { texte: md(echelleMax) })]), el("span")]));
-    var leg = el("div", { classe: "legende" }, [el("span", null, [el("span", { classe: "pastille n-gris" }), "Socle"])]
-      .concat(M.ARMEES.map(function (a) { return el("span", null, [el("span", { classe: "pastille " + classeArmee(a) }), "Demandes " + a]); }))
-      .concat([el("span", { texte: "Trait noir : plafond de l'année" })]));
-    tr.appendChild(leg);
-
-    // Tableau par année et par armée
-    var t = $("table-synthese");
-    vider(t);
-    t.appendChild(el("thead", null, [el("tr", null, [el("th", { texte: "M€" })].concat(M.ANNEES.map(function (a) { return el("th", { classe: "num", texte: String(a) }); })).concat([el("th", { classe: "num", texte: "Total" })]))]));
-    var corps = el("tbody");
-    function rangee(lib, f, classe) {
-      var tot = 0;
-      var cells = M.ANNEES.map(function (a) { var v = f(syn[a]); tot += v; return el("td", { classe: "num " + (classe ? classe(v) : ""), texte: md(v) }); });
-      corps.appendChild(el("tr", null, [el("td", null, lib)].concat(cells).concat([el("td", { classe: "num", texte: md(tot) })])));
-    }
-    rangee([el("span", { classe: "pastille n-gris" }), "Socle (pions posés d'office)"], function (s) { return s.totalSocle; });
-    M.ARMEES.forEach(function (arm) {
-      rangee([el("span", { classe: "pastille " + classeArmee(arm) }), "Demandes " + arm], function (s) { return s.demandes[arm]; });
-    });
-    rangee(["Total sur la table"], function (s) { return s.total; });
-    rangee(["Plafond"], function (s) { return s.plafond; });
-    rangee(["Marge (+) ou dépassement (−)"], function (s) { return s.marge; }, function (v) { return v < 0 ? "neg" : "pos"; });
-    var synArb = M.synthese(PIONS, M.lignesApresArbitrage(etat.lignes, params()), params());
-    rangee(["Total après arbitrage"], function (x) { return synArb[x.annee].total; });
-    rangee(["Marge après arbitrage"], function (x) { return synArb[x.annee].marge; }, function (v) { return v < 0 ? "neg" : "pos"; });
-    rangee(["dont DORESE demandées"], function (s) { return (s.dorese.ao + s.dorese.mco + s.dorese.rh) * M.CASE; });
-    t.appendChild(corps);
-
-    // Par rôle
-    var tr2 = $("table-roles");
-    vider(tr2);
-    tr2.appendChild(el("thead", null, [el("tr", null, [el("th", { texte: "Rôle" }), el("th", { classe: "num", texte: "Lignes" })].concat(M.ANNEES.map(function (a) { return el("th", { classe: "num", texte: String(a) }); })).concat([el("th", { classe: "num", texte: "Total" })]))]));
-    var c2 = el("tbody");
-    var rolesPresents = M.ROLES.filter(function (r) { return (vueComplete() || r.code === etat.role) && etat.lignes.some(function (l) { return l.role === r.code; }); });
-    $("note-vue").textContent = vueComplete() ? "" : "Vue limitée à vos postes de dépense : le détail des autres rôles est réservé au CEMA, au SC-Plans et à l'animateur. Les totaux par armée restent visibles.";
-    if (!rolesPresents.length) c2.appendChild(el("tr", null, [el("td", { colspan: 3 + M.ANNEES.length, classe: "vide-etat", texte: "Aucune demande saisie dans cette partie." })]));
-    rolesPresents.forEach(function (r) {
-      var s = M.synthese(PIONS, etat.lignes, params(), function (l) { return l.role === r.code; });
-      var tot = 0;
-      var n = etat.lignes.filter(function (l) { return l.role === r.code; }).length;
-      c2.appendChild(el("tr", null, [el("td", { texte: r.code }), el("td", { classe: "num", texte: String(n) })]
-        .concat(M.ANNEES.map(function (a) { tot += s[a].totalDemandes; return el("td", { classe: "num", texte: md(s[a].totalDemandes) }); }))
-        .concat([el("td", { classe: "num", texte: md(tot) })])));
-    });
-    tr2.appendChild(c2);
-
-    // Toutes les lignes
-    var t3 = $("table-toutes");
-    vider(t3);
-    t3.appendChild(el("thead", null, [el("tr", null, [el("th", { texte: "Rôle" }), el("th", { texte: "Type" }), el("th", { texte: "Objet" }), el("th", { texte: "Armée" })]
-      .concat(M.ANNEES.map(function (a) { return el("th", { classe: "num", texte: String(a) }); })).concat([el("th", { classe: "num", texte: "Total" }), el("th", { texte: "Justification" })]))]));
-    var c3 = el("tbody");
-    var lignesVisibles = etat.lignes.filter(visible);
-    if (!lignesVisibles.length) c3.appendChild(el("tr", null, [el("td", { colspan: 6 + M.ANNEES.length, classe: "vide-etat", texte: vueComplete() ? "Les lignes des joueurs apparaîtront ici." : "Vos lignes apparaîtront ici." })]));
-    lignesVisibles.forEach(function (l) {
-      var c = M.coutLigne(l, IDX);
-      c3.appendChild(el("tr", null, [el("td", { texte: l.role }), el("td", { texte: M.TYPES_LIGNE[l.type] || l.type }), el("td", { texte: libelleLigne(l) }), el("td", { texte: M.armeeDeLigne(l, IDX) })]
-        .concat(M.ANNEES.map(function (a) { return el("td", { classe: "num", texte: c.annees[a].cout ? md(c.annees[a].cout) : "·" }); }))
-        .concat([el("td", { classe: "num", texte: md(c.total) }), el("td", { texte: l.justification || "" })])));
-    });
-    t3.appendChild(c3);
-  }
-
-  // ---------- Arbitrage ----------
   var fileParams = Promise.resolve();
   function modifierParams(fn) {
-    // Lecture puis écriture, à la suite, pour ne pas écraser un arbitrage voisin.
     fileParams = fileParams.then(function () {
       return S.lireEtat(etat.partie.nom, etat.mdp).then(function (e) {
         var p = e.partie.params && e.partie.params.plafonds ? e.partie.params : M.parametresParDefaut();
@@ -6479,286 +6558,587 @@ window.STRAT_CATALOGUE_ROLES = [
     return fileParams;
   }
 
-  function rendreArbitrage() {
-    var p = params();
-    var edit = ROLES_ARBITRAGE.indexOf(etat.role) !== -1;
-    $("aide-arbitrage").textContent = (edit
-      ? "Pour chaque ligne : retenue, différée d'une à trois années, ou renoncée. "
-      : "Lecture seule : seuls le CEMA et l'animateur arbitrent. ")
-      + "Un différé décale la ligne ; ce qui dépasse 2032 est reporté hors LPM.";
-    var dem = M.synthese(PIONS, etat.lignes, p);
-    var arb = M.synthese(PIONS, M.lignesApresArbitrage(etat.lignes, p), p);
-    var t = $("table-arb-annees");
-    vider(t);
-    t.appendChild(el("thead", null, [el("tr", null, [el("th", { texte: "M€" })].concat(M.ANNEES.map(function (a) { return el("th", { classe: "num", texte: String(a) }); })))]));
-    var c = el("tbody");
-    [["Total demandé", function (a) { return dem[a].total; }],
-     ["Total après arbitrage", function (a) { return arb[a].total; }],
-     ["Plafond", function (a) { return arb[a].plafond; }],
-     ["Marge après arbitrage", function (a) { return arb[a].marge; }, true]].forEach(function (r) {
-      c.appendChild(el("tr", null, [el("td", { texte: r[0] })].concat(M.ANNEES.map(function (a) {
-        var v = r[1](a); return el("td", { classe: "num " + (r[2] ? (v < 0 ? "neg" : "pos") : ""), texte: md(v) });
-      }))));
-    });
-    t.appendChild(c);
+  // ---------- Rendu ----------
+  function rendre(complet) {
+    var actif = document.activeElement;
+    rendreJauges();
+    if (etat.onglet === "composer") {
+      rendreArsenal();
+      if (complet || !$("fiches").contains(actif)) rendreFiches(); else rendreTotalDossier();
+    }
+    if (etat.onglet === "table") rendreTable();
+    if (etat.onglet === "arbitrage") rendreArbitrage();
+    if (etat.onglet === "bilan") rendreBilan();
+    if (etat.onglet === "reglages" && (complet || !$("form-parametres").contains(actif))) rendreReglages();
+  }
 
-    var tl = $("table-arb-lignes");
-    vider(tl);
-    tl.appendChild(el("thead", null, [el("tr", null, ["Rôle", "Objet", "Armée", "Demandé (6 ans)", "Décision", "Après arbitrage", "Sur mesure"].map(function (h, i) { return el("th", { classe: i === 3 || i === 5 ? "num" : "", texte: h }); }))]));
-    var cl = el("tbody");
-    var aArbitrer = etat.lignes.filter(visible);
-    if (!aArbitrer.length) cl.appendChild(el("tr", null, [el("td", { colspan: 7, classe: "vide-etat", texte: "Aucune demande à arbitrer pour l'instant." })]));
-    aArbitrer.forEach(function (l) {
-      var a = M.arbitrageDe(l, p);
-      var avant = M.coutLigne(l, IDX).total;
-      var la = M.ligneArbitree(l, p);
-      var apres = la ? M.coutLigne(la, IDX).total : 0;
-      var st = el("select", { "aria-label": "Décision", disabled: edit ? null : "disabled" });
-      Object.keys(M.STATUTS).forEach(function (k) { st.appendChild(el("option", { value: k, texte: M.STATUTS[k] })); });
-      st.value = a.statut;
-      var dec = el("select", { "aria-label": "Décalage", disabled: edit ? null : "disabled", hidden: a.statut === "differe" ? null : "hidden" });
-      [1, 2, 3].forEach(function (n) { dec.appendChild(el("option", { value: n, texte: "de " + n + " an" + (n > 1 ? "s" : "") })); });
-      dec.value = String(a.decalage || 1);
-      function enreg() {
-        var val = { statut: st.value, decalage: st.value === "differe" ? Number(dec.value) : 0 };
-        modifierParams(function (pp) { pp.arbitrages = pp.arbitrages || {}; pp.arbitrages[l.id] = val; });
-      }
-      st.addEventListener("change", function () { dec.hidden = st.value !== "differe"; enreg(); });
-      dec.addEventListener("change", enreg);
-      var celMesure = el("td");
-      if (l.type === "libre" && !l.modele) {
-        var cb = el("input", { type: "checkbox", id: "valide-" + l.id, disabled: edit ? null : "disabled" });
-        cb.checked = !!(p.validations || {})[l.id];
-        cb.addEventListener("change", function () { modifierParams(function (pp) { pp.validations = pp.validations || {}; pp.validations[l.id] = cb.checked; }); });
-        celMesure.appendChild(el("label", { for: cb.id }, [cb, " validé"]));
-      }
-      var report = M.reportHorsLpm(l, p, IDX);
-      cl.appendChild(el("tr", { classe: "arb-ligne" }, [
-        el("td", { texte: l.role }),
-        el("td", { classe: "statut-" + a.statut, texte: libelleLigne(l) }),
-        el("td", { texte: M.armeeDeLigne(l, IDX) }),
-        el("td", { classe: "num", texte: md(avant) }),
-        el("td", null, [st, " ", dec]),
-        el("td", { classe: "num", texte: md(apres) + (report ? " (+" + md(report) + " hors LPM)" : "") }),
-        celMesure
+  function changerOnglet(nom) {
+    etat.onglet = nom;
+    document.querySelectorAll(".parcours button").forEach(function (b) { b.setAttribute("aria-selected", b.getAttribute("data-onglet") === nom ? "true" : "false"); });
+    ["composer", "table", "arbitrage", "bilan", "reglages"].forEach(function (v) { $("vue-" + v).hidden = v !== nom; });
+    memoriser();
+    rendre(true);
+  }
+
+  // Jauges : une par année, toujours visibles.
+  function rendreJauges() {
+    var j = $("jauges");
+    vider(j);
+    var syn = M.synthese(PIONS, etat.lignes, params());
+    var max = Math.max.apply(null, M.ANNEES.map(function (a) { return Math.max(syn[a].total, syn[a].table); }));
+    M.ANNEES.forEach(function (a) {
+      var s = syn[a];
+      var barre = el("div", { classe: "jauge-barre" });
+      barre.appendChild(el("span", { style: "width:" + (100 * s.totalSocle / max) + "%;background:var(--gris)" }));
+      M.ARMEES.forEach(function (arm) { var v = Math.max(0, s.demandes[arm]); if (v) barre.appendChild(el("span", { style: "width:" + (100 * v / max) + "%;background:" + couleur(arm) })); });
+      barre.appendChild(el("span", { classe: "jauge-plafond", style: "left:" + (100 * s.plafond / max) + "%" }));
+      j.appendChild(el("button", { classe: "jauge", type: "button", "aria-pressed": a === etat.annee ? "true" : "false", title: "Voir la table " + a,
+        onclick: function () { etat.annee = a; changerOnglet("table"); } }, [
+        el("div", { classe: "jauge-tete" }, [el("span", { classe: "jauge-an", texte: String(a) }), el("span", { classe: "jauge-val", texte: md(s.total) + " / " + md(s.plafond) })]),
+        barre,
+        el("span", { classe: "jauge-etat " + (s.marge >= 0 ? "pos" : "neg"), texte: s.marge >= 0 ? "Marge " + md(s.marge) : "Dépassement " + md(-s.marge) })
       ]));
     });
-    tl.appendChild(cl);
-
-    var tr = $("table-renoncements");
-    vider(tr);
-    var ren = etat.lignes.filter(function (l) { return visible(l) && M.arbitrageDe(l, p).statut === "renonce"; });
-    tr.appendChild(el("thead", null, [el("tr", null, ["Rôle", "Objet", "Armée", "Montant renoncé (6 ans)", "Justification du demandeur"].map(function (h, i) { return el("th", { classe: i === 3 ? "num" : "", texte: h }); }))]));
-    var cr = el("tbody");
-    if (!ren.length) cr.appendChild(el("tr", null, [el("td", { colspan: 5, classe: "vide-etat", texte: "Aucun renoncement pour l'instant." })]));
-    var totalRen = 0;
-    ren.forEach(function (l) {
-      var v = M.coutLigne(l, IDX).total; totalRen += v;
-      cr.appendChild(el("tr", null, [el("td", { texte: l.role }), el("td", { texte: libelleLigne(l) }), el("td", { texte: M.armeeDeLigne(l, IDX) }), el("td", { classe: "num", texte: md(v) }), el("td", { texte: l.justification || "" })]));
-    });
-    tr.appendChild(cr);
-    if (ren.length) tr.appendChild(el("tfoot", null, [el("tr", null, [el("td", { colspan: 3, texte: "Total renoncé" }), el("td", { classe: "num", texte: md(totalRen) }), el("td")])]));
   }
 
-  function libelleLigne(l) {
-    if (l.type === "libre") return l.libelle || "Ligne libre";
+  // ---------- 1. Composer : l'arsenal ----------
+  var FILTRES = [
+    ["renforcer", "Renforcer"],
+    ["creer", "Créer une capacité"],
+    ["options", "Options de ma fiche"],
+    ["dissoudre", "Dissoudre"],
+    ["mesure", "Sur mesure"]
+  ];
+
+  function armeeDuRole() { return role(etat.role).armee; }
+  function pionDeMonPerimetre(p) {
+    if (vueComplete()) return true;
+    var a = armeeDuRole();
+    return a === "Interarmées" ? true : p.armee === a;
+  }
+
+  function forme(p) {
+    var f = el("span", { classe: "forme", style: "grid-template-columns:repeat(" + Math.min(p.l || 1, 6) + ",8px);--c:" + (p.type === "violet" ? "var(--violet)" : p.type === "gris" ? "var(--gris)" : couleur(p.armee)) });
+    for (var i = 0; i < Math.min((p.l || 1) * (p.h || 1), 24); i++) f.appendChild(el("i"));
+    return f;
+  }
+  function pips(n) { var s = el("span", { classe: "pips", title: n + " DORESE" }); for (var i = 0; i < n; i++) s.appendChild(el("i")); return s; }
+
+  function rendreArsenal() {
+    var f = $("filtres");
+    vider(f);
+    FILTRES.forEach(function (x) {
+      f.appendChild(el("button", { classe: "filtre", type: "button", "aria-pressed": etat.filtre === x[0] ? "true" : "false", texte: x[1], onclick: function () { etat.filtre = x[0]; rendreArsenal(); } }));
+    });
+    var a = $("arsenal");
+    vider(a);
+    var q = etat.recherche.trim().toLowerCase();
+    function correspond(txt) { return !q || txt.toLowerCase().indexOf(q) !== -1; }
+    var cartes = [];
+
+    if (etat.filtre === "renforcer") {
+      PIONS.filter(function (p) { return p.type === "capacite" && M.nbManquantes(p) > 0 && pionDeMonPerimetre(p) && correspond(p.nom); }).forEach(function (p) {
+        var deja = etat.lignes.some(function (l) { return l.type === "dorese" && l.pion === p.id && l.role === etat.role; });
+        var mq = M.doreseManquantes(p);
+        cartes.push(carte(p, p.nom, [md(M.nbManquantes(p) * M.CASE) + " par an", pips(M.nbManquantes(p)), "manque " + mq.ao + " AO · " + mq.mco + " MCO · " + mq.rh + " RH"],
+          deja ? "✓" : "+", function () { ajouter({ type: "dorese", pion: p.id, toutes: true }); }, "Passer " + p.nom + " de 50 % à 100 % en ajoutant ses DORESE"));
+      });
+    } else if (etat.filtre === "creer") {
+      PIONS.filter(function (p) { return (p.type === "capacite" || p.type === "violet") && pionDeMonPerimetre(p) && correspond(p.nom); }).forEach(function (p) {
+        var info = p.type === "capacite" && M.nbDorese(p)
+          ? ["À 50 % : " + md(p.cout50), "À 100 % : " + md(p.cout100)]
+          : [md(p.cout50) + " par an"];
+        cartes.push(carte(p, p.nom.replace(/ \d$/, ""), info, "+", function () { ajouter({ type: "ajout", pion: p.id, niveau: p.type === "capacite" && M.nbDorese(p) ? 100 : 50 }); }, "Créer un nouvel exemplaire de " + p.nom));
+      });
+    } else if (etat.filtre === "dissoudre") {
+      PIONS.filter(function (p) { return (p.type === "capacite" || p.type === "violet") && pionDeMonPerimetre(p) && correspond(p.nom); }).forEach(function (p) {
+        cartes.push(carte(p, p.nom, ["Libère " + md(M.coutSocle(p)) + " par an"], "−", function () { ajouter({ type: "retrait", pion: p.id }); }, "Dissoudre " + p.nom));
+      });
+    } else if (etat.filtre === "options") {
+      var opts = CATALOGUE.filter(function (o) { return (vueComplete() || o.role === etat.role) && correspond(o.libelle + " " + (o.categorie || "")); });
+      opts.forEach(function (o) {
+        var p = { l: 2, h: 1, armee: o.armee, type: /Violet/.test(o.type_pion || "") ? "violet" : "capacite" };
+        cartes.push(carte(p, o.libelle, [fourchette(o), vueComplete() ? "Fiche " + o.role : (o.categorie || "")], "+", function () { ajouter({ type: "libre", modele: o.code }); }, o.description || o.libelle));
+      });
+      if (!opts.length) a.appendChild(el("p", { classe: "vide-arsenal", texte: "Votre fiche ne propose pas d'option chiffrée. Utilisez « Sur mesure » pour créer un pion." }));
+    } else if (etat.filtre === "mesure") {
+      a.appendChild(el("div", { classe: "dossier-vide" }, [
+        el("b", { texte: "Un besoin hors catalogue ?" }),
+        el("p", { texte: "Créez votre propre pion : intitulé, prix, années, DORESE. Il restera « à valider » jusqu'à l'accord de l'animateur." }),
+        el("button", { classe: "btn-laiton", type: "button", texte: "Créer un pion sur mesure", onclick: function () { ajouter({ type: "libre" }); } })
+      ]));
+    }
+    cartes.forEach(function (c) { a.appendChild(c); });
+    if (!cartes.length && etat.filtre !== "mesure" && etat.filtre !== "options") a.appendChild(el("p", { classe: "vide-arsenal", texte: etat.filtre === "renforcer" && !etat.recherche ? "Toutes vos capacités sont déjà à 100 % dans la situation de départ." : "Aucun pion ne correspond." }));
+  }
+
+  function carte(p, nom, infos, signe, action, titre) {
+    return el("button", { classe: "carte-pion", type: "button", title: titre, onclick: action }, [
+      forme(p),
+      el("span", null, [el("span", { classe: "carte-pion-nom", texte: nom }), el("span", { classe: "carte-pion-info" }, infos.map(function (i) { return typeof i === "string" ? el("span", { texte: i }) : i; }))]),
+      el("span", { classe: "plus", "aria-hidden": "true", texte: signe })
+    ]);
+  }
+
+  function ajouter(o) {
+    var r = role(etat.role);
+    var l = { id: nouvelId(), role: etat.role, type: o.type, qte: {}, justification: "", cree_le: new Date().toISOString() };
+    if (o.type === "libre") {
+      var opt = optionDe(o.modele);
+      l.modele = opt ? opt.code : null;
+      l.libelle = opt ? opt.libelle : "";
+      l.armee = opt ? opt.armee : r.armee;
+      l.source = opt ? opt.source : null;
+      l.cout_unitaire = opt && opt.cout ? M.arrondiCase(opt.cout) : 0;
+      l.dorese = opt && opt.dorese ? { ao: opt.dorese.ao || 0, mco: opt.dorese.mco || 0, rh: opt.dorese.rh || 0 } : { ao: 0, mco: 0, rh: 0 };
+      M.ANNEES.forEach(function (a) { l.qte[a] = opt && opt.annuel ? 1 : 0; });
+      if (!opt || !opt.annuel) l.qte[M.ANNEES[0]] = 1;
+    } else {
+      var p = IDX[o.pion];
+      l.pion = p.id;
+      l.niveau = o.niveau || 100;
+      l.armee = r.armee !== "Interarmées" ? r.armee : p.armee;
+      M.ANNEES.forEach(function (a) { l.qte[a] = 1; });
+    }
+    etat.lignes.push(l);
+    etat.ouverte = l.id;
+    enregistrer(l);
+    rendreFiches();
+    rendreJauges();
+    var f = document.querySelector('[data-fiche="' + l.id + '"]');
+    if (f) f.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    toast(natureLigne(l) === libelleLigne(l) ? "Fiche ajoutée : " + libelleLigne(l) : natureLigne(l) + " : " + libelleLigne(l));
+  }
+
+  // ---------- 1. Composer : les fiches ----------
+  function rendreTotalDossier() {
+    var mien = M.synthese(PIONS, etat.lignes, params(), function (l) { return l.role === etat.role; });
+    var tot = 0, dor = 0;
+    M.ANNEES.forEach(function (a) { tot += mien[a].totalDemandes; dor += mien[a].dorese.ao + mien[a].dorese.mco + mien[a].dorese.rh; });
+    var t = $("dossier-total");
+    vider(t);
+    t.appendChild(el("div", null, [el("b", { texte: md(tot) }), el("small", { texte: "Ma demande sur 6 ans" })]));
+    t.appendChild(el("div", null, [el("b", { texte: String(dor) }), el("small", { texte: "DORESE" })]));
+  }
+
+  function rendreFiches() {
+    var r = role(etat.role);
+    $("titre-dossier").textContent = "Demande " + r.code;
+    rendreTotalDossier();
+    var f = $("fiches");
+    vider(f);
+    var miennes = etat.lignes.filter(function (l) { return l.role === etat.role; });
+    if (!miennes.length) {
+      f.appendChild(el("div", { classe: "dossier-vide" }, [
+        el("b", { texte: "Votre dossier est vide" }),
+        el("p", { texte: "Choisissez dans le catalogue : renforcez une capacité existante, créez-en une, retenez une option de votre fiche ou dissolvez ce qui ne sert plus." })
+      ]));
+      return;
+    }
+    miennes.slice().reverse().forEach(function (l) { f.appendChild(fiche(l)); });
+  }
+
+  function fiche(l) {
     var p = IDX[l.pion];
-    var nom = p ? p.nom : l.pion;
-    if (l.type === "ajout") return nom + " à " + (l.niveau || 50) + " %";
-    return nom;
-  }
+    var o = optionDe(l.modele);
+    var armee = M.armeeDeLigne(l, IDX);
+    var boite = el("article", { classe: "fiche", "data-fiche": l.id, style: "--c:" + couleur(armee) });
+    var cout = el("div", { classe: "fiche-cout" });
+    var calendrier = el("div", { classe: "calendrier" });
+    var notePrix = el("div", { classe: "alerte-texte" });
 
-  function csv() {
-    var sep = ";";
-    var ent = ["Rôle", "Type", "Objet", "Armée imputée"].concat(M.ANNEES.map(String)).concat(["Total (M€)", "Justification"]);
-    var lignes = [ent.join(sep)];
-    etat.lignes.filter(visible).forEach(function (l) {
+    function majCout() {
       var c = M.coutLigne(l, IDX);
-      var v = [l.role, M.TYPES_LIGNE[l.type], libelleLigne(l), M.armeeDeLigne(l, IDX)]
-        .concat(M.ANNEES.map(function (a) { return c.annees[a].cout; })).concat([c.total, (l.justification || "").replace(/\s+/g, " ")]);
-      lignes.push(v.map(function (x) { var s = String(x); return /[";\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }).join(sep));
+      var u = M.unitaire(l, IDX);
+      vider(cout);
+      cout.appendChild(el("b", { texte: md(c.total) }));
+      cout.appendChild(el("small", { texte: (u.cout ? md(u.cout) + " par an posé" : "prix à fixer") + (c.totalDorese ? " · " + c.totalDorese + " DORESE" : "") }));
+      rendreTotalDossier();
+      rendreJauges();
+    }
+    function changer() { majCout(); enregistrer(l); }
+
+    // En-tête
+    var titre = el("div", { classe: "fiche-titre" }, [el("span", { classe: "fiche-type", texte: natureLigne(l) })]);
+    if (l.type === "libre" && !o) {
+      var lib = el("input", { value: l.libelle || "", placeholder: "Intitulé du pion", "aria-label": "Intitulé" });
+      lib.addEventListener("input", function () { l.libelle = lib.value; enregistrer(l); });
+      titre.appendChild(el("div", { classe: "fiche-nom" }, [lib]));
+    } else {
+      titre.appendChild(el("div", { classe: "fiche-nom", texte: libelleLigne(l) }));
+    }
+    var sous = [];
+    if (p && l.type === "dorese") { var mq2 = M.doreseManquantes(p); sous.push("Ajoute les " + M.nbManquantes(p) + " DORESE qui manquent (" + mq2.ao + " AO, " + mq2.mco + " MCO, " + mq2.rh + " RH) pour passer la capacité à 100 %"); }
+    if (p && l.type === "retrait") sous.push("Retire la capacité de la table les années cochées");
+    if (p && l.type === "ajout") sous.push("Nouvel exemplaire, en plus du socle");
+    if (o) sous.push("Fiche : " + fourchette(o) + (o.periodicite ? " · " + o.periodicite : ""));
+    if (sous.length) titre.appendChild(el("div", { classe: "fiche-sous", texte: sous.join(" · ") }));
+    if (l.type === "libre" && !o) {
+      var val = (params().validations || {})[l.id];
+      titre.appendChild(el("span", null, [el("span", { classe: "badge " + (val ? "badge-ok" : "badge-attente"), texte: val ? "Validé par l'animateur" : "À valider par l'animateur" })]));
+    }
+    var arb = M.arbitrageDe(l, params());
+    if (arb.statut !== "attente") titre.appendChild(el("span", null, [el("span", { classe: "badge " + (arb.statut === "retenu" ? "badge-ok" : arb.statut === "renonce" ? "badge-alerte" : "badge-attente"), texte: "CEMA : " + M.STATUTS[arb.statut] + (arb.statut === "differe" ? " de " + arb.decalage + " an" + (arb.decalage > 1 ? "s" : "") : "") })]));
+
+    var suppr = el("button", { classe: "suppr", type: "button", texte: "Retirer de ma demande" });
+    suppr.addEventListener("click", function () {
+      if (suppr.dataset.arme !== "1") { suppr.dataset.arme = "1"; suppr.textContent = "Confirmer le retrait"; setTimeout(function () { suppr.dataset.arme = ""; suppr.textContent = "Retirer de ma demande"; }, 3000); return; }
+      clearTimeout(enAttente[l.id]); delete enAttente[l.id];
+      etat.lignes = etat.lignes.filter(function (x) { return x.id !== l.id; });
+      S.supprimerLigne(etat.partie.nom, etat.mdp, l.id).then(function () { toast("Fiche retirée"); }).catch(function (e) { toast(e.message); });
+      rendreFiches(); rendreJauges(); rendreArsenal();
     });
-    return lignes.join("\n");
+    boite.appendChild(el("div", { classe: "fiche-tete" }, [titre, cout, suppr]));
+
+    // Réglages
+    var reg = el("div", { classe: "fiche-reglages" });
+    if (l.type === "ajout" && p && p.type === "capacite" && M.nbDorese(p)) {
+      var seg = el("div", { classe: "segment", role: "group", "aria-label": "Niveau" });
+      [[50, "À 50 % · " + md(p.cout50)], [100, "À 100 % · " + md(p.cout100)]].forEach(function (x) {
+        seg.appendChild(el("button", { type: "button", "aria-pressed": Number(l.niveau) === x[0] ? "true" : "false", texte: x[1], onclick: function () { l.niveau = x[0]; changer(); rendreFiches(); } }));
+      });
+      reg.appendChild(seg);
+    }
+    if (l.type === "libre") {
+      var prix = el("input", { classe: "prix", type: "number", min: 0, step: 100, value: l.cout_unitaire || "", placeholder: "0", "aria-label": "Prix fixé en M€" });
+      function majNote(brut) {
+        var t = [];
+        if (!l.cout_unitaire) t.push("Fixez le prix : la fiche ne compte pas tant qu'il est vide.");
+        else if (brut !== undefined && Number(brut) !== l.cout_unitaire) t.push("Arrondi à la case : " + md(l.cout_unitaire) + ".");
+        else if (brut === undefined && o && o.cout && o.cout % M.CASE) t.push("Prix de la fiche " + md(o.cout) + ", arrondi à " + md(l.cout_unitaire) + " : à confirmer.");
+        if (o && o.cout && l.cout_unitaire && (l.cout_unitaire < M.arrondiCase(o.cout) || l.cout_unitaire > Math.max(M.arrondiCase(o.cout_max || o.cout), o.cout_max || o.cout))) t.push("Hors fourchette de la fiche (" + fourchette(o) + ").");
+        notePrix.textContent = t.join(" ");
+      }
+      prix.addEventListener("input", function () { l.cout_unitaire = M.arrondiCase(prix.value); changer(); majNote(prix.value); });
+      prix.addEventListener("change", function () { prix.value = l.cout_unitaire || ""; majNote(); });
+      reg.appendChild(el("label", null, ["Prix fixé, M€ par an posé", prix]));
+      var d = l.dorese || { ao: 0, mco: 0, rh: 0 };
+      ["ao", "mco", "rh"].forEach(function (k) {
+        var i = el("input", { classe: "dor", type: "number", min: 0, step: 1, value: d[k] || 0, "aria-label": "DORESE " + k.toUpperCase() });
+        i.addEventListener("input", function () { l.dorese = l.dorese || {}; l.dorese[k] = Number(i.value) || 0; changer(); });
+        reg.appendChild(el("label", null, ["DORESE " + k.toUpperCase(), i]));
+      });
+      majNote();
+    }
+    var arm = el("select", { "aria-label": "Armée qui porte le projet" });
+    M.ARMEES.forEach(function (a) { arm.appendChild(el("option", { value: a, texte: a })); });
+    arm.value = armee;
+    arm.addEventListener("change", function () { l.armee = arm.value; boite.style.setProperty("--c", couleur(arm.value)); changer(); });
+    reg.appendChild(el("label", null, ["Imputé à", arm]));
+    boite.appendChild(reg);
+    if (l.type === "libre") boite.appendChild(notePrix);
+
+    // Calendrier
+    var unique = l.type === "dorese" || l.type === "retrait";
+    M.ANNEES.forEach(function (a) {
+      var q = M.quantite(l, a);
+      var c = el("div", { classe: "an-case" + (q ? " actif" : "") }, [el("small", { texte: String(a) })]);
+      if (unique) {
+        c.appendChild(el("button", { classe: "coche", type: "button", "aria-pressed": q ? "true" : "false", texte: q ? (l.type === "retrait" ? "Retiré" : "À 100 %") : "—",
+          onclick: function () { l.qte[a] = q ? 0 : 1; changer(); remplacer(); } }));
+      } else {
+        var out = el("output", { texte: String(q) });
+        c.appendChild(el("div", { classe: "pas" }, [
+          el("button", { type: "button", "aria-label": "Moins en " + a, texte: "−", onclick: function () { l.qte[a] = Math.max(0, q - 1); changer(); remplacer(); } }),
+          out,
+          el("button", { type: "button", "aria-label": "Plus en " + a, texte: "+", onclick: function () { l.qte[a] = q + 1; changer(); remplacer(); } })
+        ]));
+      }
+      calendrier.appendChild(c);
+    });
+    boite.appendChild(calendrier);
+    function remplacer() { var n = fiche(l); boite.replaceWith(n); }
+
+    // Justification et conditions
+    var just = el("textarea", { placeholder: "Pourquoi ce besoin ? Votre argument pour l'arbitrage.", "aria-label": "Justification" });
+    just.value = l.justification || "";
+    just.addEventListener("input", function () { l.justification = just.value; enregistrer(l); });
+    boite.appendChild(just);
+    if (o && (o.conditions || o.alerte)) {
+      boite.appendChild(el("details", null, [el("summary", { texte: "Ce que dit la fiche" }),
+        o.alerte ? el("p", { classe: "alerte-texte", texte: o.alerte }) : null,
+        o.conditions ? el("p", { texte: o.conditions }) : null,
+        el("p", { texte: [o.source, o.edition].filter(Boolean).join(" · ") })]));
+    }
+    majCout();
+    return boite;
   }
 
-  // ---------- Table ----------
+  // ---------- 2. La table ----------
   function rendreTable() {
-    var sel = $("table-annee");
-    if (!sel.options.length) M.ANNEES.forEach(function (a) { sel.appendChild(el("option", { value: a, texte: String(a) })); });
-    sel.value = String(etat.anneeTable);
-    var a = etat.anneeTable;
+    var ans = $("annees-table");
+    vider(ans);
+    M.ANNEES.forEach(function (a) { ans.appendChild(el("button", { type: "button", "aria-pressed": a === etat.annee ? "true" : "false", texte: String(a), onclick: function () { etat.annee = a; rendreTable(); rendreJauges(); } })); });
+    document.querySelectorAll(".bascule button").forEach(function (b) { b.setAttribute("aria-pressed", b.getAttribute("data-vue") === etat.vueTable ? "true" : "false"); });
     var p = params();
-    var lignesVues = etat.vueTable === "arbitrage" ? M.lignesApresArbitrage(etat.lignes, p) : etat.lignes;
-    var t = M.placerAnnee(PIONS, lignesVues, p, a);
-    var syn = M.synthese(PIONS, lignesVues, p)[a];
+    var lignes = etat.vueTable === "arbitrage" ? M.lignesApresArbitrage(etat.lignes, p) : etat.lignes;
+    var t = M.placerAnnee(PIONS, lignes, p, etat.annee);
+    var syn = M.synthese(PIONS, lignes, p)[etat.annee];
 
-    var ch = $("table-chiffres");
-    vider(ch);
-    [["Cases occupées", t.occupees + " sur " + t.plafond + " autorisées"], ["Montant", md(syn.total)], [syn.marge >= 0 ? "Marge" : "Dépassement", md(Math.abs(syn.marge))]].forEach(function (x, i) {
-      ch.appendChild(el("span", { classe: i === 2 ? (syn.marge >= 0 ? "pos" : "neg") : "" }, [x[0] + " : ", el("b", { texte: x[1] })]));
+    var rel = $("table-releve");
+    vider(rel);
+    [["Année", String(etat.annee), ""], ["Cases posées", t.occupees + " / " + t.plafond, ""], ["Montant", md(syn.total), ""], [syn.marge >= 0 ? "Marge" : "Dépassement", md(Math.abs(syn.marge)), syn.marge >= 0 ? "pos" : "neg"]].forEach(function (x) {
+      rel.appendChild(el("div", { classe: "releve" }, [el("small", { texte: x[0] }), el("b", { classe: x[2], texte: x[1] })]));
     });
 
     var pl = $("plateau");
     vider(pl);
     pl.style.gridTemplateRows = "repeat(" + t.hauteur + ", var(--case))";
-    // Fond : une case par emplacement, rouge pâle au-delà du plafond, hachurée hors table.
     for (var k = 0; k < t.hauteur * t.largeur; k++) {
-      var cl = "fond";
-      if (k >= t.table) cl += " fond-horstable";
-      else if (k >= t.plafond) cl += " fond-hors";
-      pl.appendChild(el("div", { classe: cl, style: "grid-row:" + (Math.floor(k / t.largeur) + 1) + ";grid-column:" + (k % t.largeur + 1) }));
+      pl.appendChild(el("div", { classe: "fond" + (k >= t.table ? " fond-horstable" : k >= t.plafond ? " fond-hors" : ""), style: "grid-row:" + (Math.floor(k / t.largeur) + 1) + ";grid-column:" + (k % t.largeur + 1) }));
     }
-    function depasse(r, c, w, h) {
-      for (var i = r; i < r + h; i++) for (var j = c; j < c + w; j++) if (i * t.largeur + j >= t.plafond) return true;
-      return false;
-    }
+    function depasse(r, c, w, h) { for (var i = r; i < r + h; i++) for (var j = c; j < c + w; j++) if (i * t.largeur + j >= t.plafond) return true; return false; }
+    function masque(x) { return x.role && !vueComplete() && x.role !== etat.role; }
     t.pieces.forEach(function (x) {
-      var couleur = x.groupe === "Fixes" ? "var(--gris)" : x.nature === "violet" ? "var(--violet)" : couleurArmee(x.armee);
-      var classes = ["pion"];
-      if (x.niveau === 50) classes.push("pion-50");
-      if (depasse(x.r, x.c, x.w, x.h)) classes.push("pion-debord");
-      if (x.w * x.h <= 2) classes.push("pion-petit");
-      if (x.role && !vueComplete() && x.role !== etat.role) x.libelle = "Demande " + x.armee;
-      var titre = x.libelle + " · " + x.armee + " · " + x.cases + " case" + (x.cases > 1 ? "s" : "") + (x.niveau ? " · " + x.niveau + " %" : "") + (x.role && (vueComplete() || x.role === etat.role) ? " · demande " + x.role : "");
-      pl.appendChild(el("div", { classe: classes.join(" "), title: titre,
-        style: "grid-row:" + (x.r + 1) + " / span " + x.h + ";grid-column:" + (x.c + 1) + " / span " + x.w + ";background:" + couleur }, [
-        el("span", { texte: x.libelle.replace(/^Capacité /, "").replace(/^Brigade /, "Bde ") })
-      ]));
+      var c = x.groupe === "Fixes" ? "var(--gris)" : x.nature === "violet" ? "var(--violet)" : couleur(x.armee);
+      var cl = ["pion"];
+      if (x.niveau === 50) cl.push("pion-50");
+      if (depasse(x.r, x.c, x.w, x.h)) cl.push("pion-debord");
+      if (x.w * x.h <= 2) cl.push("pion-petit");
+      if (x.role && x.role === etat.role) cl.push("pion-mien");
+      var nom = masque(x) ? "Demande " + x.armee : x.libelle;
+      pl.appendChild(el("div", { classe: cl.join(" "), title: nom + " · " + x.cases + " case" + (x.cases > 1 ? "s" : "") + (x.niveau ? " · " + x.niveau + " %" : "") + (x.role && !masque(x) ? " · " + x.role : ""),
+        style: "grid-row:" + (x.r + 1) + " / span " + x.h + ";grid-column:" + (x.c + 1) + " / span " + x.w + ";background:" + c }, [
+        el("span", { texte: nom.replace(/^Capacité /, "").replace(/^Brigade /, "Bde ") })]));
     });
     t.cellules.forEach(function (x) {
-      var classes = ["pion", "pion-case"];
-      if (x.nature === "dorese") classes.push("pion-dorese");
-      if (x.horsCatalogue) classes.push("pion-mesure");
-      if (x.r * t.largeur + x.c >= t.plafond) classes.push("pion-debord");
-      if (x.role && !vueComplete() && x.role !== etat.role) x.libelle = x.nature === "dorese" ? "DORESE" : "Demande " + x.armee;
-      pl.appendChild(el("div", { classe: classes.join(" "), title: x.libelle + " · " + x.armee + (x.role && (vueComplete() || x.role === etat.role) ? " · demande " + x.role : ""),
-        style: "grid-row:" + (x.r + 1) + ";grid-column:" + (x.c + 1) + ";background:" + couleurArmee(x.armee) }, [
-        el("span", { texte: x.nature === "dorese" ? { ao: "AO", mco: "M", rh: "RH" }[x.type] : "" })
-      ]));
+      var cl = ["pion", "pion-case"];
+      if (x.nature === "dorese") cl.push("pion-dorese");
+      if (x.horsCatalogue) cl.push("pion-mesure");
+      if (x.r * t.largeur + x.c >= t.plafond) cl.push("pion-debord");
+      if (x.role && x.role === etat.role) cl.push("pion-mien");
+      var nom = masque(x) ? (x.nature === "dorese" ? "DORESE" : "Demande " + x.armee) : x.libelle;
+      pl.appendChild(el("div", { classe: cl.join(" "), title: nom, style: "grid-row:" + (x.r + 1) + ";grid-column:" + (x.c + 1) + ";background:" + couleur(x.armee) }, [
+        el("span", { texte: x.nature === "dorese" ? { ao: "AO", mco: "M", rh: "RH" }[x.type] : "" })]));
     });
 
     var lg = $("legende");
     vider(lg);
-    function puce(style, classe, texte) { return el("span", null, [el("span", { classe: "puce-legende " + (classe || ""), style: style }), texte]); }
+    function puce(style, cl, txt) { return el("span", null, [el("span", { classe: "puce-legende " + (cl || ""), style: style }), txt]); }
     lg.appendChild(puce("background:var(--gris)", "", "Dépense fixe"));
     lg.appendChild(puce("background:var(--violet)", "", "Investissement"));
-    M.ARMEES.forEach(function (arm) { lg.appendChild(puce("background:" + couleurArmee(arm), "", arm)); });
+    M.ARMEES.forEach(function (a) { lg.appendChild(puce("background:" + couleur(a), "", a)); });
     lg.appendChild(puce("background:var(--terre)", "pion-50", "Capacité à 50 %"));
-    lg.appendChild(puce("background:var(--terre)", "pion-dorese", "DORESE (AO, MCO, RH)"));
-    lg.appendChild(puce("background:var(--terre)", "pion-mesure", "Pion sur mesure"));
-    lg.appendChild(puce("", "fond-hors", "Au-delà du plafond"));
-    lg.appendChild(puce("background:var(--marine)", "pion-debord", "Pion au-delà du plafond"));
+    lg.appendChild(puce("background:var(--terre)", "pion-dorese", "DORESE"));
+    lg.appendChild(puce("background:var(--terre)", "pion-mien", "Ma demande"));
+    lg.appendChild(puce("background:var(--hors)", "", "Au-delà du plafond"));
   }
 
-  // ---------- Paramètres ----------
-  function rendreParametres() {
+  // ---------- 3. Arbitrage ----------
+  function rendreArbitrage() {
     var p = params();
-    var edit = peutEditerParams();
-    $("aide-parametres").textContent = edit
-      ? "Les plafonds et les pions de scénario s'appliquent à toute la partie."
-      : "Lecture seule : seuls l'animateur, le SC-Plans et le CEMA modifient ces paramètres.";
+    var edit = ROLES_ARBITRAGE.indexOf(etat.role) !== -1;
+    $("aide-arbitrage").textContent = edit
+      ? "Pour chaque demande : retenir, différer d'une à trois années, ou renoncer. Un différé qui dépasse 2032 sort de la LPM."
+      : "Le CEMA et l'animateur tranchent. Vous voyez ici les décisions sur vos demandes.";
+    var dem = M.synthese(PIONS, etat.lignes, p);
+    var arb = M.synthese(PIONS, M.lignesApresArbitrage(etat.lignes, p), p);
+    var ra = $("arb-annees");
+    vider(ra);
+    M.ANNEES.forEach(function (a) {
+      ra.appendChild(el("div", { classe: "arb-an" }, [
+        el("span", { classe: "an", texte: String(a) }),
+        el("span", { classe: "l" }, ["Demandé", el("b", { texte: md(dem[a].total) })]),
+        el("span", { classe: "l" }, ["Retenu", el("b", { texte: md(arb[a].total) })]),
+        el("span", { classe: "l" }, ["Plafond", el("b", { texte: md(arb[a].plafond) })]),
+        el("span", { classe: "l " + (arb[a].marge >= 0 ? "pos" : "neg") }, [arb[a].marge >= 0 ? "Marge" : "Dépassement", el("b", { classe: arb[a].marge >= 0 ? "pos" : "neg", texte: md(Math.abs(arb[a].marge)) })])
+      ]));
+    });
+
+    var zl = $("arb-lignes");
+    vider(zl);
+    var lignes = etat.lignes.filter(visible);
+    if (!lignes.length) zl.appendChild(el("p", { classe: "vide", texte: "Aucune demande pour l'instant." }));
+    lignes.forEach(function (l) {
+      var a = M.arbitrageDe(l, p);
+      var avant = M.coutLigne(l, IDX).total;
+      var la = M.ligneArbitree(l, p);
+      var apres = la ? M.coutLigne(la, IDX).total : 0;
+      var report = M.reportHorsLpm(l, p, IDX);
+      var choix = el("div", { classe: "choix" });
+      Object.keys(M.STATUTS).forEach(function (k) {
+        choix.appendChild(el("button", { type: "button", "data-statut": k, "aria-pressed": a.statut === k ? "true" : "false", disabled: edit ? null : "disabled", texte: M.STATUTS[k],
+          onclick: function () { modifierParams(function (pp) { pp.arbitrages = pp.arbitrages || {}; pp.arbitrages[l.id] = { statut: k, decalage: k === "differe" ? (a.decalage || 1) : 0 }; }); } }));
+      });
+      if (a.statut === "differe") {
+        var dec = el("select", { "aria-label": "Décalage", disabled: edit ? null : "disabled" });
+        [1, 2, 3].forEach(function (n) { dec.appendChild(el("option", { value: n, texte: "de " + n + " an" + (n > 1 ? "s" : "") })); });
+        dec.value = String(a.decalage || 1);
+        dec.addEventListener("change", function () { modifierParams(function (pp) { pp.arbitrages = pp.arbitrages || {}; pp.arbitrages[l.id] = { statut: "differe", decalage: Number(dec.value) }; }); });
+        choix.appendChild(dec);
+      }
+      if (l.type === "libre" && !l.modele && edit) {
+        var cb = el("input", { type: "checkbox", id: "val-" + l.id });
+        cb.checked = !!(p.validations || {})[l.id];
+        cb.addEventListener("change", function () { modifierParams(function (pp) { pp.validations = pp.validations || {}; pp.validations[l.id] = cb.checked; }); });
+        choix.appendChild(el("label", { for: cb.id, style: "font-size:.8rem;color:var(--sourdine);margin-left:.5rem" }, [cb, " pion sur mesure validé"]));
+      }
+      zl.appendChild(el("div", { classe: "decision", style: "--c:" + couleur(M.armeeDeLigne(l, IDX)) }, [
+        el("div", { classe: "decision-tete" }, [
+          el("span", { classe: "decision-nom" }, [libelleLigne(l), el("small", { texte: l.role + " · " + natureLigne(l) + " · " + M.armeeDeLigne(l, IDX) + (l.justification ? " · « " + l.justification + " »" : "") })]),
+          el("span", { classe: "num" }, [md(avant), apres !== avant ? el("small", { classe: "fiche-sous", texte: " → " + md(apres) + (report ? " (+" + md(report) + " après 2032)" : "") }) : null])
+        ]),
+        choix
+      ]));
+    });
+
+    var zr = $("arb-renoncements");
+    vider(zr);
+    var ren = etat.lignes.filter(function (l) { return visible(l) && M.arbitrageDe(l, p).statut === "renonce"; });
+    if (!ren.length) zr.appendChild(el("p", { classe: "vide", texte: "Aucun renoncement." }));
+    var tot = 0;
+    ren.forEach(function (l) {
+      var v = M.coutLigne(l, IDX).total; tot += v;
+      zr.appendChild(el("div", { classe: "renonce" }, [el("div", { texte: libelleLigne(l) }), el("small", { classe: "fiche-sous", texte: l.role + " · " }), el("b", { texte: md(v) })]));
+    });
+    if (ren.length) zr.appendChild(el("p", { classe: "fiche-sous", texte: "Total renoncé sur la période : " + md(tot) }));
+  }
+
+  // ---------- Bilan ----------
+  function rendreBilan() {
+    var p = params();
+    $("note-vue").textContent = vueComplete() ? "Vue complète de la partie." : "Vue limitée à vos postes de dépense ; les totaux par armée restent visibles.";
+    var syn = M.synthese(PIONS, etat.lignes, p);
+    var arb = M.synthese(PIONS, M.lignesApresArbitrage(etat.lignes, p), p);
+    var tr = $("trajectoire");
+    vider(tr);
+    var max = Math.max.apply(null, M.ANNEES.map(function (a) { return Math.max(syn[a].total, syn[a].table); }));
+    M.ANNEES.forEach(function (a) {
+      var s = syn[a];
+      var b = el("div", { classe: "traj-barre" });
+      b.appendChild(el("span", { style: "width:" + (100 * s.totalSocle / max) + "%;background:var(--gris)" }));
+      M.ARMEES.forEach(function (arm) { var v = Math.max(0, s.demandes[arm]); if (v) b.appendChild(el("span", { style: "width:" + (100 * v / max) + "%;background:" + couleur(arm), title: arm + " " + md(v) })); });
+      b.appendChild(el("span", { classe: "traj-plafond", style: "left:" + (100 * s.plafond / max) + "%" }));
+      tr.appendChild(el("div", { classe: "traj-ligne" }, [el("span", { classe: "traj-an", texte: String(a) }), b, el("span", { classe: "num " + (s.marge < 0 ? "neg" : ""), texte: md(s.total) })]));
+    });
+    var t = $("table-synthese");
+    vider(t);
+    t.appendChild(el("thead", null, [el("tr", null, [el("th", { texte: "M€" })].concat(M.ANNEES.map(function (a) { return el("th", { classe: "num", texte: String(a) }); })).concat([el("th", { classe: "num", texte: "Total" })]))]));
+    var c = el("tbody");
+    function rangee(lib, f, cl) {
+      var tot = 0;
+      var cells = M.ANNEES.map(function (a) { var v = f(a); tot += v; return el("td", { classe: "num " + (cl ? cl(v) : ""), texte: md(v) }); });
+      c.appendChild(el("tr", null, [el("td", null, lib)].concat(cells).concat([el("td", { classe: "num", texte: md(tot) })])));
+    }
+    rangee([el("span", { classe: "pastille", style: "background:var(--gris)" }), "Socle"], function (a) { return syn[a].totalSocle; });
+    M.ARMEES.forEach(function (arm) { rangee([el("span", { classe: "pastille", style: "background:" + couleur(arm) }), "Demandes " + arm], function (a) { return syn[a].demandes[arm]; }); });
+    rangee(["Total demandé"], function (a) { return syn[a].total; });
+    rangee(["Total après arbitrage"], function (a) { return arb[a].total; });
+    rangee(["Plafond"], function (a) { return syn[a].plafond; });
+    rangee(["Marge après arbitrage"], function (a) { return arb[a].marge; }, function (v) { return v < 0 ? "neg" : "pos"; });
+    t.appendChild(c);
+
+    var t3 = $("table-toutes");
+    vider(t3);
+    t3.appendChild(el("thead", null, [el("tr", null, ["Pôle", "Action", "Objet", "Armée"].map(function (h) { return el("th", { texte: h }); }).concat(M.ANNEES.map(function (a) { return el("th", { classe: "num", texte: String(a) }); })).concat([el("th", { classe: "num", texte: "Total" }), el("th", { texte: "Décision" })]))]));
+    var c3 = el("tbody");
+    etat.lignes.filter(visible).forEach(function (l) {
+      var cl = M.coutLigne(l, IDX);
+      c3.appendChild(el("tr", null, [el("td", { texte: l.role }), el("td", { texte: natureLigne(l) }), el("td", { texte: libelleLigne(l) }), el("td", { texte: M.armeeDeLigne(l, IDX) })]
+        .concat(M.ANNEES.map(function (a) { return el("td", { classe: "num", texte: cl.annees[a].cout ? md(cl.annees[a].cout) : "·" }); }))
+        .concat([el("td", { classe: "num", texte: md(cl.total) }), el("td", { texte: M.STATUTS[M.arbitrageDe(l, p).statut] })])));
+    });
+    t3.appendChild(c3);
+  }
+
+  function csv() {
+    var p = params();
+    var ent = ["Pôle", "Action", "Objet", "Armée"].concat(M.ANNEES.map(String)).concat(["Total (M€)", "Décision", "Justification"]);
+    var out = [ent.join(";")];
+    etat.lignes.filter(visible).forEach(function (l) {
+      var c = M.coutLigne(l, IDX);
+      var v = [l.role, natureLigne(l), libelleLigne(l), M.armeeDeLigne(l, IDX)].concat(M.ANNEES.map(function (a) { return c.annees[a].cout; }))
+        .concat([c.total, M.STATUTS[M.arbitrageDe(l, p).statut], (l.justification || "").replace(/\s+/g, " ")]);
+      out.push(v.map(function (x) { var s = String(x); return /[";\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }).join(";"));
+    });
+    return out.join("\n");
+  }
+
+  // ---------- Réglages ----------
+  function rendreReglages() {
+    var p = params();
+    var edit = ROLES_REGLAGES.indexOf(etat.role) !== -1;
+    $("aide-parametres").textContent = edit ? "Plafonds et pions de scénario valent pour toute la partie." : "Lecture seule.";
     var pf = $("plafonds");
     vider(pf);
     M.ANNEES.forEach(function (a) {
       var i = el("input", { id: "plafond-" + a, type: "number", min: 0, max: 2000, step: 1, value: p.plafonds[a], disabled: edit ? null : "disabled" });
-      var aide = el("span", { classe: "sous", texte: md((Number(p.plafonds[a]) || 0) * M.CASE) });
-      i.addEventListener("input", function () { aide.textContent = md((Number(i.value) || 0) * M.CASE); });
-      pf.appendChild(el("label", { for: "plafond-" + a }, [String(a), i, aide]));
+      var s = el("small", { texte: md((Number(p.plafonds[a]) || 0) * M.CASE) });
+      i.addEventListener("input", function () { s.textContent = md((Number(i.value) || 0) * M.CASE); });
+      pf.appendChild(el("label", { for: i.id }, [String(a), i, s]));
     });
     var al = $("aleas");
     vider(al);
     PIONS.filter(function (x) { return x.type === "orange"; }).forEach(function (o) {
-      var annees = (p.aleas || {})[o.id] || [];
-      var boites = M.ANNEES.map(function (a) {
+      var an = ((p.aleas || {})[o.id] || []).map(Number);
+      al.appendChild(el("div", { classe: "alea" }, [el("span", { texte: o.nom + " (" + o.cout50 / M.CASE + " cases par an)" }), el("div", { classe: "alea-annees" }, M.ANNEES.map(function (a) {
         var cb = el("input", { type: "checkbox", id: "alea-" + o.id + "-" + a, "data-pion": o.id, "data-annee": a, disabled: edit ? null : "disabled" });
-        cb.checked = annees.map(Number).indexOf(a) !== -1;
+        cb.checked = an.indexOf(a) !== -1;
         return el("label", { for: cb.id }, [cb, " " + a]);
-      });
-      al.appendChild(el("div", { classe: "alea" }, [el("span", { texte: o.nom + " (" + o.cout50 / M.CASE + " cases par an)" }), el("div", { classe: "alea-annees" }, boites)]));
+      }))]));
     });
     $("btn-parametres").hidden = !edit;
   }
 
-  function enregistrerParametres(ev) {
+  function enregistrerReglages(ev) {
     ev.preventDefault();
-    if (!peutEditerParams()) return;
-    var p = JSON.parse(JSON.stringify(params()));
-    M.ANNEES.forEach(function (a) { p.plafonds[a] = Math.max(0, Number($("plafond-" + a).value) || 0); });
-    p.aleas = {};
+    var plaf = {}, aleas = {};
+    M.ANNEES.forEach(function (a) { plaf[a] = Math.max(0, Number($("plafond-" + a).value) || 0); });
     document.querySelectorAll("#aleas input[type=checkbox]").forEach(function (cb) {
-      var id = cb.getAttribute("data-pion");
-      p.aleas[id] = p.aleas[id] || [];
-      if (cb.checked) p.aleas[id].push(Number(cb.getAttribute("data-annee")));
+      var id = cb.getAttribute("data-pion"); aleas[id] = aleas[id] || [];
+      if (cb.checked) aleas[id].push(Number(cb.getAttribute("data-annee")));
     });
-    S.majParams(etat.partie.nom, etat.mdp, p).then(function () {
-      etat.partie.params = p;
-      $("param-etat").textContent = "Paramètres enregistrés.";
-      toast("Paramètres enregistrés");
-      rendre(true);
-    }).catch(function (e) { $("param-etat").textContent = e.message; });
+    modifierParams(function (pp) { pp.plafonds = plaf; pp.aleas = aleas; }).then(function () { $("param-etat").textContent = "Réglages enregistrés."; toast("Réglages enregistrés"); });
   }
 
   // ---------- Démarrage ----------
   function demarrer() {
     $("mode").textContent = S.mode === "partage" ? "Base partagée" : "Mode local";
     $("note-mode").textContent = S.mode === "partage"
-      ? "Les parties sont enregistrées dans la base partagée : elles restent disponibles d'une séance à l'autre, et chaque joueur voit les demandes des autres en quelques secondes."
-      : "Mode local : les parties restent dans ce navigateur. Pour jouer à plusieurs, ouvrez l'outil par le lien que donne l'animateur.";
-    remplirRoles($("rej-role"), "EMAT");
-    var ty = $("ajout-type");
-    Object.keys(M.TYPES_LIGNE).forEach(function (k) { ty.appendChild(el("option", { value: k, texte: M.TYPES_LIGNE[k] })); });
-
+      ? "Les parties sont conservées d'une séance à l'autre ; chaque pôle voit les autres avancer en quelques secondes."
+      : "Mode local : les parties restent dans ce navigateur.";
     $("form-rejoindre").addEventListener("submit", function (ev) {
       ev.preventDefault();
       $("rej-erreur").textContent = "";
       var nom = $("rej-partie").value, mdp = $("rej-mdp").value;
-      if (!nom) { $("rej-erreur").textContent = "Créez d'abord une partie, ou demandez son nom à l'animateur."; return; }
-      S.ouvrirPartie(nom, mdp).then(function (p) { return entrer(p, mdp, $("rej-role").value); })
-        .catch(function (e) { $("rej-erreur").textContent = e.message; });
+      if (!nom) { $("rej-erreur").textContent = "Ouvrez d'abord une partie, ou demandez son nom à l'animateur."; return; }
+      S.ouvrirPartie(nom, mdp).then(function (p) { montrerRoles(p, mdp); }).catch(function (e) { $("rej-erreur").textContent = e.message; });
     });
     $("form-creer").addEventListener("submit", function (ev) {
       ev.preventDefault();
       $("cre-erreur").textContent = "";
       var nom = $("cre-nom").value.trim(), mdp = $("cre-mdp").value;
       if (mdp !== $("cre-mdp2").value) { $("cre-erreur").textContent = "Les deux mots de passe diffèrent."; return; }
-      S.creerPartie(nom, mdp, M.parametresParDefaut()).then(function (p) { toast("Partie « " + p.nom + " » créée"); return entrer(p, mdp, "Animateur"); })
+      S.creerPartie(nom, mdp, M.parametresParDefaut()).then(function (p) { toast("Partie « " + p.nom + " » ouverte"); montrerRoles(p, mdp); })
         .catch(function (e) { $("cre-erreur").textContent = e.message; });
     });
+    $("btn-retour-partie").addEventListener("click", quitter);
     $("btn-quitter").addEventListener("click", quitter);
-    $("session-role").addEventListener("change", function () { etat.role = $("session-role").value; memoriser(); rendre(true); });
-    document.querySelectorAll(".onglets button").forEach(function (b) {
-      b.addEventListener("click", function () { changerOnglet(b.getAttribute("data-onglet")); });
+    $("btn-role").addEventListener("click", function () {
+      $("ecran-partie").hidden = true; $("ecran-accueil").hidden = false; montrerRoles(etat.partie, etat.mdp);
     });
-    $("btn-ajouter").addEventListener("click", function () {
-      var l = nouvelleLigne($("ajout-type").value);
-      etat.lignes.push(l);
-      enregistrer(l);
-      rendreDemande();
-    });
-    $("table-vue").addEventListener("change", function () { etat.vueTable = $("table-vue").value; rendreTable(); });
-    $("table-annee").addEventListener("change", function () { etat.anneeTable = Number($("table-annee").value); rendreTable(); });
-    $("form-parametres").addEventListener("submit", enregistrerParametres);
+    document.querySelectorAll(".parcours button").forEach(function (b) { b.addEventListener("click", function () { changerOnglet(b.getAttribute("data-onglet")); }); });
+    document.querySelectorAll(".bascule button").forEach(function (b) { b.addEventListener("click", function () { etat.vueTable = b.getAttribute("data-vue"); rendreTable(); }); });
+    $("recherche").addEventListener("input", function () { etat.recherche = $("recherche").value; rendreArsenal(); });
+    $("form-parametres").addEventListener("submit", enregistrerReglages);
     $("btn-copier-csv").addEventListener("click", function () {
-      var texte = csv();
-      try {
-        navigator.clipboard.writeText(texte).then(function () { toast("CSV copié : collez-le dans Excel"); }, function () { toast("Copie refusée par le navigateur"); });
-      } catch (e) { toast("Copie refusée par le navigateur"); }
+      try { navigator.clipboard.writeText(csv()).then(function () { toast("CSV copié : collez-le dans Excel"); }, function () { toast("Copie refusée par le navigateur"); }); }
+      catch (e) { toast("Copie refusée par le navigateur"); }
     });
     $("btn-telecharger-csv").addEventListener("click", function () {
-      var blob = new Blob(["﻿" + csv()], { type: "text/csv;charset=utf-8" });
-      var a = el("a", { href: URL.createObjectURL(blob), download: "strategikon-" + (etat.partie ? etat.partie.nom : "partie") + ".csv" });
+      var a = el("a", { href: URL.createObjectURL(new Blob(["﻿" + csv()], { type: "text/csv;charset=utf-8" })), download: "strategikon-" + (etat.partie ? etat.partie.nom : "partie") + ".csv" });
       document.body.appendChild(a); a.click(); a.remove();
     });
-
-    setInterval(function () { if (etat.partie && !Object.keys(enAttente).length) rechargerLignes(false); }, S.mode === "partage" ? 8000 : 5000);
+    setInterval(function () { if (etat.partie && etat.role && !Object.keys(enAttente).length) recharger(false); }, S.mode === "partage" ? 6000 : 5000);
 
     chargerParties().then(function () {
       var mem = null;
-      try { mem = JSON.parse(sessionStorage.getItem("strategikon.session")); } catch (e) { mem = null; }
-      if (mem && mem.nom) {
+      try { mem = JSON.parse(sessionStorage.getItem("strategikon.v2")); } catch (e) { mem = null; }
+      if (mem && mem.nom && mem.role) {
         S.ouvrirPartie(mem.nom, mem.mdp).then(function (p) {
-          return entrer(p, mem.mdp, mem.role).then(function () { if (mem.onglet) changerOnglet(mem.onglet); });
-        }).catch(function () { memoriser(); });
+          etat.partie = p; etat.mdp = mem.mdp;
+          return entrer(mem.role).then(function () { if (mem.onglet) changerOnglet(mem.onglet); });
+        }).catch(function () { etat.partie = null; memoriser(); });
       }
     });
   }

@@ -7,6 +7,7 @@
   var S = window.STRAT_STOCKAGE;
   var PIONS = window.STRAT_PIONS || [];
   var CATALOGUE = window.STRAT_CATALOGUE_ROLES || [];
+  var REGLES = window.STRAT_CONTRAINTES_ROLES || [];
   var IDX = M.indexPions(PIONS);
   var ROLES_REGLAGES = ["Animateur", "SC-Plans", "CEMA"];
   var ROLES_ARBITRAGE = ["CEMA", "Animateur"];
@@ -804,6 +805,24 @@
     }
   }
 
+  // Règles de jeu tirées des fiches de rôle, pour référence (l'animateur les voit toutes).
+  function blocRegles() {
+    var regles = REGLES.filter(function (r) { return etat.role === "Animateur" || r.role === etat.role || r.porteur === etat.role; });
+    if (!regles.length) return null;
+    var noms = { blocage: "Blocage", alerte: "Alerte", "surcoût automatique": "Surcoût", drapeau: "Drapeau" };
+    var ul = el("ul", { classe: "regles" });
+    regles.forEach(function (r) {
+      ul.appendChild(el("li", null, [
+        el("span", { classe: "regle-tete" }, [el("b", { texte: r.theme || r.id }), el("span", { classe: "badge regle-" + (r.application || "").replace(/[^a-z]/g, ""), texte: noms[r.application] || r.application }),
+          r.a_verifier ? el("span", { classe: "badge badge-attente", texte: "à vérifier" }) : null]),
+        el("span", { texte: r.regle }),
+        el("small", { texte: (etat.role === "Animateur" ? r.role + " · " : "") + (r.qui_peut_lever ? "Levée : " + r.qui_peut_lever + " · " : "") + r.source + (r.pages ? " p. " + r.pages : "") })
+      ]));
+    });
+    return el("details", { classe: "details-regles" }, [el("summary", { texte: "Règles de jeu " + (etat.role === "Animateur" ? "de toutes les fiches" : "de ma fiche") + " (" + regles.length + ")" }),
+      el("p", { classe: "aide", texte: "Tirées des fiches de rôle. L'outil ne les applique pas encore automatiquement : l'animateur les fait respecter." }), ul]);
+  }
+
   function voletDemande(v) {
     var miennes = etat.lignes.filter(function (l) { return l.role === etat.role; }).sort(M.comparerEmpilement(params()));
     var mien = M.synthese(PIONS, lignesJeu(), params(), function (l) { return l.role === etat.role; });
@@ -811,6 +830,8 @@
     M.ANNEES.forEach(function (a) { tot += mien[a].totalDemandes; dor += mien[a].dorese.ao + mien[a].dorese.mco + mien[a].dorese.rh; });
     v.appendChild(el("h2", { classe: "volet-titre", texte: "Demande " + etat.role }));
     v.appendChild(el("p", { classe: "total-demande" }, [el("b", { texte: md(tot) }), " sur 2027-2032 · " + dor + " DORESE"]));
+    var rg = blocRegles();
+    if (rg) v.appendChild(rg);
     if (!miennes.length) { v.appendChild(el("p", { classe: "vide", texte: "Rien encore. Posez un pion depuis l'onglet « Poser », ou cliquez sur un pion de la table." })); return; }
     var ul = el("ul", { classe: "liste-demande" });
     miennes.forEach(function (l) {

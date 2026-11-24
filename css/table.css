@@ -311,3 +311,13 @@ button.jeton-option { color: #222; }
 .traj-bande span.traj-on { background: var(--laiton); color: #fff; font-weight: 600; }
 .traj-entete span, .traj-marge .traj-bande span { background: none; }
 .trajectoire li.traj-hors { opacity: .7; border-style: dashed; }
+.details-regles { margin: .6rem 0 1rem; font-size: .86rem; }
+.details-regles summary { cursor: pointer; color: var(--laiton); font-weight: 600; }
+.regles { list-style: none; padding: 0; margin: .4rem 0 0; display: grid; gap: .45rem; max-height: 22rem; overflow-y: auto; }
+.regles li { display: grid; gap: .15rem; border-left: 3px solid var(--trait); padding-left: .5rem; }
+.regles small { color: var(--sourdine); font-size: .72rem; }
+.regle-tete { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; }
+.regle-blocage { color: var(--alerte); }
+.regle-alerte { color: var(--attente); }
+.regle-surcotautomatique { color: #6d52a8; }
+.regle-drapeau { color: var(--laiton); }

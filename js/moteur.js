@@ -300,7 +300,8 @@
     return this.h;
   };
 
-  function placerAnnee(pions, lignes, params, annee) {
+  // filtreSocle(pion) -> bool (facultatif) : ne pose que ces pions du socle (vue « ma demande »).
+  function placerAnnee(pions, lignes, params, annee, filtreSocle) {
     var idx = indexPions(pions);
     params = params || parametresParDefaut();
     var tableCases = Number(params.table) || 600;
@@ -320,6 +321,7 @@
     function groupe(nom) { return groupes[nom] || groupes["Interarmées"]; }
     pions.forEach(function (p) {
       if (!estDansSocle(p, annee, params) || retires[p.id]) return;
+      if (filtreSocle && !filtreSocle(p)) return;
       var l100 = passes100[p.id] && nbManquantes(p) ? passes100[p.id] : null;
       var g = p.type === "gris" ? "Fixes" : (l100 ? armeeDeLigne(l100, idx) : p.armee);
       var dg = degrades[p.id] && !passes100[p.id] ? degrades[p.id] : null;

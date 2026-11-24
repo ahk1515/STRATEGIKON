@@ -6143,7 +6143,8 @@ window.STRAT_CATALOGUE_ROLES = [
     return this.h;
   };
 
-  function placerAnnee(pions, lignes, params, annee) {
+  // filtreSocle(pion) -> bool (facultatif) : ne pose que ces pions du socle (vue « ma demande »).
+  function placerAnnee(pions, lignes, params, annee, filtreSocle) {
     var idx = indexPions(pions);
     params = params || parametresParDefaut();
     var tableCases = Number(params.table) || 600;
@@ -6163,6 +6164,7 @@ window.STRAT_CATALOGUE_ROLES = [
     function groupe(nom) { return groupes[nom] || groupes["Interarmées"]; }
     pions.forEach(function (p) {
       if (!estDansSocle(p, annee, params) || retires[p.id]) return;
+      if (filtreSocle && !filtreSocle(p)) return;
       var l100 = passes100[p.id] && nbManquantes(p) ? passes100[p.id] : null;
       var g = p.type === "gris" ? "Fixes" : (l100 ? armeeDeLigne(l100, idx) : p.armee);
       var dg = degrades[p.id] && !passes100[p.id] ? degrades[p.id] : null;
@@ -6645,6 +6647,11 @@ window.STRAT_CATALOGUE_ROLES = [
     var a = armeeDuRole();
     return a === "Interarmées" ? true : p.armee === a;
   }
+  // Pions en place qui relèvent de mon rôle (vue « Ma demande »).
+  function pionAMoi(p) {
+    if (!p || p.type === "gris" || p.type === "orange" || vueComplete()) return false;
+    return p.armee === armeeDuRole();
+  }
   function fourchette(o) {
     var u = o.annuel ? "/an" : "";
     if (o.cout === null || o.cout === undefined) return o.statut_cout === "a_definir" ? "coût à définir" : "non chiffré";
@@ -6869,38 +6876,42 @@ window.STRAT_CATALOGUE_ROLES = [
   function rendreTable() {
     var p = params();
     var lignes = etat.vue === "arbitrage" ? M.lignesApresArbitrage(etat.lignes, p) : etat.lignes;
-    var t = M.placerAnnee(PIONS, lignes, p, etat.annee);
     var syn = M.synthese(PIONS, lignes, p)[etat.annee];
+    // Filtre « Ma demande » : on ne pose que mes pions, regroupés sur une table compacte.
+    var filtre = etat.maTable;
+    var t = filtre
+      ? M.placerAnnee(PIONS, lignes.filter(function (l) { return l.role === etat.role; }), p, etat.annee, function (x) { return pionAMoi(x); })
+      : M.placerAnnee(PIONS, lignes, p, etat.annee);
+    if (filtre) {
+      var bas = 0;
+      t.pieces.forEach(function (x) { bas = Math.max(bas, x.r + x.h); });
+      t.cellules.forEach(function (x) { bas = Math.max(bas, x.r + 1); });
+      t.hauteur = Math.max(4, bas + 2);
+    }
     document.querySelectorAll(".bascule button[data-vue]").forEach(function (b) { b.setAttribute("aria-pressed", b.getAttribute("data-vue") === etat.vue ? "true" : "false"); });
     document.querySelectorAll(".bascule button[data-filtre]").forEach(function (b) { b.setAttribute("aria-pressed", (b.getAttribute("data-filtre") === "mien") === etat.maTable ? "true" : "false"); });
 
     var rel = $("table-releve");
     vider(rel);
-    [["Table " + etat.annee, t.occupees + " / " + t.plafond + " cases", ""], ["Montant", md(syn.total), ""], ["Plafond", md(syn.plafond), ""],
+    [filtre ? ["Ma demande " + etat.annee, md(t.occupees * M.CASE) + " · " + t.occupees + " cases", ""] : ["Table " + etat.annee, t.occupees + " / " + t.plafond + " cases", ""], ["Montant total", md(syn.total), ""], ["Plafond", md(syn.plafond), ""],
       [syn.marge >= 0 ? "Marge" : "Dépassement", md(Math.abs(syn.marge)), syn.marge >= 0 ? "pos" : "neg"]].forEach(function (x) {
       rel.appendChild(el("div", { classe: "releve" }, [el("small", { texte: x[0] }), el("b", { classe: x[2], texte: x[1] })]));
     });
     $("consigne").textContent = arbitre()
       ? "Cliquez sur une demande posée sur la table pour la retenir, la différer ou y renoncer."
+      : filtre ? "Vos pions seuls, regroupés. Cliquez sur un pion pour le modifier, sur une case vide pour en poser un nouveau. « Toute la table » les remet parmi les autres."
       : "Les pions en place sont votre point de départ. Cliquez sur un pion pour le modifier, sur une case vide pour en poser un nouveau.";
 
     var pl = $("plateau");
     vider(pl);
     pl.style.gridTemplateRows = "repeat(" + t.hauteur + ", var(--case))";
     for (var k = 0; k < t.hauteur * t.largeur; k++) {
-      pl.appendChild(el("div", { classe: "fond fond-clic" + (k >= t.table ? " fond-horstable" : k >= t.plafond ? " fond-hors" : ""), title: "Poser un nouveau pion en " + etat.annee, style: "grid-row:" + (Math.floor(k / t.largeur) + 1) + ";grid-column:" + (k % t.largeur + 1),
+      pl.appendChild(el("div", { classe: "fond fond-clic" + (filtre ? "" : k >= t.table ? " fond-horstable" : k >= t.plafond ? " fond-hors" : ""), title: "Poser un nouveau pion en " + etat.annee, style: "grid-row:" + (Math.floor(k / t.largeur) + 1) + ";grid-column:" + (k % t.largeur + 1),
         onclick: function () { etat.selection = null; etat.volet = "poser"; rendre(true); toast("Choisissez à droite le pion à poser en " + etat.annee); } }));
     }
-    function depasse(r, c, w, h) { for (var i = r; i < r + h; i++) for (var j = c; j < c + w; j++) if (i * t.largeur + j >= t.plafond) return true; return false; }
+    function depasse(r, c, w, h) { if (filtre) return false; for (var i = r; i < r + h; i++) for (var j = c; j < c + w; j++) if (i * t.largeur + j >= t.plafond) return true; return false; }
     function masque(x) { return x.role && !vueComplete() && x.role !== etat.role; }
-    // « Ma demande » : mes pions posés et les pions en place de mon armée.
-    function aMoi(x) {
-      if (x.role) return x.role === etat.role;
-      var p = x.pion && IDX[x.pion];
-      if (!x.socle || !p || p.type === "gris" || p.type === "orange" || vueComplete()) return false;
-      return p.armee === armeeDuRole();
-    }
-    function estompe(x) { return etat.maTable && !aMoi(x); }
+    function estompe(x) { return false; }
     function choisir(x) {
       return function () {
         etat.selection = { ligne: x.ligne || null, pion: x.pion || null, socle: !!x.socle && !x.ligne };

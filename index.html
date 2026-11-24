@@ -67,6 +67,7 @@
       <button role="tab" data-onglet="demande" aria-selected="true">Ma demande</button>
       <button role="tab" data-onglet="synthese" aria-selected="false">Synthèse</button>
       <button role="tab" data-onglet="table" aria-selected="false">Table</button>
+      <button role="tab" data-onglet="arbitrage" aria-selected="false">Arbitrage</button>
       <button role="tab" data-onglet="parametres" aria-selected="false">Paramètres</button>
     </nav>
 
@@ -101,6 +102,7 @@
       </div>
       <div class="trajectoire" id="trajectoire"></div>
       <div class="defile"><table class="tableau" id="table-synthese"></table></div>
+      <p class="note" id="note-vue"></p>
       <h3>Demandes par rôle</h3>
       <div class="defile"><table class="tableau" id="table-roles"></table></div>
       <h3>Toutes les lignes</h3>
@@ -114,6 +116,11 @@
           <p class="aide">Chaque carré est une case de 100 M€. Le socle est posé d'abord, puis les demandes armée par armée ; les DORESE sont posées au contact de leur capacité. Survolez une case pour voir le pion.</p>
         </div>
         <div class="ajout">
+          <label for="table-vue">Afficher</label>
+          <select id="table-vue">
+            <option value="demandes">Toutes les demandes</option>
+            <option value="arbitrage">Après arbitrage</option>
+          </select>
           <label for="table-annee">Année</label>
           <select id="table-annee"></select>
         </div>
@@ -121,6 +128,20 @@
       <div class="table-chiffres" id="table-chiffres"></div>
       <div class="defile"><div class="plateau" id="plateau"></div></div>
       <div class="legende" id="legende"></div>
+    </div>
+
+    <div class="vue" id="vue-arbitrage" hidden>
+      <div class="entete-vue">
+        <div>
+          <h2>Arbitrage du CEMA</h2>
+          <p class="aide" id="aide-arbitrage"></p>
+        </div>
+      </div>
+      <div class="defile"><table class="tableau" id="table-arb-annees"></table></div>
+      <h3>Lignes à arbitrer</h3>
+      <div class="defile"><table class="tableau" id="table-arb-lignes"></table></div>
+      <h3>Renoncements</h3>
+      <div class="defile"><table class="tableau" id="table-renoncements"></table></div>
     </div>
 
     <div class="vue" id="vue-parametres" hidden>
@@ -146,7 +167,7 @@
 
 <script src="js/config.js"></script>
 <script src="data/pions.js"></script>
-<script src="data/options.js"></script>
+<script src="data/catalogue_roles.js"></script>
 <script src="js/moteur.js"></script>
 <script src="js/stockage.js"></script>
 <script src="js/app.js"></script>

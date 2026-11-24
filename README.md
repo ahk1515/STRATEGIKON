@@ -27,7 +27,7 @@ Mise en ligne : [INSTALLATION-SUPABASE.md](INSTALLATION-SUPABASE.md) (Supabase e
 |---|---|
 | `data/base_pions_strategikon.csv` | base des pions (fait foi) |
 | `scripts/csv_vers_js.py` | convertit le CSV en `data/pions.js` |
-| `data/options.js` | modèles de lignes libres (DGRIS, DGA), à valider |
+| `data/catalogue_roles.js` | catalogue des options par rôle (151 options, fil « Lister les dépenses de chaque rôle ») |
 | `js/moteur.js` | calculs, sans dépendance |
 | `js/stockage.js` | stockage : Supabase, feuille Google (Apps Script) ou navigateur seul |
 | `supabase/schema.sql` | tables et fonctions de la base Supabase |
@@ -37,8 +37,10 @@ Mise en ligne : [INSTALLATION-SUPABASE.md](INSTALLATION-SUPABASE.md) (Supabase e
 
 Après une modification : `python3 scripts/csv_vers_js.py` (si le CSV a changé), `python3 scripts/assembler.py`, puis `node --test tests/*.test.js`.
 
-## Prochaines étapes
+## Visibilité par rôle
 
-1. Arbitrage CEMA : retenu, différé, renoncé, ligne par ligne.
-2. Grille par armée avec la forme réelle des pions, optimisée pour remplir la table.
-3. Visualisation finale : trajectoire sur 6 ans, demandes au-delà du plafond, renoncements.
+Chaque rôle ne voit que son catalogue et ses lignes. Le CEMA, le SC-Plans et l'animateur voient tout. Les totaux par armée et la table restent visibles de tous ; sur la table, les demandes des autres rôles apparaissent sans leur intitulé.
+
+## Arbitrage
+
+Le CEMA et l'animateur décident ligne par ligne : retenu, différé d'une à trois années, ou renoncé. Les décisions et les validations des pions sur mesure sont rangées dans les paramètres de la partie.

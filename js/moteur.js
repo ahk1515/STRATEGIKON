@@ -29,7 +29,7 @@
     dorese: "Passer à 100 % (ajout des DORESE)",
     ajout: "Ajouter un pion",
     retrait: "Retirer un pion du socle",
-    libre: "Ligne libre (investissement, option…)"
+    libre: "Option du catalogue ou pion sur mesure"
   };
 
   function parametresParDefaut() {
@@ -149,6 +149,7 @@
       var plafond = (Number((params.plafonds || {})[a]) || 0) * CASE;
       var total = totalSocle + totalDemandes;
       res[a] = {
+        annee: a,
         socle: socle,
         demandes: demandes,
         totalSocle: totalSocle,
@@ -219,6 +220,221 @@
     return blocs;
   }
 
+
+  // ---------- Placement sur la table (grille de 30 colonnes) ----------
+  // Pose les pions avec leur forme réelle, groupe par groupe (dépenses fixes, puis chaque armée).
+  // Pions rigides : socle et pions ajoutés (largeur x hauteur, rotation permise).
+  // Les DORESE d'une capacité à 100 % sont posées au contact de la capacité.
+  // Les montants libres (investissements, options, pions sur mesure) sont sécables :
+  // ils comblent les cases restantes de leur groupe.
+  var LARGEUR = 30;
+  var ORDRE_GROUPES = ["Fixes", "Interarmées", "Terre", "Marine", "Air et Espace"];
+
+  function Plateau(lignesInit) {
+    this.l = LARGEUR;
+    this.h = lignesInit;
+    this.occ = [];
+    for (var i = 0; i < this.l * this.h; i++) this.occ.push(null);
+  }
+  Plateau.prototype.agrandir = function (n) {
+    for (var i = 0; i < n * this.l; i++) this.occ.push(null);
+    this.h += n;
+  };
+  Plateau.prototype.libre = function (r, c) {
+    return r >= 0 && c >= 0 && c < this.l && r < this.h && this.occ[r * this.l + c] === null;
+  };
+  Plateau.prototype.tient = function (r, c, w, h) {
+    if (c + w > this.l || r + h > this.h) return false;
+    for (var i = r; i < r + h; i++) for (var j = c; j < c + w; j++) if (!this.libre(i, j)) return false;
+    return true;
+  };
+  Plateau.prototype.marquer = function (r, c, w, h, id) {
+    for (var i = r; i < r + h; i++) for (var j = c; j < c + w; j++) this.occ[i * this.l + j] = id;
+  };
+  // Première position libre (haut-gauche d'abord) à partir de la rangée r0.
+  Plateau.prototype.chercher = function (w, h, r0) {
+    for (;;) {
+      for (var r = r0; r < this.h; r++) {
+        for (var c = 0; c < this.l; c++) {
+          if (this.tient(r, c, w, h)) return { r: r, c: c, w: w, h: h };
+          if (w !== h && this.tient(r, c, h, w)) return { r: r, c: c, w: h, h: w };
+        }
+      }
+      this.agrandir(Math.max(h, w > this.l ? 1 : 1));
+      if (w > this.l && h > this.l) return null;
+    }
+  };
+  Plateau.prototype.premiereLigneLibre = function () {
+    for (var k = 0; k < this.occ.length; k++) if (this.occ[k] === null) return Math.floor(k / this.l);
+    return this.h;
+  };
+
+  function placerAnnee(pions, lignes, params, annee) {
+    var idx = indexPions(pions);
+    params = params || parametresParDefaut();
+    var tableCases = Number(params.table) || 600;
+    var plateau = new Plateau(Math.ceil(tableCases / LARGEUR));
+    var pieces = [];
+    var retires = {}, passes100 = {};
+    lignes.forEach(function (l) {
+      if (!quantite(l, annee)) return;
+      if (l.type === "retrait") retires[l.pion] = true;
+      if (l.type === "dorese") passes100[l.pion] = l;
+    });
+
+    // Constitution des groupes.
+    var groupes = {};
+    ORDRE_GROUPES.forEach(function (g) { groupes[g] = { rigides: [], secables: [] }; });
+    function groupe(nom) { return groupes[nom] || groupes["Interarmées"]; }
+    pions.forEach(function (p) {
+      if (!estDansSocle(p, annee, params) || retires[p.id]) return;
+      var l100 = passes100[p.id];
+      var g = p.type === "gris" ? "Fixes" : (l100 ? armeeDeLigne(l100, idx) : p.armee);
+      groupe(g).rigides.push({ pion: p, w: p.l || 1, h: p.h || 1, armee: g === "Fixes" ? p.armee : g, nature: p.type,
+        libelle: p.nom, niveau: l100 ? 100 : 50, dorese: l100 ? nbDorese(p) : 0, detailDorese: p.dorese, socle: true });
+    });
+    lignes.forEach(function (l) {
+      var q = quantite(l, annee);
+      if (!q || l.type === "dorese" || l.type === "retrait") return;
+      var arm = armeeDeLigne(l, idx);
+      if (l.type === "ajout") {
+        var p = idx[l.pion];
+        if (!p) return;
+        for (var i = 0; i < q; i++) {
+          var cent = Number(l.niveau) === 100;
+          groupe(arm).rigides.push({ pion: p, w: p.l || 1, h: p.h || 1, armee: arm, nature: p.type, libelle: "+ " + p.nom,
+            niveau: cent ? 100 : 50, dorese: cent ? nbDorese(p) : 0, detailDorese: p.dorese, role: l.role, ligne: l.id });
+        }
+      } else if (l.type === "libre") {
+        var n = Math.round((Number(l.cout_unitaire) || 0) * q / CASE);
+        if (n > 0) groupe(arm).secables.push({ cases: n, armee: arm, nature: "libre", libelle: l.libelle || "Ligne libre", role: l.role, ligne: l.id, horsCatalogue: !l.modele });
+      }
+    });
+
+    var cellules = []; // cases isolées : DORESE et montants sécables
+    ORDRE_GROUPES.forEach(function (nomG) {
+      var g = groupes[nomG];
+      if (!g.rigides.length && !g.secables.length) return;
+      var r0 = plateau.premiereLigneLibre();
+      g.rigides.sort(function (a, b) { return (b.w * b.h + b.dorese) - (a.w * a.h + a.dorese) || b.w - a.w; });
+      g.rigides.forEach(function (it) {
+        var id = pieces.length;
+        var pos;
+        // Avec DORESE : on cherche d'abord une place pour la capacité et ses DORESE en bande à droite.
+        if (it.dorese) {
+          var col = Math.ceil(it.dorese / it.h);
+          pos = null;
+          for (var r = r0; r < plateau.h && !pos; r++) {
+            for (var c = 0; c < plateau.l; c++) {
+              if (plateau.tient(r, c, it.w + col, it.h)) { pos = { r: r, c: c, w: it.w, h: it.h }; break; }
+            }
+          }
+          if (!pos) pos = plateau.chercher(it.w, it.h, r0);
+        } else {
+          pos = plateau.chercher(it.w, it.h, r0);
+        }
+        plateau.marquer(pos.r, pos.c, pos.w, pos.h, id);
+        pieces.push({ r: pos.r, c: pos.c, w: pos.w, h: pos.h, armee: it.armee, nature: it.nature, libelle: it.libelle,
+          niveau: it.nature === "capacite" ? it.niveau : null, role: it.role || null, groupe: nomG, cases: pos.w * pos.h });
+        // DORESE au contact : cases libres voisines de la capacité (ou de ses DORESE déjà posées).
+        var types = [];
+        ["ao", "mco", "rh"].forEach(function (k) { for (var n = 0; n < (it.detailDorese || {})[k]; n++) types.push(k); });
+        var amas = [{ r: pos.r, c: pos.c, w: pos.w, h: pos.h }];
+        types.slice(0, it.dorese).forEach(function (t) {
+          var cand = voisinLibre(plateau, amas);
+          if (!cand) { var p2 = plateau.chercher(1, 1, r0); cand = { r: p2.r, c: p2.c, loin: true }; }
+          plateau.marquer(cand.r, cand.c, 1, 1, "d" + id);
+          amas.push({ r: cand.r, c: cand.c, w: 1, h: 1 });
+          cellules.push({ r: cand.r, c: cand.c, armee: it.armee, nature: "dorese", type: t, libelle: "DORESE " + t.toUpperCase() + " · " + it.libelle, role: it.role || null, loin: !!cand.loin });
+        });
+      });
+      // Montants sécables : on comble les trous du groupe, dans l'ordre de lecture.
+      g.secables.forEach(function (it) {
+        var reste = it.cases;
+        var k = r0 * plateau.l;
+        while (reste > 0) {
+          if (k >= plateau.occ.length) plateau.agrandir(1);
+          if (plateau.occ[k] === null) {
+            plateau.occ[k] = "s";
+            cellules.push({ r: Math.floor(k / plateau.l), c: k % plateau.l, armee: it.armee, nature: "libre", libelle: it.libelle, role: it.role, horsCatalogue: it.horsCatalogue });
+            reste--;
+          }
+          k++;
+        }
+      });
+    });
+
+    return {
+      largeur: LARGEUR,
+      hauteur: Math.max(plateau.h, Math.ceil(tableCases / LARGEUR)),
+      table: tableCases,
+      plafond: Number((params.plafonds || {})[annee]) || 0,
+      occupees: plateau.occ.filter(function (x) { return x !== null; }).length,
+      pieces: pieces,
+      cellules: cellules
+    };
+  }
+
+  function voisinLibre(plateau, amas) {
+    var meilleur = null;
+    amas.forEach(function (b) {
+      for (var r = b.r - 1; r <= b.r + b.h; r++) {
+        for (var c = b.c - 1; c <= b.c + b.w; c++) {
+          var bord = (r === b.r - 1 || r === b.r + b.h) !== (c === b.c - 1 || c === b.c + b.w); // côté, pas coin
+          if (!bord || !plateau.libre(r, c)) continue;
+          if (!meilleur || r * plateau.l + c < meilleur.r * plateau.l + meilleur.c) meilleur = { r: r, c: c };
+        }
+      }
+    });
+    return meilleur;
+  }
+
+
+  // ---------- Arbitrage CEMA ----------
+  // params.arbitrages[idLigne] = { statut: 'attente'|'retenu'|'differe'|'renonce', decalage: n }
+  var STATUTS = { attente: "En attente", retenu: "Retenu", differe: "Différé", renonce: "Renoncé" };
+
+  function arbitrageDe(ligne, params) {
+    var a = ((params || {}).arbitrages || {})[ligne.id];
+    return a && STATUTS[a.statut] ? a : { statut: "attente", decalage: 0 };
+  }
+
+  // Ligne telle qu'elle pèse après arbitrage (null si renoncée). Un différé décale les années ;
+  // ce qui sort de la période est reporté hors LPM.
+  function ligneArbitree(ligne, params) {
+    var a = arbitrageDe(ligne, params);
+    if (a.statut === "renonce") return null;
+    if (a.statut !== "differe" || !Number(a.decalage)) return ligne;
+    var n = Number(a.decalage), qte = {};
+    ANNEES.forEach(function (an) {
+      var q = (ligne.qte || {})[an];
+      if (q && ANNEES.indexOf(an + n) !== -1) qte[an + n] = (qte[an + n] || 0) + Number(q);
+    });
+    var copie = JSON.parse(JSON.stringify(ligne));
+    copie.qte = qte;
+    return copie;
+  }
+
+  function lignesApresArbitrage(lignes, params) {
+    return lignes.map(function (l) { return ligneArbitree(l, params); }).filter(Boolean);
+  }
+
+  // Montant reporté au-delà de 2032 par un différé (M€).
+  function reportHorsLpm(ligne, params, idx) {
+    var a = arbitrageDe(ligne, params);
+    if (a.statut !== "differe") return 0;
+    var avant = coutLigne(ligne, idx).total;
+    var apres = coutLigne(ligneArbitree(ligne, params), idx).total;
+    return avant - apres;
+  }
+
+  // Arrondi d'un prix à la case de 100 M€ (au moins une case).
+  function arrondiCase(m) {
+    var n = Number(m) || 0;
+    if (n <= 0) return 0;
+    return Math.max(CASE, Math.round(n / CASE) * CASE);
+  }
+
   var API = {
     CASE: CASE,
     ANNEES: ANNEES,
@@ -233,7 +449,15 @@
     coutLigne: coutLigne,
     armeeDeLigne: armeeDeLigne,
     synthese: synthese,
-    blocsAnnee: blocsAnnee
+    blocsAnnee: blocsAnnee,
+    placerAnnee: placerAnnee,
+    STATUTS: STATUTS,
+    arbitrageDe: arbitrageDe,
+    ligneArbitree: ligneArbitree,
+    lignesApresArbitrage: lignesApresArbitrage,
+    reportHorsLpm: reportHorsLpm,
+    arrondiCase: arrondiCase,
+    LARGEUR: LARGEUR
   };
 
   if (typeof module !== "undefined" && module.exports) module.exports = API;

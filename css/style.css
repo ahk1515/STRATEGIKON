@@ -151,16 +151,24 @@ tfoot td { font-weight: 600; border-top: 2px solid var(--trait); border-bottom: 
 
 .table-chiffres { display: flex; flex-wrap: wrap; gap: .5rem 1.5rem; margin-bottom: .75rem; font-size: .9rem; }
 .table-chiffres b { font-family: var(--f-chiffre); font-weight: 500; }
-.plateau { display: grid; grid-template-columns: repeat(30, 1.35rem); gap: 2px; padding: .75rem; width: max-content; }
-.case { width: 1.35rem; height: 1.35rem; border-radius: 2px; background: var(--vide); border: 1px solid var(--trait); position: relative; }
-.case.pleine { border-color: transparent; }
-.case.hors { background: var(--hors); }
-.case.debord { outline: 2px solid var(--alerte); outline-offset: -2px; }
-.case.c50::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(135deg, transparent 0 3px, rgba(184, 50, 42, .55) 3px 5px); border-radius: 2px; }
-.case.dor::after { content: ""; position: absolute; inset: 35%; border-radius: 50%; background: var(--surface); }
-.case.debut { box-shadow: inset 2px 0 0 var(--surface); }
+.plateau { --case: 1.75rem; display: grid; grid-template-columns: repeat(30, var(--case)); gap: 2px; padding: .75rem; width: max-content; }
+.fond { background: var(--vide); border: 1px solid var(--trait); border-radius: 2px; }
+.fond-hors { background: var(--hors); }
+.fond-horstable { background: repeating-linear-gradient(135deg, var(--hors) 0 4px, var(--vide) 4px 8px); }
+.pion {
+  position: relative; z-index: 1; border-radius: 3px; overflow: hidden; display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: .68rem; line-height: 1.1; font-weight: 600; text-align: center; padding: 2px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .25);
+}
+.pion span { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; text-shadow: 0 1px 1px rgba(0, 0, 0, .35); }
+.pion-petit { font-size: .55rem; }
+.pion-50::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(135deg, transparent 0 5px, rgba(184, 50, 42, .5) 5px 8px); pointer-events: none; }
+.pion-case { font-size: .55rem; }
+.pion-dorese { border-radius: 50%; box-shadow: inset 0 0 0 2px var(--surface); }
+.pion-mesure { background-image: radial-gradient(rgba(255, 255, 255, .55) 1px, transparent 1.5px) !important; background-size: 5px 5px; }
+.pion-debord { outline: 2px solid var(--alerte); outline-offset: -2px; }
 .legende { display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; margin-top: .75rem; font-size: .82rem; color: var(--sourdine); align-items: center; }
-.legende .case { display: inline-block; vertical-align: middle; margin-right: .35rem; width: 1rem; height: 1rem; }
+.puce-legende { display: inline-block; vertical-align: middle; margin-right: .35rem; width: 1rem; height: 1rem; border-radius: 3px; position: relative; overflow: hidden; border: 1px solid var(--trait); }
 
 .parametres { display: grid; gap: 1rem; max-width: 760px; margin-top: 1rem; }
 fieldset { border: 1px solid var(--trait); border-radius: 6px; padding: .75rem 1rem 1rem; background: var(--surface); }
@@ -178,7 +186,18 @@ legend { font-weight: 600; padding: 0 .35rem; }
 
 @media (max-width: 600px) {
   h1 { font-size: 1.9rem; }
-  .plateau { grid-template-columns: repeat(30, .9rem); }
-  .case { width: .9rem; height: .9rem; }
+  .plateau { --case: 1.1rem; }
+  .pion span { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+.badge { display: inline-block; font-size: .72rem; font-weight: 600; border-radius: 99px; padding: .05rem .5rem; margin-top: .3rem; }
+.badge-attente { color: var(--inter); border: 1px solid var(--inter); }
+.badge-ok { color: var(--ok); border: 1px solid var(--ok); }
+.alerte-texte { color: var(--alerte); }
+details.sous summary { cursor: pointer; }
+details.sous p { margin-top: .25rem; max-width: 50ch; }
+.statut-retenu { color: var(--ok); }
+.statut-differe { color: var(--inter); }
+.statut-renonce { color: var(--alerte); text-decoration: line-through; }
+.arb-ligne select { font-size: .85rem; padding: .2rem .3rem; }

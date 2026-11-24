@@ -72,3 +72,38 @@ test("la grille pose les DORESE juste après leur capacité", () => {
   const totalCases = blocs.reduce((s, b) => s + b.cases, 0);
   assert.strictEqual(totalCases, 263 + 2);
 });
+
+test("placement : formes réelles, aucun chevauchement, DORESE au contact", () => {
+  const L = [
+    { id: "a", role: "EMAT", type: "dorese", pion: "P24", qte: { 2027: 1 } },
+    { id: "b", role: "EMAAE", type: "dorese", pion: "P33", qte: { 2027: 1 } },
+    { id: "c", role: "EMAT", type: "ajout", pion: "P22", niveau: 100, qte: { 2027: 2 } },
+    { id: "d", role: "DGRIS", type: "libre", libelle: "Roumanie", cout_unitaire: 200, armee: "Terre", qte: { 2027: 1 } }
+  ];
+  const t = M.placerAnnee(PIONS, L, P, 2027);
+  const occ = new Map();
+  const poser = (r, c) => { const k = r + ":" + c; assert.ok(!occ.has(k), "chevauchement en " + k); occ.set(k, true); };
+  t.pieces.forEach((p) => { for (let i = p.r; i < p.r + p.h; i++) for (let j = p.c; j < p.c + p.w; j++) poser(i, j); });
+  t.cellules.forEach((c) => poser(c.r, c.c));
+  const total = M.synthese(PIONS, L, P)[2027].total / 100;
+  assert.strictEqual(occ.size, total);
+  assert.strictEqual(t.occupees, total);
+  const rafale = t.pieces.find((p) => p.libelle === "Capacité Rafale");
+  assert.strictEqual(rafale.w * rafale.h, 8);
+  const dorRafale = t.cellules.filter((c) => c.nature === "dorese" && c.libelle.endsWith("Capacité Rafale"));
+  assert.strictEqual(dorRafale.length, 5);
+  dorRafale.forEach((d) => assert.ok(!d.loin, "DORESE posée loin de sa capacité"));
+});
+
+test("arbitrage : renoncé retire la ligne, différé la décale et reporte hors LPM", () => {
+  const l = { id: "x", role: "EMAT", type: "ajout", pion: "P24", niveau: 50, qte: { 2031: 1, 2032: 1 } };
+  const p = M.parametresParDefaut();
+  p.arbitrages = { x: { statut: "differe", decalage: 1 } };
+  const la = M.ligneArbitree(l, p);
+  assert.deepStrictEqual(la.qte, { 2032: 1 });
+  assert.strictEqual(M.reportHorsLpm(l, p, IDX), 300);
+  p.arbitrages.x = { statut: "renonce" };
+  assert.strictEqual(M.lignesApresArbitrage([l], p).length, 0);
+  assert.strictEqual(M.arrondiCase(150), 200);
+  assert.strictEqual(M.arrondiCase(249), 200);
+});

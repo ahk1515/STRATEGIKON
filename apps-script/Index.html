@@ -161,16 +161,24 @@ tfoot td { font-weight: 600; border-top: 2px solid var(--trait); border-bottom: 
 
 .table-chiffres { display: flex; flex-wrap: wrap; gap: .5rem 1.5rem; margin-bottom: .75rem; font-size: .9rem; }
 .table-chiffres b { font-family: var(--f-chiffre); font-weight: 500; }
-.plateau { display: grid; grid-template-columns: repeat(30, 1.35rem); gap: 2px; padding: .75rem; width: max-content; }
-.case { width: 1.35rem; height: 1.35rem; border-radius: 2px; background: var(--vide); border: 1px solid var(--trait); position: relative; }
-.case.pleine { border-color: transparent; }
-.case.hors { background: var(--hors); }
-.case.debord { outline: 2px solid var(--alerte); outline-offset: -2px; }
-.case.c50::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(135deg, transparent 0 3px, rgba(184, 50, 42, .55) 3px 5px); border-radius: 2px; }
-.case.dor::after { content: ""; position: absolute; inset: 35%; border-radius: 50%; background: var(--surface); }
-.case.debut { box-shadow: inset 2px 0 0 var(--surface); }
+.plateau { --case: 1.75rem; display: grid; grid-template-columns: repeat(30, var(--case)); gap: 2px; padding: .75rem; width: max-content; }
+.fond { background: var(--vide); border: 1px solid var(--trait); border-radius: 2px; }
+.fond-hors { background: var(--hors); }
+.fond-horstable { background: repeating-linear-gradient(135deg, var(--hors) 0 4px, var(--vide) 4px 8px); }
+.pion {
+  position: relative; z-index: 1; border-radius: 3px; overflow: hidden; display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: .68rem; line-height: 1.1; font-weight: 600; text-align: center; padding: 2px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .25);
+}
+.pion span { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; text-shadow: 0 1px 1px rgba(0, 0, 0, .35); }
+.pion-petit { font-size: .55rem; }
+.pion-50::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(135deg, transparent 0 5px, rgba(184, 50, 42, .5) 5px 8px); pointer-events: none; }
+.pion-case { font-size: .55rem; }
+.pion-dorese { border-radius: 50%; box-shadow: inset 0 0 0 2px var(--surface); }
+.pion-mesure { background-image: radial-gradient(rgba(255, 255, 255, .55) 1px, transparent 1.5px) !important; background-size: 5px 5px; }
+.pion-debord { outline: 2px solid var(--alerte); outline-offset: -2px; }
 .legende { display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; margin-top: .75rem; font-size: .82rem; color: var(--sourdine); align-items: center; }
-.legende .case { display: inline-block; vertical-align: middle; margin-right: .35rem; width: 1rem; height: 1rem; }
+.puce-legende { display: inline-block; vertical-align: middle; margin-right: .35rem; width: 1rem; height: 1rem; border-radius: 3px; position: relative; overflow: hidden; border: 1px solid var(--trait); }
 
 .parametres { display: grid; gap: 1rem; max-width: 760px; margin-top: 1rem; }
 fieldset { border: 1px solid var(--trait); border-radius: 6px; padding: .75rem 1rem 1rem; background: var(--surface); }
@@ -188,10 +196,21 @@ legend { font-weight: 600; padding: 0 .35rem; }
 
 @media (max-width: 600px) {
   h1 { font-size: 1.9rem; }
-  .plateau { grid-template-columns: repeat(30, .9rem); }
-  .case { width: .9rem; height: .9rem; }
+  .plateau { --case: 1.1rem; }
+  .pion span { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+.badge { display: inline-block; font-size: .72rem; font-weight: 600; border-radius: 99px; padding: .05rem .5rem; margin-top: .3rem; }
+.badge-attente { color: var(--inter); border: 1px solid var(--inter); }
+.badge-ok { color: var(--ok); border: 1px solid var(--ok); }
+.alerte-texte { color: var(--alerte); }
+details.sous summary { cursor: pointer; }
+details.sous p { margin-top: .25rem; max-width: 50ch; }
+.statut-retenu { color: var(--ok); }
+.statut-differe { color: var(--inter); }
+.statut-renonce { color: var(--alerte); text-decoration: line-through; }
+.arb-ligne select { font-size: .85rem; padding: .2rem .3rem; }
 
 </style>
 
@@ -253,6 +272,7 @@ legend { font-weight: 600; padding: 0 .35rem; }
       <button role="tab" data-onglet="demande" aria-selected="true">Ma demande</button>
       <button role="tab" data-onglet="synthese" aria-selected="false">Synthèse</button>
       <button role="tab" data-onglet="table" aria-selected="false">Table</button>
+      <button role="tab" data-onglet="arbitrage" aria-selected="false">Arbitrage</button>
       <button role="tab" data-onglet="parametres" aria-selected="false">Paramètres</button>
     </nav>
 
@@ -287,6 +307,7 @@ legend { font-weight: 600; padding: 0 .35rem; }
       </div>
       <div class="trajectoire" id="trajectoire"></div>
       <div class="defile"><table class="tableau" id="table-synthese"></table></div>
+      <p class="note" id="note-vue"></p>
       <h3>Demandes par rôle</h3>
       <div class="defile"><table class="tableau" id="table-roles"></table></div>
       <h3>Toutes les lignes</h3>
@@ -300,6 +321,11 @@ legend { font-weight: 600; padding: 0 .35rem; }
           <p class="aide">Chaque carré est une case de 100 M€. Le socle est posé d'abord, puis les demandes armée par armée ; les DORESE sont posées au contact de leur capacité. Survolez une case pour voir le pion.</p>
         </div>
         <div class="ajout">
+          <label for="table-vue">Afficher</label>
+          <select id="table-vue">
+            <option value="demandes">Toutes les demandes</option>
+            <option value="arbitrage">Après arbitrage</option>
+          </select>
           <label for="table-annee">Année</label>
           <select id="table-annee"></select>
         </div>
@@ -307,6 +333,20 @@ legend { font-weight: 600; padding: 0 .35rem; }
       <div class="table-chiffres" id="table-chiffres"></div>
       <div class="defile"><div class="plateau" id="plateau"></div></div>
       <div class="legende" id="legende"></div>
+    </div>
+
+    <div class="vue" id="vue-arbitrage" hidden>
+      <div class="entete-vue">
+        <div>
+          <h2>Arbitrage du CEMA</h2>
+          <p class="aide" id="aide-arbitrage"></p>
+        </div>
+      </div>
+      <div class="defile"><table class="tableau" id="table-arb-annees"></table></div>
+      <h3>Lignes à arbitrer</h3>
+      <div class="defile"><table class="tableau" id="table-arb-lignes"></table></div>
+      <h3>Renoncements</h3>
+      <div class="defile"><table class="tableau" id="table-renoncements"></table></div>
     </div>
 
     <div class="vue" id="vue-parametres" hidden>
@@ -1186,30 +1226,4118 @@ window.STRAT_PIONS = [
 
 </script>
 <script>
-// Options chiffrées tirées des fiches de rôle (DGRIS, DGA). Elles servent de modèles
-// de « lignes libres » : le joueur les choisit puis ajuste montants et années.
-// Montants en M€ par année. « source » renvoie à la fiche ; tout est à valider par l'animateur.
-window.STRAT_OPTIONS = [
-  { code: "DGRIS-ROU", role: "DGRIS", armee: "Interarmées", libelle: "Renforcement Roumanie (forces terrestres, navales et aériennes)", cout: 200, source: "Fiche DGRIS" },
-  { code: "DGRIS-POL-HUB", role: "DGRIS", armee: "Terre", libelle: "Hub divisionnaire Pologne", cout: 200, source: "Fiche DGRIS (150 à 300 M€/an)" },
-  { code: "DGRIS-POL-LOG", role: "DGRIS", armee: "Terre", libelle: "Hub logistique Pologne", cout: 300, source: "Fiche DGRIS (250 M€, arrondi à la case)" },
-  { code: "DGRIS-POL-PRE", role: "DGRIS", armee: "Interarmées", libelle: "Forces prépositionnées en Pologne (air et terre)", cout: 100, source: "Fiche DGRIS" },
-  { code: "DGRIS-BAL", role: "DGRIS", armee: "Interarmées", libelle: "Base Baltique", cout: 200, source: "Fiche DGRIS (150 M€, arrondi à la case)" },
-  { code: "DGRIS-DJI", role: "DGRIS", armee: "Interarmées", libelle: "Renforcement Djibouti", cout: 100, source: "Fiche DGRIS" },
-  { code: "DGRIS-IPAC", role: "DGRIS", armee: "Interarmées", libelle: "Renforcement Indo-Pacifique", cout: 200, source: "Fiche DGRIS" },
-  { code: "DGA-SAMPT", role: "DGA", armee: "Air et Espace", libelle: "Système sol-air SAMP/T NG (investissement)", cout: 400, dorese: { ao: 0, mco: 1, rh: 0 }, source: "Fiche DGA" },
-  { code: "DGA-SEAD", role: "DGA", armee: "Air et Espace", libelle: "Escadron SEAD Rafale F5 + munitions", cout: 400, dorese: { ao: 0, mco: 1, rh: 2 }, source: "Fiche DGA" },
-  { code: "DGA-MGCS", role: "DGA", armee: "Terre", libelle: "Escadron MGCS (12 chars + soutien)", cout: 400, dorese: { ao: 0, mco: 1, rh: 1 }, source: "Fiche DGA" },
-  { code: "DGA-CIFS", role: "DGA", armee: "Terre", libelle: "Batterie CIFS (artillerie du futur)", cout: 100, source: "Fiche DGA" },
-  { code: "DGA-EURODRONE", role: "DGA", armee: "Air et Espace", libelle: "Eurodrone (3 drones + soutien)", cout: 200, dorese: { ao: 0, mco: 1, rh: 1 }, source: "Fiche DGA" },
-  { code: "DGA-IA-C2", role: "DGA", armee: "Interarmées", libelle: "IA C2 interarmées", cout: 300, dorese: { ao: 0, mco: 1, rh: 1 }, source: "Fiche DGA" },
-  { code: "DGA-LAD", role: "DGA", armee: "Interarmées", libelle: "Lutte anti-drones, système intégré", cout: 100, source: "Fiche DGA" },
-  { code: "DGA-ARGONAUTE", role: "DGA", armee: "Air et Espace", libelle: "Argonaute (spatial), annuité", cout: 200, source: "Fiche DGA (lancement 500 M€ puis 200 M€/an)" },
-  { code: "DGA-HYPER", role: "DGA", armee: "Interarmées", libelle: "Missiles hypersoniques (opérationnel N+5)", cout: 200, source: "Fiche DGA" },
-  { code: "DGA-QUANT", role: "DGA", armee: "Interarmées", libelle: "Cyberdéfense quantique", cout: 200, source: "Fiche DGA" },
-  { code: "DGA-ESSAIM", role: "DGA", armee: "Interarmées", libelle: "Essaim de drones (opérationnel N+6)", cout: 200, source: "Fiche DGA" },
-  { code: "DGA-MUN-155", role: "DGA", armee: "Terre", libelle: "Stock 30 jours artillerie division", cout: 100, source: "Fiche DGA" },
-  { code: "DGA-QUAI", role: "DGA", armee: "Marine", libelle: "Quai permanent porte-avions", cout: 300, source: "Fiche DGA (actif en N+3)" }
+// Généré depuis le catalogue des fiches de rôle. Montants en M€ (1 case = 100 M€).
+// Ne pas modifier à la main : régénérer depuis catalogue_options_roles.json.
+window.STRAT_CATALOGUE_ROLES = [
+ {
+  "code": "DGRIS-BFA2",
+  "groupe": "BRIG-FRA-ALL",
+  "role": "DGRIS",
+  "armee": "Terre",
+  "libelle": "Seconde brigade franco-allemande",
+  "description": "Brigade binationale (mixte) à 50 % française.",
+  "categorie": "Partenariat européen",
+  "statut_cout": "a_definir",
+  "cout": null,
+  "cout_max": null,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Initiative négociée ou instruite avec les joueurs responsables, puis soumise aux facilitateurs si elle suppose une décision extérieure au ministère (p7). Une capacité multinationale n'est acquise qu'avec des partenaires identifiés et un engagement plausible (p2). Part française à expliciter (p3).",
+  "partenaires": "Allemagne",
+  "effets": "Renforcement bilatéral structurant (p6) ; renforcement bilatéral symbolique (p8).",
+  "type_pion": null,
+  "edition": "2027-2033 (confirmée)",
+  "alerte": null,
+  "source": "strat_role-dgris-fr, p. 6, 8"
+ },
+ {
+  "code": "DGRIS-BEM",
+  "groupe": "BRIG-EUR",
+  "role": "DGRIS",
+  "armee": "Terre",
+  "libelle": "Brigade européenne multinationale",
+  "description": "Brigade composée de 3 à 5 partenaires, part française de 25 à 40 %.",
+  "categorie": "Partenariat européen",
+  "statut_cout": "a_definir",
+  "cout": null,
+  "cout_max": null,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Initiative négociée ou instruite avec les joueurs responsables, puis soumise aux facilitateurs si elle suppose une décision extérieure au ministère (p7). Une capacité multinationale n'est acquise qu'avec des partenaires identifiés et un engagement plausible (p2). Part française et carences alliées à expliciter (p3).",
+  "partenaires": "3 à 5 partenaires européens",
+  "effets": "Symbole / vecteur d'Europe de la Défense.",
+  "type_pion": null,
+  "edition": "2027-2033 (confirmée)",
+  "alerte": null,
+  "source": "strat_role-dgris-fr, p. 6, 8"
+ },
+ {
+  "code": "DGRIS-ROU",
+  "groupe": "EST-ROU",
+  "role": "DGRIS",
+  "armee": "Interarmées",
+  "libelle": "Renforcement Roumanie (forces prépositionnées)",
+  "description": "Forces prépositionnées aériennes, terrestres et navales en Roumanie.",
+  "categorie": "Présence avancée (flanc Est)",
+  "statut_cout": "chiffre",
+  "cout": 200,
+  "cout_max": 200,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": true,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Initiative négociée ou instruite avec les joueurs responsables, puis soumise aux facilitateurs si elle suppose une décision extérieure au ministère (p7). Une capacité multinationale n'est acquise qu'avec des partenaires identifiés et un engagement plausible (p2).",
+  "partenaires": "Roumanie (pays hôte), OTAN",
+  "effets": "Forte visibilité, forte présence, crédibilité OTAN. Risque : perçu comme belliqueux.",
+  "type_pion": null,
+  "edition": "2027-2033 (confirmée)",
+  "alerte": "Même option sous deux intitulés (p6 « forces prépositionnées », p8 « renforcement ») : ne la poser qu'une fois.",
+  "source": "strat_role-dgris-fr, p. 6, 8"
+ },
+ {
+  "code": "DGRIS-POL-PREPO",
+  "groupe": "EST-POL-PREPO",
+  "role": "DGRIS",
+  "armee": "Interarmées",
+  "libelle": "Forces prépositionnées en Pologne",
+  "description": "Forces prépositionnées aériennes et terrestres uniquement.",
+  "categorie": "Présence avancée (flanc Est)",
+  "statut_cout": "chiffre",
+  "cout": 100,
+  "cout_max": 100,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": true,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Initiative négociée ou instruite avec les joueurs responsables, puis soumise aux facilitateurs si elle suppose une décision extérieure au ministère (p7). Une capacité multinationale n'est acquise qu'avec des partenaires identifiés et un engagement plausible (p2).",
+  "partenaires": "Pologne (pays hôte)",
+  "effets": "Gain diplomatique ; tensions avec la Russie.",
+  "type_pion": null,
+  "edition": "2027-2033 (confirmée)",
+  "alerte": "Recouvre peut-être le hub divisionnaire Pologne (p8) : à trancher par l'animateur.",
+  "source": "strat_role-dgris-fr, p. 6"
+ },
+ {
+  "code": "DGRIS-POL-HUB",
+  "groupe": "EST-POL-HUB",
+  "role": "DGRIS",
+  "armee": "Terre",
+  "libelle": "Hub divisionnaire Pologne",
+  "description": "Forces terrestres et aériennes : soutien d'une division française ou alliée, stockage, accès aux réseaux de transport, coordination avec le pays hôte, protection des infrastructures (p3).",
+  "categorie": "Présence avancée (flanc Est)",
+  "statut_cout": "fourchette",
+  "cout": 150,
+  "cout_max": 300,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Initiative négociée ou instruite avec les joueurs responsables, puis soumise aux facilitateurs si elle suppose une décision extérieure au ministère (p7). Une capacité multinationale n'est acquise qu'avec des partenaires identifiés et un engagement plausible (p2). La DGRIS propose le cadre de coopération ; le CEMA et les armées définissent le besoin ; le SGA précise infrastructures et soutien. Acceptabilité politique à apprécier (p3).",
+  "partenaires": "Pologne (pays hôte)",
+  "effets": "Soutien du flanc Est.",
+  "type_pion": null,
+  "edition": "2027-2033 (confirmée)",
+  "alerte": "Le MEFR et le SGA le chiffrent à 300 M€/an : retenir une valeur commune.",
+  "source": "strat_role-dgris-fr, p. 3, 8"
+ },
+ {
+  "code": "DGRIS-POL-LOG",
+  "groupe": "EST-POL-LOG",
+  "role": "DGRIS",
+  "armee": "Terre",
+  "libelle": "Hub logistique Pologne",
+  "description": "Hub logistique en soutien divisionnaire.",
+  "categorie": "Présence avancée (flanc Est)",
+  "statut_cout": "chiffre",
+  "cout": 250,
+  "cout_max": 250,
+  "unite": "M€",
+  "periodicite": "non précisée",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Initiative négociée ou instruite avec les joueurs responsables, puis soumise aux facilitateurs si elle suppose une décision extérieure au ministère (p7). Une capacité multinationale n'est acquise qu'avec des partenaires identifiés et un engagement plausible (p2).",
+  "partenaires": "Pologne",
+  "effets": "Soutien divisionnaire.",
+  "type_pion": null,
+  "edition": "2027-2033 (confirmée)",
+  "alerte": "Périodicité non dite (colonne « coût estimé »). 250 M€ n'est pas un multiple de la case de 100 M€.",
+  "source": "strat_role-dgris-fr, p. 8"
+ },
+ {
+  "code": "DGRIS-BAL",
+  "groupe": "EST-BAL",
+  "role": "DGRIS",
+  "armee": "Interarmées",
+  "libelle": "Base Baltique",
+  "description": "Base dans les États baltes.",
+  "categorie": "Présence avancée (flanc Est)",
+  "statut_cout": "chiffre",
+  "cout": 150,
+  "cout_max": 150,
+  "unite": "M€",
+  "periodicite": "non précisée",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Initiative négociée ou instruite avec les joueurs responsables, puis soumise aux facilitateurs si elle suppose une décision extérieure au ministère (p7). Une capacité multinationale n'est acquise qu'avec des partenaires identifiés et un engagement plausible (p2).",
+  "partenaires": "États baltes",
+  "effets": "Présence avancée.",
+  "type_pion": null,
+  "edition": "2027-2033 (confirmée)",
+  "alerte": "Périodicité non dite ; le MEFR chiffre un « pré-positionnement Baltique » à 150 M€/an. 150 M€ n'est pas un multiple de la case.",
+  "source": "strat_role-dgris-fr, p. 8"
+ },
+ {
+  "code": "DGRIS-DJI",
+  "groupe": "MONDE-DJI",
+  "role": "DGRIS",
+  "armee": "Interarmées",
+  "libelle": "Renforcement Djibouti",
+  "description": "Renforcement du point d'appui de Djibouti.",
+  "categorie": "Présence mondiale",
+  "statut_cout": "chiffre",
+  "cout": 100,
+  "cout_max": 100,
+  "unite": "M€",
+  "periodicite": "non précisée",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Initiative négociée ou instruite avec les joueurs responsables, puis soumise aux facilitateurs si elle suppose une décision extérieure au ministère (p7). Une capacité multinationale n'est acquise qu'avec des partenaires identifiés et un engagement plausible (p2).",
+  "partenaires": "Djibouti",
+  "effets": "Afrique / mer Rouge (Bab el-Mandeb).",
+  "type_pion": null,
+  "edition": "2027-2033 (confirmée)",
+  "alerte": "Périodicité non dite.",
+  "source": "strat_role-dgris-fr, p. 4, 8"
+ },
+ {
+  "code": "DGRIS-IPAC",
+  "groupe": "MONDE-IPAC",
+  "role": "DGRIS",
+  "armee": "Interarmées",
+  "libelle": "Renforcement Indo-Pacifique",
+  "description": "Renforcement de la présence en Indo-Pacifique.",
+  "categorie": "Présence mondiale",
+  "statut_cout": "chiffre",
+  "cout": 200,
+  "cout_max": 200,
+  "unite": "M€",
+  "periodicite": "non précisée",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Initiative négociée ou instruite avec les joueurs responsables, puis soumise aux facilitateurs si elle suppose une décision extérieure au ministère (p7). Une capacité multinationale n'est acquise qu'avec des partenaires identifiés et un engagement plausible (p2).",
+  "partenaires": null,
+  "effets": "Présence mondiale.",
+  "type_pion": null,
+  "edition": "2027-2033 (confirmée)",
+  "alerte": "Périodicité non dite.",
+  "source": "strat_role-dgris-fr, p. 8"
+ },
+ {
+  "code": "DGRIS-PROG-SCAF",
+  "groupe": "PROG-SCAF",
+  "role": "DGRIS",
+  "armee": "Air et Espace",
+  "libelle": "Soutien au SCAF / Rafale F6",
+  "description": "Aviation de combat du futur. Programme européen à soutenir ; symbole politique autant que capacité.",
+  "categorie": "Programme européen à soutenir",
+  "statut_cout": "a_definir",
+  "cout": null,
+  "cout_max": null,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "La DGRIS favorise l'adoption et la visibilité ; la conduite du programme et les prix relèvent de la DGA (p5, p7).",
+  "partenaires": "France, Allemagne, Espagne",
+  "effets": "Orientation européenne de la France.",
+  "type_pion": null,
+  "edition": "2027-2033 (confirmée)",
+  "alerte": "Coût « à définir » côté DGRIS ; voir les fiches programme DGA pour les montants.",
+  "source": "strat_role-dgris-fr, p. 6"
+ },
+ {
+  "code": "DGRIS-PROG-MALE",
+  "groupe": "PROG-MALE",
+  "role": "DGRIS",
+  "armee": "Air et Espace",
+  "libelle": "Soutien au programme MALE (Eurodrone)",
+  "description": "Drone MALE européen. Programme européen à soutenir ; symbole politique autant que capacité.",
+  "categorie": "Programme européen à soutenir",
+  "statut_cout": "a_definir",
+  "cout": null,
+  "cout_max": null,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "La DGRIS favorise l'adoption et la visibilité ; la conduite du programme et les prix relèvent de la DGA (p5, p7).",
+  "partenaires": "France, Allemagne, Italie, Espagne",
+  "effets": "Orientation européenne de la France.",
+  "type_pion": null,
+  "edition": "2027-2033 (confirmée)",
+  "alerte": "Coût « à définir » côté DGRIS ; voir les fiches programme DGA pour les montants.",
+  "source": "strat_role-dgris-fr, p. 6"
+ },
+ {
+  "code": "DGRIS-PROG-MGCS",
+  "groupe": "PROG-MGCS",
+  "role": "DGRIS",
+  "armee": "Terre",
+  "libelle": "Soutien au MGCS",
+  "description": "Char de combat du futur. Programme européen à soutenir ; symbole politique autant que capacité.",
+  "categorie": "Programme européen à soutenir",
+  "statut_cout": "a_definir",
+  "cout": null,
+  "cout_max": null,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "La DGRIS favorise l'adoption et la visibilité ; la conduite du programme et les prix relèvent de la DGA (p5, p7).",
+  "partenaires": "France, Allemagne",
+  "effets": "Orientation européenne de la France.",
+  "type_pion": null,
+  "edition": "2027-2033 (confirmée)",
+  "alerte": "Coût « à définir » côté DGRIS ; voir les fiches programme DGA pour les montants.",
+  "source": "strat_role-dgris-fr, p. 6"
+ },
+ {
+  "code": "DGRIS-PROG-CIFS",
+  "groupe": "PROG-CIFS",
+  "role": "DGRIS",
+  "armee": "Terre",
+  "libelle": "Soutien au CIFS",
+  "description": "Artillerie du futur. Programme européen à soutenir ; symbole politique autant que capacité.",
+  "categorie": "Programme européen à soutenir",
+  "statut_cout": "a_definir",
+  "cout": null,
+  "cout_max": null,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "La DGRIS favorise l'adoption et la visibilité ; la conduite du programme et les prix relèvent de la DGA (p5, p7).",
+  "partenaires": "France, Allemagne et partenaires",
+  "effets": "Orientation européenne de la France.",
+  "type_pion": null,
+  "edition": "2027-2033 (confirmée)",
+  "alerte": "Coût « à définir » côté DGRIS ; voir les fiches programme DGA pour les montants.",
+  "source": "strat_role-dgris-fr, p. 6"
+ },
+ {
+  "code": "DGRIS-ACT-INFL-EURODRONE",
+  "groupe": "PROG-MALE",
+  "role": "DGRIS",
+  "armee": "Interarmées",
+  "libelle": "Influence industrielle : commande d'Eurodrone",
+  "description": "Soutenir la commande française d'Eurodrone malgré l'existence d'une alternative nationale.",
+  "categorie": "Action diplomatique",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Initiative négociée ou instruite avec les joueurs responsables, puis soumise aux facilitateurs si elle suppose une décision extérieure au ministère (p7). Une capacité multinationale n'est acquise qu'avec des partenaires identifiés et un engagement plausible (p2).",
+  "partenaires": null,
+  "effets": "Image de partenaire fiable, soutien industriel européen.",
+  "type_pion": null,
+  "edition": "2027-2033 (confirmée)",
+  "alerte": "Non chiffré dans la fiche ; le coût vient de l'équipement concerné (voir DGA) ou de l'arbitrage animateur.",
+  "source": "strat_role-dgris-fr, p. 8"
+ },
+ {
+  "code": "DGRIS-ACT-SIGNAL-PA2",
+  "groupe": "PA2",
+  "role": "DGRIS",
+  "armee": "Interarmées",
+  "libelle": "Signal diplomatique fort : 2e porte-avions",
+  "description": "Acquisition d'un 2e porte-avions, avec justification de projection.",
+  "categorie": "Action diplomatique",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Initiative négociée ou instruite avec les joueurs responsables, puis soumise aux facilitateurs si elle suppose une décision extérieure au ministère (p7). Une capacité multinationale n'est acquise qu'avec des partenaires identifiés et un engagement plausible (p2).",
+  "partenaires": null,
+  "effets": "Renforcement des alliances indo-pacifiques.",
+  "type_pion": null,
+  "edition": "2027-2033 (confirmée)",
+  "alerte": "Non chiffré dans la fiche ; le coût vient de l'équipement concerné (voir DGA) ou de l'arbitrage animateur.",
+  "source": "strat_role-dgris-fr, p. 8"
+ },
+ {
+  "code": "DGRIS-ACT-SAHEL",
+  "groupe": "SAHEL",
+  "role": "DGRIS",
+  "armee": "Interarmées",
+  "libelle": "Stabilisation régionale : mission hybride au Sahel",
+  "description": "Lancement d'une mission hybride (armée + humanitaire) au Sahel.",
+  "categorie": "Action diplomatique",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Initiative négociée ou instruite avec les joueurs responsables, puis soumise aux facilitateurs si elle suppose une décision extérieure au ministère (p7). Une capacité multinationale n'est acquise qu'avec des partenaires identifiés et un engagement plausible (p2).",
+  "partenaires": null,
+  "effets": "Prévention de crise, réduction des critiques internationales.",
+  "type_pion": null,
+  "edition": "2027-2033 (confirmée)",
+  "alerte": "Non chiffré dans la fiche ; le coût vient de l'équipement concerné (voir DGA) ou de l'arbitrage animateur.",
+  "source": "strat_role-dgris-fr, p. 8"
+ },
+ {
+  "code": "DGRIS-ACT-CONTRE-INFL",
+  "groupe": "MAWS",
+  "role": "DGRIS",
+  "armee": "Interarmées",
+  "libelle": "Contre-influence : projet européen contre équipement américain",
+  "description": "Opposer un projet européen à un équipement américain (ex. P-8 contre MAWS).",
+  "categorie": "Action diplomatique",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Initiative négociée ou instruite avec les joueurs responsables, puis soumise aux facilitateurs si elle suppose une décision extérieure au ministère (p7). Une capacité multinationale n'est acquise qu'avec des partenaires identifiés et un engagement plausible (p2).",
+  "partenaires": null,
+  "effets": "Affirmation de souveraineté stratégique.",
+  "type_pion": null,
+  "edition": "2027-2033 (confirmée)",
+  "alerte": "Non chiffré dans la fiche ; le coût vient de l'équipement concerné (voir DGA) ou de l'arbitrage animateur.",
+  "source": "strat_role-dgris-fr, p. 8"
+ },
+ {
+  "code": "MEAE-BFA2",
+  "groupe": "BRIG-FRA-ALL",
+  "role": "MEAE",
+  "armee": "Terre",
+  "libelle": "Seconde brigade franco-allemande",
+  "description": "Brigade binationale (mixte) à 50 % française.",
+  "categorie": "Partenariat européen",
+  "statut_cout": "a_definir",
+  "cout": null,
+  "cout_max": null,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Proposition à coordonner avec CEMA, MINARM, SGA, DGA, MEFR (valide les coûts) et les armées (p5).",
+  "partenaires": "Allemagne",
+  "effets": "Renforcement bilatéral structurant (p6) ; renforcement bilatéral symbolique (p8).",
+  "type_pion": null,
+  "edition": "2027-2033 (texte de la fiche)",
+  "alerte": null,
+  "source": "strat_role-meae-fr, p. 4, 6"
+ },
+ {
+  "code": "MEAE-BEM",
+  "groupe": "BRIG-EUR",
+  "role": "MEAE",
+  "armee": "Terre",
+  "libelle": "Brigade européenne multinationale",
+  "description": "Brigade composée de 3 à 5 partenaires, part française de 25 à 40 %.",
+  "categorie": "Partenariat européen",
+  "statut_cout": "a_definir",
+  "cout": null,
+  "cout_max": null,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Proposition à coordonner avec CEMA, MINARM, SGA, DGA, MEFR (valide les coûts) et les armées (p5).",
+  "partenaires": "3 à 5 partenaires européens",
+  "effets": "Symbole / vecteur d'Europe de la Défense.",
+  "type_pion": null,
+  "edition": "2027-2033 (texte de la fiche)",
+  "alerte": null,
+  "source": "strat_role-meae-fr, p. 4, 6"
+ },
+ {
+  "code": "MEAE-ROU",
+  "groupe": "EST-ROU",
+  "role": "MEAE",
+  "armee": "Interarmées",
+  "libelle": "Renforcement Roumanie (forces prépositionnées)",
+  "description": "Forces prépositionnées aériennes, terrestres et navales en Roumanie.",
+  "categorie": "Présence avancée (flanc Est)",
+  "statut_cout": "chiffre",
+  "cout": 200,
+  "cout_max": 200,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": true,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Proposition à coordonner avec CEMA, MINARM, SGA, DGA, MEFR (valide les coûts) et les armées (p5).",
+  "partenaires": "Roumanie (pays hôte), OTAN",
+  "effets": "Forte visibilité, forte présence, crédibilité OTAN. Risque : perçu comme belliqueux.",
+  "type_pion": null,
+  "edition": "2027-2033 (texte de la fiche)",
+  "alerte": "Même option sous deux intitulés (p6 « forces prépositionnées », p8 « renforcement ») : ne la poser qu'une fois.",
+  "source": "strat_role-meae-fr, p. 4, 6"
+ },
+ {
+  "code": "MEAE-POL-PREPO",
+  "groupe": "EST-POL-PREPO",
+  "role": "MEAE",
+  "armee": "Interarmées",
+  "libelle": "Forces prépositionnées en Pologne",
+  "description": "Forces prépositionnées aériennes et terrestres uniquement.",
+  "categorie": "Présence avancée (flanc Est)",
+  "statut_cout": "chiffre",
+  "cout": 100,
+  "cout_max": 100,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": true,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Proposition à coordonner avec CEMA, MINARM, SGA, DGA, MEFR (valide les coûts) et les armées (p5).",
+  "partenaires": "Pologne (pays hôte)",
+  "effets": "Gain diplomatique ; tensions avec la Russie.",
+  "type_pion": null,
+  "edition": "2027-2033 (texte de la fiche)",
+  "alerte": "Recouvre peut-être le hub divisionnaire Pologne (p8) : à trancher par l'animateur.",
+  "source": "strat_role-meae-fr, p. 4"
+ },
+ {
+  "code": "MEAE-POL-HUB",
+  "groupe": "EST-POL-HUB",
+  "role": "MEAE",
+  "armee": "Terre",
+  "libelle": "Hub divisionnaire Pologne",
+  "description": "Forces terrestres et aériennes.",
+  "categorie": "Présence avancée (flanc Est)",
+  "statut_cout": "fourchette",
+  "cout": 150,
+  "cout_max": 300,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Proposition à coordonner avec CEMA, MINARM, SGA, DGA, MEFR (valide les coûts) et les armées (p5).",
+  "partenaires": "Pologne (pays hôte)",
+  "effets": "Soutien du flanc Est.",
+  "type_pion": null,
+  "edition": "2027-2033 (texte de la fiche)",
+  "alerte": "Le MEFR et le SGA le chiffrent à 300 M€/an : retenir une valeur commune.",
+  "source": "strat_role-meae-fr, p. 6"
+ },
+ {
+  "code": "MEAE-POL-LOG",
+  "groupe": "EST-POL-LOG",
+  "role": "MEAE",
+  "armee": "Terre",
+  "libelle": "Hub logistique Pologne",
+  "description": "Hub logistique en soutien divisionnaire.",
+  "categorie": "Présence avancée (flanc Est)",
+  "statut_cout": "chiffre",
+  "cout": 250,
+  "cout_max": 250,
+  "unite": "M€",
+  "periodicite": "non précisée",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Proposition à coordonner avec CEMA, MINARM, SGA, DGA, MEFR (valide les coûts) et les armées (p5).",
+  "partenaires": "Pologne",
+  "effets": "Soutien divisionnaire.",
+  "type_pion": null,
+  "edition": "2027-2033 (texte de la fiche)",
+  "alerte": "Périodicité non dite (colonne « coût estimé »). 250 M€ n'est pas un multiple de la case de 100 M€.",
+  "source": "strat_role-meae-fr, p. 6"
+ },
+ {
+  "code": "MEAE-BAL",
+  "groupe": "EST-BAL",
+  "role": "MEAE",
+  "armee": "Interarmées",
+  "libelle": "Base Baltique",
+  "description": "Base dans les États baltes.",
+  "categorie": "Présence avancée (flanc Est)",
+  "statut_cout": "chiffre",
+  "cout": 150,
+  "cout_max": 150,
+  "unite": "M€",
+  "periodicite": "non précisée",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Proposition à coordonner avec CEMA, MINARM, SGA, DGA, MEFR (valide les coûts) et les armées (p5).",
+  "partenaires": "États baltes",
+  "effets": "Présence avancée.",
+  "type_pion": null,
+  "edition": "2027-2033 (texte de la fiche)",
+  "alerte": "Périodicité non dite ; le MEFR chiffre un « pré-positionnement Baltique » à 150 M€/an. 150 M€ n'est pas un multiple de la case.",
+  "source": "strat_role-meae-fr, p. 6"
+ },
+ {
+  "code": "MEAE-DJI",
+  "groupe": "MONDE-DJI",
+  "role": "MEAE",
+  "armee": "Interarmées",
+  "libelle": "Renforcement Djibouti",
+  "description": "Renforcement du point d'appui de Djibouti.",
+  "categorie": "Présence mondiale",
+  "statut_cout": "chiffre",
+  "cout": 100,
+  "cout_max": 100,
+  "unite": "M€",
+  "periodicite": "non précisée",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Proposition à coordonner avec CEMA, MINARM, SGA, DGA, MEFR (valide les coûts) et les armées (p5).",
+  "partenaires": "Djibouti",
+  "effets": "Afrique / mer Rouge (Bab el-Mandeb).",
+  "type_pion": null,
+  "edition": "2027-2033 (texte de la fiche)",
+  "alerte": "Périodicité non dite.",
+  "source": "strat_role-meae-fr, p. 6"
+ },
+ {
+  "code": "MEAE-IPAC",
+  "groupe": "MONDE-IPAC",
+  "role": "MEAE",
+  "armee": "Interarmées",
+  "libelle": "Renforcement Indo-Pacifique",
+  "description": "Renforcement de la présence en Indo-Pacifique.",
+  "categorie": "Présence mondiale",
+  "statut_cout": "chiffre",
+  "cout": 200,
+  "cout_max": 200,
+  "unite": "M€",
+  "periodicite": "non précisée",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Proposition à coordonner avec CEMA, MINARM, SGA, DGA, MEFR (valide les coûts) et les armées (p5).",
+  "partenaires": null,
+  "effets": "Présence mondiale.",
+  "type_pion": null,
+  "edition": "2027-2033 (texte de la fiche)",
+  "alerte": "Périodicité non dite.",
+  "source": "strat_role-meae-fr, p. 6"
+ },
+ {
+  "code": "MEAE-PROG-SCAF",
+  "groupe": "PROG-SCAF",
+  "role": "MEAE",
+  "armee": "Air et Espace",
+  "libelle": "Soutien au SCAF / Rafale F6",
+  "description": "Aviation de combat du futur. Programme européen à soutenir ; symbole politique autant que capacité.",
+  "categorie": "Programme européen à soutenir",
+  "statut_cout": "a_definir",
+  "cout": null,
+  "cout_max": null,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Proposition à coordonner avec CEMA, MINARM, SGA, DGA, MEFR (valide les coûts) et les armées (p5).",
+  "partenaires": "France, Allemagne, Espagne",
+  "effets": "Orientation européenne de la France.",
+  "type_pion": null,
+  "edition": "2027-2033 (texte de la fiche)",
+  "alerte": "Coût « à définir » côté DGRIS ; voir les fiches programme DGA pour les montants.",
+  "source": "strat_role-meae-fr, p. 4"
+ },
+ {
+  "code": "MEAE-PROG-MALE",
+  "groupe": "PROG-MALE",
+  "role": "MEAE",
+  "armee": "Air et Espace",
+  "libelle": "Soutien au programme MALE (Eurodrone)",
+  "description": "Drone MALE européen. Programme européen à soutenir ; symbole politique autant que capacité.",
+  "categorie": "Programme européen à soutenir",
+  "statut_cout": "a_definir",
+  "cout": null,
+  "cout_max": null,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Proposition à coordonner avec CEMA, MINARM, SGA, DGA, MEFR (valide les coûts) et les armées (p5).",
+  "partenaires": "France, Allemagne, Italie, Espagne",
+  "effets": "Orientation européenne de la France.",
+  "type_pion": null,
+  "edition": "2027-2033 (texte de la fiche)",
+  "alerte": "Coût « à définir » côté DGRIS ; voir les fiches programme DGA pour les montants.",
+  "source": "strat_role-meae-fr, p. 4"
+ },
+ {
+  "code": "MEAE-PROG-MGCS",
+  "groupe": "PROG-MGCS",
+  "role": "MEAE",
+  "armee": "Terre",
+  "libelle": "Soutien au MGCS",
+  "description": "Char de combat du futur. Programme européen à soutenir ; symbole politique autant que capacité.",
+  "categorie": "Programme européen à soutenir",
+  "statut_cout": "a_definir",
+  "cout": null,
+  "cout_max": null,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Proposition à coordonner avec CEMA, MINARM, SGA, DGA, MEFR (valide les coûts) et les armées (p5).",
+  "partenaires": "France, Allemagne",
+  "effets": "Orientation européenne de la France.",
+  "type_pion": null,
+  "edition": "2027-2033 (texte de la fiche)",
+  "alerte": "Coût « à définir » côté DGRIS ; voir les fiches programme DGA pour les montants.",
+  "source": "strat_role-meae-fr, p. 4"
+ },
+ {
+  "code": "MEAE-PROG-CIFS",
+  "groupe": "PROG-CIFS",
+  "role": "MEAE",
+  "armee": "Terre",
+  "libelle": "Soutien au CIFS",
+  "description": "Artillerie du futur. Programme européen à soutenir ; symbole politique autant que capacité.",
+  "categorie": "Programme européen à soutenir",
+  "statut_cout": "a_definir",
+  "cout": null,
+  "cout_max": null,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Proposition à coordonner avec CEMA, MINARM, SGA, DGA, MEFR (valide les coûts) et les armées (p5).",
+  "partenaires": "France, Allemagne et partenaires",
+  "effets": "Orientation européenne de la France.",
+  "type_pion": null,
+  "edition": "2027-2033 (texte de la fiche)",
+  "alerte": "Coût « à définir » côté DGRIS ; voir les fiches programme DGA pour les montants.",
+  "source": "strat_role-meae-fr, p. 4"
+ },
+ {
+  "code": "MEAE-ACT-INFL-EURODRONE",
+  "groupe": "PROG-MALE",
+  "role": "MEAE",
+  "armee": "Interarmées",
+  "libelle": "Influence industrielle : commande d'Eurodrone",
+  "description": "Soutenir la commande française d'Eurodrone malgré l'existence d'une alternative nationale.",
+  "categorie": "Action diplomatique",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Proposition à coordonner avec CEMA, MINARM, SGA, DGA, MEFR (valide les coûts) et les armées (p5).",
+  "partenaires": null,
+  "effets": "Image de partenaire fiable, soutien industriel européen.",
+  "type_pion": null,
+  "edition": "2027-2033 (texte de la fiche)",
+  "alerte": "Non chiffré dans la fiche ; le coût vient de l'équipement concerné (voir DGA) ou de l'arbitrage animateur.",
+  "source": "strat_role-meae-fr, p. 6"
+ },
+ {
+  "code": "MEAE-ACT-SIGNAL-PA2",
+  "groupe": "PA2",
+  "role": "MEAE",
+  "armee": "Interarmées",
+  "libelle": "Signal diplomatique fort : 2e porte-avions",
+  "description": "Acquisition d'un 2e porte-avions, avec justification de projection.",
+  "categorie": "Action diplomatique",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Proposition à coordonner avec CEMA, MINARM, SGA, DGA, MEFR (valide les coûts) et les armées (p5).",
+  "partenaires": null,
+  "effets": "Renforcement des alliances indo-pacifiques.",
+  "type_pion": null,
+  "edition": "2027-2033 (texte de la fiche)",
+  "alerte": "Non chiffré dans la fiche ; le coût vient de l'équipement concerné (voir DGA) ou de l'arbitrage animateur.",
+  "source": "strat_role-meae-fr, p. 6"
+ },
+ {
+  "code": "MEAE-ACT-SAHEL",
+  "groupe": "SAHEL",
+  "role": "MEAE",
+  "armee": "Interarmées",
+  "libelle": "Stabilisation régionale : mission hybride au Sahel",
+  "description": "Lancement d'une mission hybride (armée + humanitaire) au Sahel.",
+  "categorie": "Action diplomatique",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Proposition à coordonner avec CEMA, MINARM, SGA, DGA, MEFR (valide les coûts) et les armées (p5).",
+  "partenaires": null,
+  "effets": "Prévention de crise, réduction des critiques internationales.",
+  "type_pion": null,
+  "edition": "2027-2033 (texte de la fiche)",
+  "alerte": "Non chiffré dans la fiche ; le coût vient de l'équipement concerné (voir DGA) ou de l'arbitrage animateur.",
+  "source": "strat_role-meae-fr, p. 6"
+ },
+ {
+  "code": "MEAE-ACT-CONTRE-INFL",
+  "groupe": "MAWS",
+  "role": "MEAE",
+  "armee": "Interarmées",
+  "libelle": "Contre-influence : projet européen contre équipement américain",
+  "description": "Opposer un projet européen à un équipement américain (ex. P-8 contre MAWS).",
+  "categorie": "Action diplomatique",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Proposition à coordonner avec CEMA, MINARM, SGA, DGA, MEFR (valide les coûts) et les armées (p5).",
+  "partenaires": null,
+  "effets": "Affirmation de souveraineté stratégique.",
+  "type_pion": null,
+  "edition": "2027-2033 (texte de la fiche)",
+  "alerte": "Non chiffré dans la fiche ; le coût vient de l'équipement concerné (voir DGA) ou de l'arbitrage animateur.",
+  "source": "strat_role-meae-fr, p. 6"
+ },
+ {
+  "code": "MEAE-LEV-INDUS",
+  "groupe": "MEAE-LEV-INDUS",
+  "role": "MEAE",
+  "armee": "Interarmées",
+  "libelle": "Coopérations industrielles",
+  "description": "Programmes européens, développements communs, partage de capacités, achats conjoints.",
+  "categorie": "Levier diplomatique",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Proposition à coordonner avec CEMA, MINARM, SGA, DGA, MEFR (valide les coûts) et les armées (p5).",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2033 (texte de la fiche)",
+  "alerte": "Levier sans coût dans la fiche : à chiffrer avec le MEFR ou l'animateur.",
+  "source": "strat_role-meae-fr, p. 4, 5"
+ },
+ {
+  "code": "MEAE-LEV-MIL",
+  "groupe": "MEAE-LEV-MIL",
+  "role": "MEAE",
+  "armee": "Interarmées",
+  "libelle": "Coopérations militaires",
+  "description": "Prépositionnements, forces multinationales, états-majors conjoints, exercices communs.",
+  "categorie": "Levier diplomatique",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Proposition à coordonner avec CEMA, MINARM, SGA, DGA, MEFR (valide les coûts) et les armées (p5).",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2033 (texte de la fiche)",
+  "alerte": "Levier sans coût dans la fiche : à chiffrer avec le MEFR ou l'animateur.",
+  "source": "strat_role-meae-fr, p. 4, 5"
+ },
+ {
+  "code": "MEAE-LEV-STRAT",
+  "groupe": "MEAE-LEV-STRAT",
+  "role": "MEAE",
+  "armee": "Interarmées",
+  "libelle": "Coopérations stratégiques",
+  "description": "Accords de défense, soutien nation hôte, accords de transit, bases permanentes, accords d'accès aux infrastructures.",
+  "categorie": "Levier diplomatique",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Proposition à coordonner avec CEMA, MINARM, SGA, DGA, MEFR (valide les coûts) et les armées (p5).",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2033 (texte de la fiche)",
+  "alerte": "Levier sans coût dans la fiche : à chiffrer avec le MEFR ou l'animateur.",
+  "source": "strat_role-meae-fr, p. 4, 5"
+ },
+ {
+  "code": "MEFR-ROU",
+  "groupe": "EST-ROU",
+  "role": "MEFR",
+  "armee": "Interarmées",
+  "libelle": "Renforcement Roumanie",
+  "description": "Présence avancée et soutien du flanc Est.",
+  "categorie": "Présence avancée (flanc Est)",
+  "statut_cout": "chiffre",
+  "cout": 200,
+  "cout_max": 200,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": true,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Présenté comme un surcoût à provisionner dès la planification initiale (p4).",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-mefr-fr, p. 4"
+ },
+ {
+  "code": "MEFR-POL-HUB",
+  "groupe": "EST-POL-HUB",
+  "role": "MEFR",
+  "armee": "Terre",
+  "libelle": "Hub divisionnaire Pologne",
+  "description": "Présence avancée et soutien du flanc Est.",
+  "categorie": "Présence avancée (flanc Est)",
+  "statut_cout": "chiffre",
+  "cout": 300,
+  "cout_max": 300,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": true,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Présenté comme un surcoût à provisionner dès la planification initiale (p4).",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": "DGRIS et MEAE donnent 150 à 300 M€/an.",
+  "source": "strat_role-mefr-fr, p. 4"
+ },
+ {
+  "code": "MEFR-BAL",
+  "groupe": "EST-BAL",
+  "role": "MEFR",
+  "armee": "Interarmées",
+  "libelle": "Pré-positionnement Baltique",
+  "description": "Présence avancée et soutien du flanc Est.",
+  "categorie": "Présence avancée (flanc Est)",
+  "statut_cout": "chiffre",
+  "cout": 150,
+  "cout_max": 150,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Présenté comme un surcoût à provisionner dès la planification initiale (p4).",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": "150 M€ n'est pas un multiple de la case de 100 M€.",
+  "source": "strat_role-mefr-fr, p. 4"
+ },
+ {
+  "code": "MEFR-LOG-EST",
+  "groupe": "EST-LOG",
+  "role": "MEFR",
+  "armee": "Interarmées",
+  "libelle": "Renforcement logistique Est",
+  "description": "Présence avancée et soutien du flanc Est.",
+  "categorie": "Présence avancée (flanc Est)",
+  "statut_cout": "chiffre",
+  "cout": 100,
+  "cout_max": 100,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": true,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Présenté comme un surcoût à provisionner dès la planification initiale (p4).",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-mefr-fr, p. 4"
+ },
+ {
+  "code": "MEFR-HNS",
+  "groupe": "EST-HNS",
+  "role": "MEFR",
+  "armee": "Interarmées",
+  "libelle": "Soutien nation hôte OTAN (HNS)",
+  "description": "Présence avancée et soutien du flanc Est.",
+  "categorie": "Présence avancée (flanc Est)",
+  "statut_cout": "chiffre",
+  "cout": 150,
+  "cout_max": 150,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Présenté comme un surcoût à provisionner dès la planification initiale (p4).",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": "150 M€ n'est pas un multiple de la case de 100 M€.",
+  "source": "strat_role-mefr-fr, p. 4"
+ },
+ {
+  "code": "MEFR-DIV-RES",
+  "groupe": "RES-DIV",
+  "role": "MEFR",
+  "armee": "Interarmées",
+  "libelle": "Division de réserve",
+  "description": "Financement de la résilience nationale.",
+  "categorie": "Résilience nationale",
+  "statut_cout": "chiffre",
+  "cout": 1000,
+  "cout_max": 1000,
+  "unite": "M€/an (impact annuel moyen)",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": true,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": null,
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": "Le SGA chiffre la division de réserve nationale à 2 à 3 Md€/an : écart à arbitrer.",
+  "source": "strat_role-mefr-fr, p. 4"
+ },
+ {
+  "code": "MEFR-SMV-R",
+  "groupe": "SMV-R",
+  "role": "MEFR",
+  "armee": "Interarmées",
+  "libelle": "SMV renforcé",
+  "description": "Service militaire volontaire renforcé.",
+  "categorie": "Résilience nationale",
+  "statut_cout": "chiffre",
+  "cout": 1700,
+  "cout_max": 1700,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": true,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": null,
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": "Le plateau porte déjà un pion orange « SMV 2,5 Md€ » : préciser s'il s'ajoute ou le remplace.",
+  "source": "strat_role-mefr-fr, p. 4"
+ },
+ {
+  "code": "MEFR-SMV-E",
+  "groupe": "SMV-E",
+  "role": "MEFR",
+  "armee": "Interarmées",
+  "libelle": "SMV élargi",
+  "description": "Service militaire volontaire élargi.",
+  "categorie": "Résilience nationale",
+  "statut_cout": "chiffre",
+  "cout": 5000,
+  "cout_max": 5000,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": true,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": null,
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-mefr-fr, p. 4"
+ },
+ {
+  "code": "MEFR-SN",
+  "groupe": "SMV-HI",
+  "role": "MEFR",
+  "armee": "Interarmées",
+  "libelle": "Service national ambitieux",
+  "description": "Service national de grande ampleur.",
+  "categorie": "Résilience nationale",
+  "statut_cout": "fourchette",
+  "cout": 7000,
+  "cout_max": 10000,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": null,
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-mefr-fr, p. 4"
+ },
+ {
+  "code": "MEFR-CARBU",
+  "groupe": "CARBU",
+  "role": "MEFR",
+  "armee": "Interarmées",
+  "libelle": "Provision surcoût carburants",
+  "description": "Surcoût carburants à provisionner selon trois scénarios. Optimiste : 100, 150, 200, 250, 300, 400 M€ ; référence : 250, 300, 350, 400, 500, 700 M€ ; pessimiste : 500, 650, 700, 800, 900, 1 300 M€ (2027 à 2032).",
+  "categorie": "Provision / aléa",
+  "statut_cout": "fourchette",
+  "cout": 100,
+  "cout_max": 1300,
+  "unite": "M€/an (selon année et scénario)",
+  "periodicite": "annuel, variable par année",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Ignorer ces surcoûts entraîne des gels ou coupes tardives (p5).",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": "Orange (scénario / aléa) [suggestion]",
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-mefr-fr, p. 4, 5"
+ },
+ {
+  "code": "MEFR-OPEX50",
+  "groupe": "OPEX",
+  "role": "MEFR",
+  "armee": "Interarmées",
+  "libelle": "Lever la clause de solidarité OPEX",
+  "description": "Partager jusqu'à 50 % du coût des opérations extérieures avec d'autres budgets.",
+  "categorie": "Levier budgétaire",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Contrepartie : effort renforcé exigé sur les postes classiques (p6).",
+  "partenaires": null,
+  "effets": "Allège le pion gris « Surcoût OPEX » (900 M€) jusqu'à 50 %.",
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": "Effet à paramétrer par l'animateur (montant non donné par la fiche).",
+  "source": "strat_role-mefr-fr, p. 6"
+ },
+ {
+  "code": "MEFR-UE",
+  "groupe": "UE-FIN",
+  "role": "MEFR",
+  "armee": "Interarmées",
+  "libelle": "Financements européens / mutualisation",
+  "description": "Réduire la charge pesant sur la LPM par des financements européens ou une mutualisation.",
+  "categorie": "Levier budgétaire",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Avec la DGA (faisabilité industrielle), le MEAE (cohérence européenne), le MINARM (cohérence politique), puis validation des facilitateurs (p6).",
+  "partenaires": null,
+  "effets": "Réduction partielle du coût supporté par la LPM française.",
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-mefr-fr, p. 6"
+ },
+ {
+  "code": "MEFR-DUAL",
+  "groupe": "DUAL",
+  "role": "MEFR",
+  "armee": "Interarmées",
+  "libelle": "Investissements duaux civil-militaire",
+  "description": "Partage de charge avec d'autres ministères : cyberdéfense, programme spatial ARGONAUTE.",
+  "categorie": "Levier budgétaire",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": null,
+  "partenaires": null,
+  "effets": "Partage des coûts entre ministères.",
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-mefr-fr, p. 3, 6"
+ },
+ {
+  "code": "MEFR-RESERVE",
+  "groupe": "RESERVE-STRAT",
+  "role": "MEFR",
+  "armee": "Interarmées",
+  "libelle": "Clause de révision budgétaire ou réserve stratégique",
+  "description": "Le MEFR peut imposer une clause de révision budgétaire ou une réserve stratégique.",
+  "categorie": "Levier budgétaire",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": null,
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-mefr-fr, p. 6"
+ },
+ {
+  "code": "SGA-JEUNESSE",
+  "groupe": "SGA-JEUNESSE",
+  "role": "SGA",
+  "armee": "Interarmées",
+  "libelle": "Dispositifs jeunesse (lien armée-nation)",
+  "description": "SNU, classes Défense, cadets, stages.",
+  "categorie": "Dépense protégée",
+  "statut_cout": "chiffre",
+  "cout": 400,
+  "cout_max": 400,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": true,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Ligne qui ne peut être coupée sans conséquences politiques majeures (p4).",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": "Gris (dépense fixe) [suggestion]",
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-sga-fr, p. 3, 4"
+ },
+ {
+  "code": "SGA-PLAN-FAMILLE",
+  "groupe": "SGA-PLAN-FAMILLE",
+  "role": "SGA",
+  "armee": "Interarmées",
+  "libelle": "Plan Famille",
+  "description": "Logement militaire rénové, soutien aux conjoints et à l'emploi local, places en crèche et aide familiale.",
+  "categorie": "Fidélisation",
+  "statut_cout": "chiffre",
+  "cout": 800,
+  "cout_max": 800,
+  "unite": "M€ sur la LPM",
+  "periodicite": "pluriannuel",
+  "etalement": "Au moins 100 M€ par an dès le lancement",
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": null,
+  "partenaires": null,
+  "effets": "Moral des troupes et fidélisation.",
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-sga-fr, p. 4"
+ },
+ {
+  "code": "SGA-DD-AMB",
+  "groupe": "DD",
+  "role": "SGA",
+  "armee": "Interarmées",
+  "libelle": "Développement durable : politique ambitieuse",
+  "description": "Transition écologique complète, rénovation large des infrastructures.",
+  "categorie": "Infrastructures",
+  "statut_cout": "chiffre",
+  "cout": 900,
+  "cout_max": 900,
+  "unite": "M€ sur la LPM",
+  "periodicite": "pluriannuel",
+  "etalement": "Non précisé",
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": null,
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-sga-fr, p. 4"
+ },
+ {
+  "code": "SGA-DD-LIM",
+  "groupe": "DD",
+  "role": "SGA",
+  "armee": "Interarmées",
+  "libelle": "Développement durable : politique limitée",
+  "description": "Rénovation partielle, actions ciblées sur les sites les plus énergivores.",
+  "categorie": "Infrastructures",
+  "statut_cout": "chiffre",
+  "cout": 600,
+  "cout_max": 600,
+  "unite": "M€ sur la LPM",
+  "periodicite": "pluriannuel",
+  "etalement": "Non précisé",
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": null,
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-sga-fr, p. 4"
+ },
+ {
+  "code": "SGA-ENERGIE",
+  "groupe": "SGA-ENERGIE",
+  "role": "SGA",
+  "armee": "Interarmées",
+  "libelle": "Investissement énergie (économie de carburant)",
+  "description": "Investissement spécifique de 100 M€/an pendant 2 ans.",
+  "categorie": "Infrastructures",
+  "statut_cout": "chiffre",
+  "cout": 100,
+  "cout_max": 100,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": "2 ans",
+  "annuel": true,
+  "proposable_tel_quel": true,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "À coordonner avec le Service de l'énergie opérationnelle, incarné par le CEMA (p4).",
+  "partenaires": null,
+  "effets": "Réduit de 200 M€/an les coûts de carburants après la 2e année.",
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-sga-fr, p. 4"
+ },
+ {
+  "code": "SGA-LOG-PROJ",
+  "groupe": "SGA-LOG-PROJ",
+  "role": "SGA",
+  "armee": "Interarmées",
+  "libelle": "Logistique projetable (soutien humain et technique)",
+  "description": "Hôpitaux de campagne, cantonnement temporaire, ateliers MCO projetables, équipes de maintenance, approvisionnements déployés.",
+  "categorie": "Soutien",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "À budgétiser avec les capacités de projection des armées (p4).",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-sga-fr, p. 4"
+ },
+ {
+  "code": "SGA-RH-PLUS",
+  "groupe": "SGA-RH-PLUS",
+  "role": "SGA",
+  "armee": "Interarmées",
+  "libelle": "Dépasser le plafond de recrutement",
+  "description": "Campagnes nationales de recrutement, robotique administrative ou de soutien, revalorisation des filières.",
+  "categorie": "Ressources humaines",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Chaque effort doit être chiffré, financé et discuté avec MEFR, MINARM et CEMA (p5).",
+  "partenaires": null,
+  "effets": "Permet de dépasser la limite de 4 pions « masse salariale » par an.",
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-sga-fr, p. 3, 5"
+ },
+ {
+  "code": "SGA-POL-HUB",
+  "groupe": "EST-POL-HUB",
+  "role": "SGA",
+  "armee": "Terre",
+  "libelle": "Hub divisionnaire Pologne",
+  "description": "Soutien du flanc Est et infrastructures (coût estimatif).",
+  "categorie": "Présence avancée (flanc Est)",
+  "statut_cout": "chiffre",
+  "cout": 300,
+  "cout_max": 300,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": true,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": null,
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": "DGRIS et MEAE donnent 150 à 300 M€/an.",
+  "source": "strat_role-sga-fr, p. 6"
+ },
+ {
+  "code": "SGA-ROU",
+  "groupe": "EST-ROU",
+  "role": "SGA",
+  "armee": "Interarmées",
+  "libelle": "Renforcement Roumanie (infrastructures)",
+  "description": "Soutien du flanc Est et infrastructures (coût estimatif).",
+  "categorie": "Présence avancée (flanc Est)",
+  "statut_cout": "chiffre",
+  "cout": 200,
+  "cout_max": 200,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": true,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": null,
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-sga-fr, p. 6"
+ },
+ {
+  "code": "SGA-PORTS",
+  "groupe": "PORTS",
+  "role": "SGA",
+  "armee": "Marine",
+  "libelle": "Adaptation des ports militaires",
+  "description": "Soutien du flanc Est et infrastructures (coût estimatif).",
+  "categorie": "Infrastructures",
+  "statut_cout": "fourchette",
+  "cout": 100,
+  "cout_max": 300,
+  "unite": "M€",
+  "periodicite": "non précisée",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": null,
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": "Périodicité non dite.",
+  "source": "strat_role-sga-fr, p. 6"
+ },
+ {
+  "code": "SGA-INFRA-PANG",
+  "groupe": "PANG-INFRA",
+  "role": "SGA",
+  "armee": "Marine",
+  "libelle": "Infrastructures PANG France Libre",
+  "description": "Soutien du flanc Est et infrastructures (coût estimatif).",
+  "categorie": "Infrastructures",
+  "statut_cout": "fourchette",
+  "cout": 500,
+  "cout_max": 1000,
+  "unite": "M€",
+  "periodicite": "non précisée",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": null,
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": "Périodicité non dite. Recoupe peut-être les quais DGA.",
+  "source": "strat_role-sga-fr, p. 6"
+ },
+ {
+  "code": "SGA-DIRISI",
+  "groupe": "DIRISI",
+  "role": "SGA",
+  "armee": "Interarmées",
+  "libelle": "Renforcement DIRISI",
+  "description": "Soutien du flanc Est et infrastructures (coût estimatif).",
+  "categorie": "Infrastructures",
+  "statut_cout": "fourchette",
+  "cout": 100,
+  "cout_max": 200,
+  "unite": "M€",
+  "periodicite": "non précisée",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": null,
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": "Périodicité non dite.",
+  "source": "strat_role-sga-fr, p. 6"
+ },
+ {
+  "code": "SGA-DEPOTS",
+  "groupe": "DEPOTS-MUN",
+  "role": "SGA",
+  "armee": "Interarmées",
+  "libelle": "Dépôts de munitions renforcés",
+  "description": "Soutien du flanc Est et infrastructures (coût estimatif).",
+  "categorie": "Infrastructures",
+  "statut_cout": "fourchette",
+  "cout": 100,
+  "cout_max": 300,
+  "unite": "M€",
+  "periodicite": "non précisée",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": null,
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": "Périodicité non dite.",
+  "source": "strat_role-sga-fr, p. 6"
+ },
+ {
+  "code": "SGA-SMV-R",
+  "groupe": "SMV-R",
+  "role": "SGA",
+  "armee": "Interarmées",
+  "libelle": "SMV renforcé",
+  "description": "Environ 3 000 à 50 000 volontaires/an (6-9 mois), 12-15 centres + antennes ; 55-70 k€ par volontaire.",
+  "categorie": "Résilience nationale",
+  "statut_cout": "chiffre",
+  "cout": 1700,
+  "cout_max": 1700,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": true,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": null,
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-sga-fr, p. 6, 7"
+ },
+ {
+  "code": "SGA-SMV-E",
+  "groupe": "SMV-E",
+  "role": "SGA",
+  "armee": "Interarmées",
+  "libelle": "SMV élargi",
+  "description": "Environ 60 000 à 80 000 jeunes/an (9-12 mois), 20-25 centres ; 60-80 k€ par volontaire.",
+  "categorie": "Résilience nationale",
+  "statut_cout": "chiffre",
+  "cout": 5000,
+  "cout_max": 5000,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": true,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": null,
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-sga-fr, p. 6, 7"
+ },
+ {
+  "code": "SGA-SMV-HI",
+  "groupe": "SMV-HI",
+  "role": "SGA",
+  "armee": "Interarmées",
+  "libelle": "Service national de haute intensité",
+  "description": "Environ 150 000 à 200 000 jeunes/an (9-12 mois), 30-40 centres ; 50-65 k€ par volontaire ; contraintes de pic logistique.",
+  "categorie": "Résilience nationale",
+  "statut_cout": "fourchette",
+  "cout": 7000,
+  "cout_max": 10000,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": null,
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-sga-fr, p. 7"
+ },
+ {
+  "code": "SGA-RES-RENF",
+  "groupe": "RES-RENF",
+  "role": "SGA",
+  "armee": "Terre",
+  "libelle": "Renforcement de la réserve existante",
+  "description": "Augmentation des effectifs et de l'activité des réservistes.",
+  "categorie": "Réserves",
+  "statut_cout": "chiffre",
+  "cout": 500,
+  "cout_max": 500,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": true,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Programme stratégique national non soumis à la limite de 4 pions « masse salariale » par an (p7).",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-sga-fr, p. 7, 8"
+ },
+ {
+  "code": "SGA-RES-BRIG",
+  "groupe": "RES-BRIG",
+  "role": "SGA",
+  "armee": "Terre",
+  "libelle": "Brigade de réserve opérationnelle",
+  "description": "Brigade complète dotée de ses moyens de soutien.",
+  "categorie": "Réserves",
+  "statut_cout": "fourchette",
+  "cout": 1000,
+  "cout_max": 1500,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Programme stratégique national non soumis à la limite de 4 pions « masse salariale » par an (p7).",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-sga-fr, p. 7, 8"
+ },
+ {
+  "code": "SGA-RES-DIV",
+  "groupe": "RES-DIV",
+  "role": "SGA",
+  "armee": "Terre",
+  "libelle": "Division de réserve nationale",
+  "description": "Division complète capable de générer plusieurs brigades.",
+  "categorie": "Réserves",
+  "statut_cout": "fourchette",
+  "cout": 2000,
+  "cout_max": 3000,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Programme stratégique national non soumis à la limite de 4 pions « masse salariale » par an (p7).",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": "Le MEFR chiffre la division de réserve à 1 Md€/an.",
+  "source": "strat_role-sga-fr, p. 7, 8"
+ },
+ {
+  "code": "SGA-RES-DIV-EU",
+  "groupe": "RES-DIV-EU",
+  "role": "SGA",
+  "armee": "Terre",
+  "libelle": "Division de réserve renforcée à vocation européenne",
+  "description": "Division de réserve intégrée aux plans OTAN et UE.",
+  "categorie": "Réserves",
+  "statut_cout": "fourchette",
+  "cout": 3000,
+  "cout_max": 4000,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Programme stratégique national non soumis à la limite de 4 pions « masse salariale » par an (p7).",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-sga-fr, p. 7, 8"
+ },
+ {
+  "code": "DGA-SAMPT",
+  "groupe": "SAMPT",
+  "role": "DGA",
+  "armee": "Air et Espace",
+  "libelle": "Système sol-air SAMP/T NG (brigade sol-air)",
+  "description": "1 pion principal = 1 radar + 1 C2 + 3 lanceurs ; dotation minimale de 33 missiles ASTER pour la brigade. Format brigade complet = ce pion + 1 DORESE MCO. MCO ~40 M€/an ; RH opérateurs optionnel ~20-30 M€/an si doctrine complète ; recomplètement munitions à estimer selon l'usage.",
+  "categorie": "Capacité",
+  "statut_cout": "chiffre",
+  "cout": 400,
+  "cout_max": 400,
+  "unite": "M€ (investissement initial)",
+  "periodicite": "ponctuel",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": {
+   "ao": 0,
+   "mco": 1,
+   "rh": 0
+  },
+  "dorese_note": "1 MCO obligatoire ; 1 RH optionnel si doctrine complète.",
+  "delai": null,
+  "conditions": "Limite industrielle : 1 brigade sol-air tous les 2 ans au maximum. Pas de montée en puissance sans effort RH et doctrine (SGA/DGA).",
+  "partenaires": null,
+  "effets": "Défense sol-air moyenne à longue portée : protection d'un groupe aéronaval, d'une base aérienne ou d'un bataillon terrestre. Exportation possible pour amortissement (avec MEAE).",
+  "type_pion": "Capacité",
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-dga-fr, p. 4, 7"
+ },
+ {
+  "code": "DGA-SEAD",
+  "groupe": "SEAD",
+  "role": "DGA",
+  "armee": "Air et Espace",
+  "libelle": "Escadron SEAD Rafale F5",
+  "description": "1 pion principal 300 M€ (12 avions + pods) + 1 pion munitions 100 M€ (AARGM ou équivalent), soit ~400 M€. Détail : escadron 240 M€, pods EW 50-80 M€, stock initial 40-50 missiles 100 M€, cellule doctrine 10-20 M€. Exploitation : MCO ~40 M€/an, entraînement ~20-30 M€/an, doctrine ~10-20 M€/an.",
+  "categorie": "Capacité",
+  "statut_cout": "chiffre",
+  "cout": 400,
+  "cout_max": 400,
+  "unite": "M€ (investissement, 2 pions)",
+  "periodicite": "ponctuel",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": {
+   "ao": 0,
+   "mco": 1,
+   "rh": 2
+  },
+  "dorese_note": "1 MCO + 1 RH (entraînement) + 1 RH (doctrine).",
+  "delai": "3 ans minimum",
+  "conditions": "Formation pilote SEAD ; coordination Marine (si SCAF embarqué) et Terre (ouverture de théâtre).",
+  "partenaires": null,
+  "effets": "Ouvre un théâtre contesté ; multiplicateur des frappes air-sol.",
+  "type_pion": "Capacité",
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-dga-fr, p. 8"
+ },
+ {
+  "code": "DGA-IA-TAC",
+  "groupe": "IA",
+  "role": "DGA",
+  "armee": "Interarmées",
+  "libelle": "IA embarquée tactique (drone, robot)",
+  "description": "Logique embarquée + liaison plateforme (80-100 M€). Exploitation : MCO logiciel 20-50 M€/an, entraînement ~20 M€/an, cellule doctrine ~10 M€/an.",
+  "categorie": "Investissement / innovation",
+  "statut_cout": "chiffre",
+  "cout": 100,
+  "cout_max": 100,
+  "unite": "M€ (investissement)",
+  "periodicite": "ponctuel",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": {
+   "ao": 0,
+   "mco": 1,
+   "rh": 1
+  },
+  "dorese_note": "1 MCO + 1 RH. ",
+  "delai": "3 à 4 ans (2 ans démonstrateur, 1 an intégration, 1 an doctrine)",
+  "conditions": null,
+  "partenaires": null,
+  "effets": "Réactivité en combat dénié, latence décisionnelle réduite.",
+  "type_pion": "Violet (indiqué par la fiche)",
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-dga-fr, p. 9"
+ },
+ {
+  "code": "DGA-IA-C2",
+  "groupe": "IA",
+  "role": "DGA",
+  "armee": "Interarmées",
+  "libelle": "IA C2 interarmées / aide à la décision",
+  "description": "Fusion de données, tempo de décision (250-300 M€). Exploitation : MCO logiciel 20-50 M€/an, entraînement ~20 M€/an, cellule doctrine ~10 M€/an.",
+  "categorie": "Investissement / innovation",
+  "statut_cout": "chiffre",
+  "cout": 300,
+  "cout_max": 300,
+  "unite": "M€ (investissement)",
+  "periodicite": "ponctuel",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": {
+   "ao": 0,
+   "mco": 1,
+   "rh": 1
+  },
+  "dorese_note": "1 MCO + 1 RH. +1 RH ou MCO au choix (interarmées).",
+  "delai": "3 à 4 ans (2 ans démonstrateur, 1 an intégration, 1 an doctrine)",
+  "conditions": null,
+  "partenaires": null,
+  "effets": "Réactivité en combat dénié, latence décisionnelle réduite.",
+  "type_pion": "Violet (indiqué par la fiche)",
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-dga-fr, p. 9"
+ },
+ {
+  "code": "DGA-IA-PROJ",
+  "groupe": "IA",
+  "role": "DGA",
+  "armee": "Interarmées",
+  "libelle": "IA système projetable (Marine, cyber)",
+  "description": "Guerre sonar, ASM, cybersécurité avancée (400 M€ max). Exploitation : MCO logiciel 20-50 M€/an, entraînement ~20 M€/an, cellule doctrine ~10 M€/an.",
+  "categorie": "Investissement / innovation",
+  "statut_cout": "fourchette",
+  "cout": 300,
+  "cout_max": 400,
+  "unite": "M€ (investissement)",
+  "periodicite": "ponctuel",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": {
+   "ao": 0,
+   "mco": 1,
+   "rh": 1
+  },
+  "dorese_note": "1 MCO + 1 RH. +1 RH ou MCO au choix (projetée).",
+  "delai": "3 à 4 ans (2 ans démonstrateur, 1 an intégration, 1 an doctrine)",
+  "conditions": null,
+  "partenaires": null,
+  "effets": "Réactivité en combat dénié, latence décisionnelle réduite.",
+  "type_pion": "Violet (indiqué par la fiche)",
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-dga-fr, p. 9"
+ },
+ {
+  "code": "DGA-LAD-PORT",
+  "groupe": "LAD",
+  "role": "DGA",
+  "armee": "Interarmées",
+  "libelle": "Anti-drones : système portable (jammer)",
+  "description": "Protection ponctuelle (forces spéciales, infanterie, convois). Aucun pion : effet narratif.",
+  "categorie": "Capacité",
+  "statut_cout": "fourchette",
+  "cout": 10,
+  "cout_max": 20,
+  "unite": "M€/an (exploitation)",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": "Immédiat à 1 an",
+  "conditions": null,
+  "partenaires": null,
+  "effets": null,
+  "type_pion": "Aucun pion (indiqué par la fiche)",
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": "Sous le seuil de 100 M€ : à rattacher à un programme existant.",
+  "source": "strat_role-dga-fr, p. 10"
+ },
+ {
+  "code": "DGA-LAD-INT",
+  "groupe": "LAD",
+  "role": "DGA",
+  "armee": "Interarmées",
+  "libelle": "Anti-drones : système intégré (véhicule, tourelle)",
+  "description": "Effet sol-air tactique anti-UAV, protection de QG ou PHA. Pion violet 100 M€ ; exploitation 100 M€/an.",
+  "categorie": "Capacité",
+  "statut_cout": "chiffre",
+  "cout": 100,
+  "cout_max": 100,
+  "unite": "M€ (investissement) + 100 M€/an d'exploitation",
+  "periodicite": "ponctuel + annuel",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": "2 ans",
+  "conditions": null,
+  "partenaires": null,
+  "effets": null,
+  "type_pion": "Violet (indiqué par la fiche)",
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-dga-fr, p. 10"
+ },
+ {
+  "code": "DGA-LAD-LOURD",
+  "groupe": "LAD",
+  "role": "DGA",
+  "armee": "Interarmées",
+  "libelle": "Anti-drones : système lourd (base fixe, PA, SAMP/T)",
+  "description": "Défense multi-dôme intégrée aux radars, IA, C2. Pion violet 200-300 M€ ; exploitation 300 M€/an.",
+  "categorie": "Capacité",
+  "statut_cout": "fourchette",
+  "cout": 200,
+  "cout_max": 300,
+  "unite": "M€ (investissement) + 300 M€/an d'exploitation",
+  "periodicite": "ponctuel + annuel",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": "3 à 4 ans",
+  "conditions": null,
+  "partenaires": null,
+  "effets": null,
+  "type_pion": "Violet (indiqué par la fiche)",
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-dga-fr, p. 10"
+ },
+ {
+  "code": "DGA-STOCK-ART",
+  "groupe": "MUN",
+  "role": "DGA",
+  "armee": "Terre",
+  "libelle": "Stock 30 jours artillerie (division)",
+  "description": "1 pion obus (logistique).",
+  "categorie": "Munitions",
+  "statut_cout": "chiffre",
+  "cout": 100,
+  "cout_max": 100,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": true,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": "1 an (stockage passif)",
+  "conditions": "La DGA peut refuser des plans non alignés sur les cadences industrielles. Objectif : 30 jours de combat, recomplètement en 4 à 6 semaines (p6, p11).",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": "Infrastructure (indiqué par la fiche)",
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-dga-fr, p. 11"
+ },
+ {
+  "code": "DGA-STOCK-AIR",
+  "groupe": "MUN",
+  "role": "DGA",
+  "armee": "Air et Espace",
+  "libelle": "Stock de missiles air-sol (SCALP / MICA)",
+  "description": "1 pion munitions tactiques.",
+  "categorie": "Munitions",
+  "statut_cout": "chiffre",
+  "cout": 100,
+  "cout_max": 100,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": true,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": "1 an (stockage passif)",
+  "conditions": "La DGA peut refuser des plans non alignés sur les cadences industrielles. Objectif : 30 jours de combat, recomplètement en 4 à 6 semaines (p6, p11).",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": "Infrastructure (indiqué par la fiche)",
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-dga-fr, p. 11"
+ },
+ {
+  "code": "DGA-STOCK-MIXTE",
+  "groupe": "MUN",
+  "role": "DGA",
+  "armee": "Interarmées",
+  "libelle": "Stock mixte recomplètement + prépositionnement",
+  "description": "1 pion + liaison logistique (SGA).",
+  "categorie": "Munitions",
+  "statut_cout": "chiffre",
+  "cout": 200,
+  "cout_max": 200,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": true,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "La DGA peut refuser des plans non alignés sur les cadences industrielles. Objectif : 30 jours de combat, recomplètement en 4 à 6 semaines (p6, p11). Liaison logistique avec le SGA.",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": "Infrastructure (indiqué par la fiche)",
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-dga-fr, p. 11"
+ },
+ {
+  "code": "DGA-MUN-ACHAT",
+  "groupe": "MUN",
+  "role": "DGA",
+  "armee": "Interarmées",
+  "libelle": "Achat de munitions (au pion de 100 M€)",
+  "description": "Quantités pour 100 M€ données par la fiche : voir l'onglet « Munitions ».",
+  "categorie": "Munitions",
+  "statut_cout": "chiffre",
+  "cout": 100,
+  "cout_max": 100,
+  "unite": "M€ par pion",
+  "periodicite": "ponctuel",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "La DGA peut refuser des plans non alignés sur les cadences industrielles. Objectif : 30 jours de combat, recomplètement en 4 à 6 semaines (p6, p11).",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-dga-fr, p. 4, 5, 6"
+ },
+ {
+  "code": "DGA-EURODRONE",
+  "groupe": "PROG-MALE",
+  "role": "DGA",
+  "armee": "Air et Espace",
+  "libelle": "Eurodrone (3 drones + soutien)",
+  "description": "1 pion capacité = 3 Eurodrones + soutien. Unité : 50-60 M€ (ISR), 60-80 M€ (armé).",
+  "categorie": "Capacité",
+  "statut_cout": "fourchette",
+  "cout": 180,
+  "cout_max": 200,
+  "unite": "M€ par pion",
+  "periodicite": "ponctuel",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": {
+   "ao": 0,
+   "mco": 1,
+   "rh": 1
+  },
+  "dorese_note": null,
+  "delai": "3 ans après commande ; capacité ISR partielle dès 2 drones",
+  "conditions": "Engagement français : 21 drones sur 63. Commande minimale annuelle : 2.",
+  "partenaires": "Allemagne, Espagne, Italie",
+  "effets": null,
+  "type_pion": "Capacité",
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": "180-200 M€ : arrondir à 2 cases (200 M€) sur le plateau ?",
+  "source": "strat_role-dga-fr, p. 3, 12"
+ },
+ {
+  "code": "DGA-LW",
+  "groupe": "LW",
+  "role": "DGA",
+  "armee": "Air et Espace",
+  "libelle": "Loyal Wingmen (drones ailiers)",
+  "description": "Par tranche de 100 M€ : 3-4 drones d'attaque (40-50 M€) ou 4-6 drones EW/polyvalents (25-35 M€). Paquet complet conseillé : 600-800 M€ sur la période.",
+  "categorie": "Capacité",
+  "statut_cout": "fourchette",
+  "cout": 600,
+  "cout_max": 800,
+  "unite": "M€ sur la période",
+  "periodicite": "pluriannuel",
+  "etalement": "Peut être étalé",
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": {
+   "ao": 0,
+   "mco": 1,
+   "rh": 0
+  },
+  "dorese_note": "1 MCO si stockage et déploiement en escadron ; pas de RH si connectés au cloud de combat SCAF.",
+  "delai": null,
+  "conditions": "1/3 à 1/2 des NGF déployés accompagnés. Commande minimale annuelle : 4.",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "À vérifier : passage rédigé pour 2035-2040",
+  "alerte": "Raisonne en « NGF » (SCAF) : vérifier la cohérence avec un SCAF retardé en 2027-2033.",
+  "source": "strat_role-dga-fr, p. 4, 14"
+ },
+ {
+  "code": "DGA-MGCS-ESC",
+  "groupe": "PROG-MGCS",
+  "role": "DGA",
+  "armee": "Terre",
+  "libelle": "Escadron MGCS (12 chars + soutien)",
+  "description": "1 pion MGCS opérationnel.",
+  "categorie": "Capacité",
+  "statut_cout": "chiffre",
+  "cout": 400,
+  "cout_max": 400,
+  "unite": "M€ par pion",
+  "periodicite": "ponctuel",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": {
+   "ao": 0,
+   "mco": 1,
+   "rh": 1
+  },
+  "dorese_note": null,
+  "delai": "Arrive 1 an après la mise en production (production à partir de 2029)",
+  "conditions": "Cadence : 36 à 120 chars/an. Commande minimale annuelle : 20. Coût mutualisable avec l'Allemagne (bonus MEAE ou diplomatique possible).",
+  "partenaires": "Allemagne",
+  "effets": null,
+  "type_pion": "Capacité",
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": "Cible « 100 pour 2035, 200 d'ici 2045 » : calendrier à confronter à 2027-2033.",
+  "source": "strat_role-dga-fr, p. 4, 15"
+ },
+ {
+  "code": "DGA-MGCS-DRONES",
+  "groupe": "PROG-MGCS",
+  "role": "DGA",
+  "armee": "Terre",
+  "libelle": "Drones d'escorte MGCS (3-4 unités)",
+  "description": "Option IA de flanc / reconnaissance.",
+  "categorie": "Capacité",
+  "statut_cout": "chiffre",
+  "cout": 100,
+  "cout_max": 100,
+  "unite": "M€",
+  "periodicite": "ponctuel",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": null,
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-dga-fr, p. 15"
+ },
+ {
+  "code": "DGA-TITAN",
+  "groupe": "TITAN",
+  "role": "DGA",
+  "armee": "Terre",
+  "libelle": "Brigade lourde TITAN (96 chars MGCS)",
+  "description": "Capacité de percée / confrontation directe. 3,2 Md€ d'achat + 400 M€ d'exploitation par an (RH + MCO).",
+  "categorie": "Capacité",
+  "statut_cout": "chiffre",
+  "cout": 3200,
+  "cout_max": 3200,
+  "unite": "M€ (achat) + 400 M€/an d'exploitation",
+  "periodicite": "ponctuel + annuel",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": null,
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": "La fiche Terre vise 1 à 2 brigades Titan d'ici 2040.",
+  "source": "strat_role-dga-fr, p. 15"
+ },
+ {
+  "code": "DGA-CIFS-BAT",
+  "groupe": "PROG-CIFS",
+  "role": "DGA",
+  "armee": "Terre",
+  "libelle": "Batterie CIFS (8-10 pièces + véhicules)",
+  "description": "1 pion tactique ; 1 pièce = 8-10 M€.",
+  "categorie": "Capacité",
+  "statut_cout": "chiffre",
+  "cout": 100,
+  "cout_max": 100,
+  "unite": "M€ par pion",
+  "periodicite": "ponctuel",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Commande minimale annuelle : 10. Cible : 10-15 pièces d'ici 2032, 50 d'ici 2045 ; première mise en service vers 2035.",
+  "partenaires": "Allemagne",
+  "effets": null,
+  "type_pion": "Capacité",
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-dga-fr, p. 4, 17"
+ },
+ {
+  "code": "DGA-CIFS-BRIG",
+  "groupe": "PROG-CIFS",
+  "role": "DGA",
+  "armee": "Terre",
+  "libelle": "Brigade CIFS (40-50 pièces)",
+  "description": "4 à 5 pions.",
+  "categorie": "Capacité",
+  "statut_cout": "fourchette",
+  "cout": 400,
+  "cout_max": 500,
+  "unite": "M€",
+  "periodicite": "ponctuel",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": null,
+  "partenaires": "Allemagne",
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-dga-fr, p. 17"
+ },
+ {
+  "code": "DGA-VBCI-NG",
+  "groupe": "VBCI-NG",
+  "role": "DGA",
+  "armee": "Terre",
+  "libelle": "Successeur VBCI (20 véhicules)",
+  "description": "1 VBCI NG = 5 M€ ; 20 unités par pion.",
+  "categorie": "Capacité",
+  "statut_cout": "chiffre",
+  "cout": 100,
+  "cout_max": 100,
+  "unite": "M€ par pion",
+  "periodicite": "ponctuel",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": "Livraison initiale 2032 ou avant ; capacité complète 2038",
+  "conditions": "Commande minimale annuelle : 40.",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": "Capacité",
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-dga-fr, p. 4, 18"
+ },
+ {
+  "code": "DGA-VBAE",
+  "groupe": "VBAE",
+  "role": "DGA",
+  "armee": "Terre",
+  "libelle": "VBAE (60 véhicules)",
+  "description": "1 VBAE = 1,6 M€ ; 60 unités par pion. Coopération Belgique.",
+  "categorie": "Capacité",
+  "statut_cout": "chiffre",
+  "cout": 100,
+  "cout_max": 100,
+  "unite": "M€ par pion",
+  "periodicite": "ponctuel",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": "Livraison initiale 2030 ; capacité complète 2038",
+  "conditions": "Commande minimale annuelle : 20.",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": "Capacité",
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-dga-fr, p. 4, 18"
+ },
+ {
+  "code": "DGA-TIGRE-SUCC",
+  "groupe": "TIGRE-SUCC",
+  "role": "DGA",
+  "armee": "Terre",
+  "libelle": "Successeur Tigre (3 hélicoptères)",
+  "description": "1 hélicoptère d'attaque lourd = 33 M€ ; 3 unités par pion.",
+  "categorie": "Capacité",
+  "statut_cout": "chiffre",
+  "cout": 100,
+  "cout_max": 100,
+  "unite": "M€ par pion",
+  "periodicite": "ponctuel",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": "Livraison initiale 2030 ; capacité complète 2038",
+  "conditions": "Commande minimale annuelle : 10.",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": "Capacité",
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-dga-fr, p. 4, 18"
+ },
+ {
+  "code": "DGA-HIL",
+  "groupe": "HIL",
+  "role": "DGA",
+  "armee": "Interarmées",
+  "libelle": "HIL H160M Guépard (10 hélicoptères)",
+  "description": "1 hélicoptère léger = 10 M€ ; 10 unités par pion. Modèle interarmées Terre, Marine, Air.",
+  "categorie": "Capacité",
+  "statut_cout": "chiffre",
+  "cout": 100,
+  "cout_max": 100,
+  "unite": "M€ par pion",
+  "periodicite": "ponctuel",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": "Livraison initiale 2035 ; capacité complète 2038",
+  "conditions": "Commande minimale annuelle : 10.",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": "Capacité",
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-dga-fr, p. 4, 18"
+ },
+ {
+  "code": "DGA-CDG",
+  "groupe": "PA-CDG",
+  "role": "DGA",
+  "armee": "Marine",
+  "libelle": "Prolongation du Charles de Gaulle",
+  "description": "Maintien en service : permet deux porte-avions en 2037 (le CDG en fin de vie, le PANG en essais).",
+  "categorie": "Programme naval",
+  "statut_cout": "chiffre",
+  "cout": 1000,
+  "cout_max": 1000,
+  "unite": "M€",
+  "periodicite": "ponctuel / pluriannuel",
+  "etalement": "p5 : 1 Md€ en 2039, étalé sur 2 ans ; p13 : 1 Md€ unique (pion spécifique)",
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": null,
+  "partenaires": null,
+  "effets": "Gain politique narratif fort (année présidentielle 2037).",
+  "type_pion": null,
+  "edition": "À vérifier : passage rédigé pour 2035-2040",
+  "alerte": "Les deux pages se contredisent (étalé sur 2 ans / unique) ; dates 2038-2039 hors fenêtre 2027-2033.",
+  "source": "strat_role-dga-fr, p. 5, 13"
+ },
+ {
+  "code": "DGA-QUAI-TEMP",
+  "groupe": "QUAI",
+  "role": "DGA",
+  "armee": "Marine",
+  "libelle": "Quai temporaire porte-avions",
+  "description": "Accueil d'un seul PA ou PHA, avec limites d'entretien.",
+  "categorie": "Infrastructure",
+  "statut_cout": "chiffre",
+  "cout": 200,
+  "cout_max": 200,
+  "unite": "M€",
+  "periodicite": "ponctuel",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": "Actif en N+2",
+  "conditions": "Toulon ou Brest uniquement (fiche Marine p5).",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-dga-fr, p. 5, 13"
+ },
+ {
+  "code": "DGA-QUAI-PERM",
+  "groupe": "QUAI",
+  "role": "DGA",
+  "armee": "Marine",
+  "libelle": "Quai permanent porte-avions",
+  "description": "Accueil PA + navires alliés, ou double PA possible.",
+  "categorie": "Infrastructure",
+  "statut_cout": "chiffre",
+  "cout": 300,
+  "cout_max": 300,
+  "unite": "M€",
+  "periodicite": "ponctuel",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": "Actif en N+3",
+  "conditions": "Toulon ou Brest uniquement (fiche Marine p5).",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-dga-fr, p. 5, 13"
+ },
+ {
+  "code": "DGA-PANG2",
+  "groupe": "PA2",
+  "role": "DGA",
+  "armee": "Marine",
+  "libelle": "Second PANG : lancement du chantier",
+  "description": "Remobilisation de cale incluse sauf si saturée. Peut accueillir un groupe mixte franco-allié.",
+  "categorie": "Programme naval",
+  "statut_cout": "chiffre",
+  "cout": 5000,
+  "cout_max": 5000,
+  "unite": "M€ sur 5 ans",
+  "periodicite": "pluriannuel",
+  "etalement": "5 ans (2039-2044)",
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Au moins une action de développement/financement par an (fiche Marine p5).",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "À vérifier : passage rédigé pour 2035-2040",
+  "alerte": "Dates 2039-2044 hors fenêtre 2027-2033.",
+  "source": "strat_role-dga-fr, p. 13"
+ },
+ {
+  "code": "DGA-GAN2",
+  "groupe": "PA2",
+  "role": "DGA",
+  "armee": "Marine",
+  "libelle": "Groupe aéronaval additionnel",
+  "description": "Accompagne le second PANG.",
+  "categorie": "Programme naval",
+  "statut_cout": "chiffre",
+  "cout": 2000,
+  "cout_max": 2000,
+  "unite": "M€ sur 3 ans",
+  "periodicite": "pluriannuel",
+  "etalement": "3 ans, dès 2042",
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": null,
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "À vérifier : passage rédigé pour 2035-2040",
+  "alerte": "Dates hors fenêtre 2027-2033.",
+  "source": "strat_role-dga-fr, p. 13"
+ },
+ {
+  "code": "DGA-AED-10",
+  "groupe": "AED",
+  "role": "DGA",
+  "armee": "Interarmées",
+  "libelle": "Armes à énergie dirigée (opérationnel N+10)",
+  "description": "Programme de R&D.",
+  "categorie": "R&D",
+  "statut_cout": "chiffre",
+  "cout": 300,
+  "cout_max": 300,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": true,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": "N+10",
+  "conditions": null,
+  "partenaires": null,
+  "effets": null,
+  "type_pion": "Violet (investissement) [suggestion]",
+  "edition": "À vérifier : passage rédigé pour 2035-2040",
+  "alerte": "Section « R&D pour l'horizon 2035-2040 ».",
+  "source": "strat_role-dga-fr, p. 5, 6"
+ },
+ {
+  "code": "DGA-AED-15",
+  "groupe": "AED",
+  "role": "DGA",
+  "armee": "Interarmées",
+  "libelle": "Armes à énergie dirigée (opérationnel N+15)",
+  "description": "Programme de R&D.",
+  "categorie": "R&D",
+  "statut_cout": "chiffre",
+  "cout": 200,
+  "cout_max": 200,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": true,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": "N+15",
+  "conditions": null,
+  "partenaires": null,
+  "effets": null,
+  "type_pion": "Violet (investissement) [suggestion]",
+  "edition": "À vérifier : passage rédigé pour 2035-2040",
+  "alerte": "Section « R&D pour l'horizon 2035-2040 ».",
+  "source": "strat_role-dga-fr, p. 5, 6"
+ },
+ {
+  "code": "DGA-HYPER-5",
+  "groupe": "HYPER",
+  "role": "DGA",
+  "armee": "Interarmées",
+  "libelle": "Missiles hypersoniques (opérationnel N+5)",
+  "description": "Programme de R&D.",
+  "categorie": "R&D",
+  "statut_cout": "chiffre",
+  "cout": 200,
+  "cout_max": 200,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": true,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": "N+5",
+  "conditions": null,
+  "partenaires": null,
+  "effets": null,
+  "type_pion": "Violet (investissement) [suggestion]",
+  "edition": "À vérifier : passage rédigé pour 2035-2040",
+  "alerte": "Section « R&D pour l'horizon 2035-2040 ».",
+  "source": "strat_role-dga-fr, p. 5, 6"
+ },
+ {
+  "code": "DGA-HYPER-10",
+  "groupe": "HYPER",
+  "role": "DGA",
+  "armee": "Interarmées",
+  "libelle": "Missiles hypersoniques (opérationnel N+10)",
+  "description": "Programme de R&D.",
+  "categorie": "R&D",
+  "statut_cout": "chiffre",
+  "cout": 100,
+  "cout_max": 100,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": true,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": "N+10",
+  "conditions": null,
+  "partenaires": null,
+  "effets": null,
+  "type_pion": "Violet (investissement) [suggestion]",
+  "edition": "À vérifier : passage rédigé pour 2035-2040",
+  "alerte": "Section « R&D pour l'horizon 2035-2040 ».",
+  "source": "strat_role-dga-fr, p. 5, 6"
+ },
+ {
+  "code": "DGA-QUANT",
+  "groupe": "QUANT",
+  "role": "DGA",
+  "armee": "Interarmées",
+  "libelle": "Cyberdéfense quantique",
+  "description": "Parer la menace des ordinateurs quantiques sur le chiffrement (horizon 2050).",
+  "categorie": "R&D",
+  "statut_cout": "chiffre",
+  "cout": 200,
+  "cout_max": 200,
+  "unite": "M€/an",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": true,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": null,
+  "partenaires": null,
+  "effets": null,
+  "type_pion": "Violet (investissement) [suggestion]",
+  "edition": "À vérifier : passage rédigé pour 2035-2040",
+  "alerte": "Section « R&D pour l'horizon 2035-2040 ».",
+  "source": "strat_role-dga-fr, p. 5, 6"
+ },
+ {
+  "code": "DGA-ESSAIM",
+  "groupe": "ESSAIM",
+  "role": "DGA",
+  "armee": "Interarmées",
+  "libelle": "Essaim de drones",
+  "description": "Essaims autonomes de drones aériens et terrestres armés. Le financement ne présume pas de la mise en production.",
+  "categorie": "R&D",
+  "statut_cout": "chiffre",
+  "cout": 300,
+  "cout_max": 300,
+  "unite": "M€ (lancement) puis 200 M€/an",
+  "periodicite": "ponctuel + annuel",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": "Opérationnel en N+6",
+  "conditions": null,
+  "partenaires": null,
+  "effets": null,
+  "type_pion": "Violet (investissement) [suggestion]",
+  "edition": "À vérifier : passage rédigé pour 2035-2040",
+  "alerte": "Section « R&D pour l'horizon 2035-2040 ».",
+  "source": "strat_role-dga-fr, p. 5"
+ },
+ {
+  "code": "DGA-ARGONAUTE",
+  "groupe": "ARGONAUTE",
+  "role": "DGA",
+  "armee": "Air et Espace",
+  "libelle": "Argonaute (sécurité spatiale, ESA)",
+  "description": "Réduction du risque spatial (débris) ; technologie duale de protection contre les actions hostiles.",
+  "categorie": "R&D",
+  "statut_cout": "chiffre",
+  "cout": 500,
+  "cout_max": 500,
+  "unite": "M€ (lancement) puis 200 M€/an",
+  "periodicite": "ponctuel + annuel",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": "Opérationnel en N+10",
+  "conditions": "Investissement nécessaire pour convaincre les partenaires européens. Coûts partageables avec d'autres ministères (MEFR).",
+  "partenaires": "Agence spatiale européenne",
+  "effets": null,
+  "type_pion": "Violet (investissement) [suggestion]",
+  "edition": "À vérifier : passage rédigé pour 2035-2040",
+  "alerte": "Section « R&D pour l'horizon 2035-2040 ».",
+  "source": "strat_role-dga-fr, p. 6"
+ },
+ {
+  "code": "DGA-CHAR-LEOPARD",
+  "groupe": "CHARS",
+  "role": "DGA",
+  "armee": "Terre",
+  "libelle": "Achat sur étagère : Leopard 2A8",
+  "description": "Origine : Allemagne. Très répandu en Europe, interopérable. MCO : 0,5-1 M€/an par char. Acheminement : faible.",
+  "categorie": "Achat sur étagère",
+  "statut_cout": "fourchette",
+  "cout": 15.0,
+  "cout_max": 20.0,
+  "unite": "M€ par char",
+  "periodicite": "ponctuel",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": "2-3 ans",
+  "conditions": null,
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "À vérifier : passage rédigé pour 2035-2040",
+  "alerte": "Grille « 2035-2040 ». Coût unitaire : nombre de chars par case à fixer par l'animateur.",
+  "source": "strat_role-dga-fr, p. 16"
+ },
+ {
+  "code": "DGA-CHAR-M1A2",
+  "groupe": "CHARS",
+  "role": "DGA",
+  "armee": "Terre",
+  "libelle": "Achat sur étagère : M1A2 Abrams SEPv3",
+  "description": "Origine : États-Unis. Coûteux à entretenir et transporter. MCO : 1-1,5 M€/an par char. Acheminement : élevé (transatlantique).",
+  "categorie": "Achat sur étagère",
+  "statut_cout": "fourchette",
+  "cout": 10.0,
+  "cout_max": 12.0,
+  "unite": "M€ par char",
+  "periodicite": "ponctuel",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": "2-3 ans",
+  "conditions": null,
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "À vérifier : passage rédigé pour 2035-2040",
+  "alerte": "Grille « 2035-2040 ». Coût unitaire : nombre de chars par case à fixer par l'animateur.",
+  "source": "strat_role-dga-fr, p. 16"
+ },
+ {
+  "code": "DGA-CHAR-KF51",
+  "groupe": "CHARS",
+  "role": "DGA",
+  "armee": "Terre",
+  "libelle": "Achat sur étagère : KF51 Panther",
+  "description": "Origine : Allemagne. Nouvelle génération en développement. MCO : 0,5-1 M€/an par char. Acheminement : faible.",
+  "categorie": "Achat sur étagère",
+  "statut_cout": "fourchette",
+  "cout": 15.0,
+  "cout_max": 20.0,
+  "unite": "M€ par char",
+  "periodicite": "ponctuel",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": "3-4 ans",
+  "conditions": null,
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "À vérifier : passage rédigé pour 2035-2040",
+  "alerte": "Grille « 2035-2040 ». Coût unitaire : nombre de chars par case à fixer par l'animateur.",
+  "source": "strat_role-dga-fr, p. 16"
+ },
+ {
+  "code": "DGA-CHAR-EMBT",
+  "groupe": "CHARS",
+  "role": "DGA",
+  "armee": "Terre",
+  "libelle": "Achat sur étagère : EMBT (Leclerc Evolution)",
+  "description": "Origine : France / Allemagne. Char intermédiaire franco-allemand. MCO : 0,5-0,8 M€/an par char. Acheminement : N/A (national).",
+  "categorie": "Achat sur étagère",
+  "statut_cout": "fourchette",
+  "cout": 8.0,
+  "cout_max": 10.0,
+  "unite": "M€ par char",
+  "periodicite": "ponctuel",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": "2-3 ans",
+  "conditions": null,
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "À vérifier : passage rédigé pour 2035-2040",
+  "alerte": "Grille « 2035-2040 ». Coût unitaire : nombre de chars par case à fixer par l'animateur.",
+  "source": "strat_role-dga-fr, p. 16"
+ },
+ {
+  "code": "DGA-CHAR-K2",
+  "groupe": "CHARS",
+  "role": "DGA",
+  "armee": "Terre",
+  "libelle": "Achat sur étagère : K2 Black Panther",
+  "description": "Origine : Corée du Sud. Moderne, coûts logistiques importants. MCO : 0,5-0,8 M€/an par char. Acheminement : élevé (maritime).",
+  "categorie": "Achat sur étagère",
+  "statut_cout": "fourchette",
+  "cout": 8.0,
+  "cout_max": 10.0,
+  "unite": "M€ par char",
+  "periodicite": "ponctuel",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": "2-3 ans",
+  "conditions": null,
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "À vérifier : passage rédigé pour 2035-2040",
+  "alerte": "Grille « 2035-2040 ». Coût unitaire : nombre de chars par case à fixer par l'animateur.",
+  "source": "strat_role-dga-fr, p. 16"
+ },
+ {
+  "code": "DGA-CHAR-M10",
+  "groupe": "CHARS",
+  "role": "DGA",
+  "armee": "Terre",
+  "libelle": "Achat sur étagère : M10 Booker",
+  "description": "Origine : États-Unis. Char léger récent. MCO : 0,3-0,5 M€/an par char. Acheminement : élevé (transatlantique).",
+  "categorie": "Achat sur étagère",
+  "statut_cout": "fourchette",
+  "cout": 5.0,
+  "cout_max": 6.0,
+  "unite": "M€ par char",
+  "periodicite": "ponctuel",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": "2-3 ans",
+  "conditions": null,
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "À vérifier : passage rédigé pour 2035-2040",
+  "alerte": "Grille « 2035-2040 ». Coût unitaire : nombre de chars par case à fixer par l'animateur.",
+  "source": "strat_role-dga-fr, p. 16"
+ },
+ {
+  "code": "DGA-CHAR-LECLERC",
+  "groupe": "CHARS",
+  "role": "DGA",
+  "armee": "Terre",
+  "libelle": "Achat sur étagère : Leclerc XLR (rénové)",
+  "description": "Origine : France. Prolonge le Leclerc jusqu'en 2040. MCO : 0,3-0,5 M€/an par char. Acheminement : N/A (national).",
+  "categorie": "Achat sur étagère",
+  "statut_cout": "fourchette",
+  "cout": 4.0,
+  "cout_max": 5.0,
+  "unite": "M€ par char",
+  "periodicite": "ponctuel",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": "1-2 ans",
+  "conditions": null,
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "À vérifier : passage rédigé pour 2035-2040",
+  "alerte": "Grille « 2035-2040 ». Coût unitaire : nombre de chars par case à fixer par l'animateur.",
+  "source": "strat_role-dga-fr, p. 16"
+ },
+ {
+  "code": "DGA-CHAR-AMX10",
+  "groupe": "CHARS",
+  "role": "DGA",
+  "armee": "Terre",
+  "libelle": "Achat sur étagère : AMX-10 RC (rénové)",
+  "description": "Origine : France. Reconnaissance, peu adapté à la haute intensité. MCO : 0,2-0,3 M€/an par char. Acheminement : N/A (national).",
+  "categorie": "Achat sur étagère",
+  "statut_cout": "fourchette",
+  "cout": 2.0,
+  "cout_max": 3.0,
+  "unite": "M€ par char",
+  "periodicite": "ponctuel",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": "1-2 ans",
+  "conditions": null,
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "À vérifier : passage rédigé pour 2035-2040",
+  "alerte": "Grille « 2035-2040 ». Coût unitaire : nombre de chars par case à fixer par l'animateur.",
+  "source": "strat_role-dga-fr, p. 16"
+ },
+ {
+  "code": "EMAT-IA-TAC",
+  "groupe": "EMAT-IA-TAC",
+  "role": "EMAT",
+  "armee": "Terre",
+  "libelle": "IA tactique terrestre",
+  "description": "Coordination automatisée des unités robotisées (UGV, drones), appui-feu intelligent, intégration Scorpion/SICS, action sans GPS.",
+  "categorie": "Piste capacitaire",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Piste de la fiche : coût, volume et délai évalués par l'animateur ou les arbitres ; tuile ≥ 100 M€, sinon rattacher à un programme existant.",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-armee-de-terre-fr, p. 5, 6"
+ },
+ {
+  "code": "EMAT-DRONES",
+  "groupe": "EMAT-DRONES",
+  "role": "EMAT",
+  "armee": "Terre",
+  "libelle": "Drones, munitions autonomes et essaims",
+  "description": "Munitions vagabondes, drones FPV à bas coût (~300 à 1 000 € l'unité) en masse, fonctionnement sans GPS.",
+  "categorie": "Piste capacitaire",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Piste de la fiche : coût, volume et délai évalués par l'animateur ou les arbitres ; tuile ≥ 100 M€, sinon rattacher à un programme existant.",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-armee-de-terre-fr, p. 5, 6"
+ },
+ {
+  "code": "EMAT-ROBOT",
+  "groupe": "EMAT-ROBOT",
+  "role": "EMAT",
+  "armee": "Terre",
+  "libelle": "Robotique terrestre interopérable",
+  "description": "UGV, URV ou USV en appui, intégrés à la manœuvre Scorpion.",
+  "categorie": "Piste capacitaire",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Piste de la fiche : coût, volume et délai évalués par l'animateur ou les arbitres ; tuile ≥ 100 M€, sinon rattacher à un programme existant.",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-armee-de-terre-fr, p. 5, 6"
+ },
+ {
+  "code": "EMAT-LOG",
+  "groupe": "EMAT-LOG",
+  "role": "EMAT",
+  "armee": "Terre",
+  "libelle": "Logistique projetable et soutien opérationnel",
+  "description": "Hubs logistiques avancés pour brigades projetables, ravitaillement inter-théâtres, prépositionnement de Caesar, VBCI, blindés du génie.",
+  "categorie": "Piste capacitaire",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Piste de la fiche : coût, volume et délai évalués par l'animateur ou les arbitres ; tuile ≥ 100 M€, sinon rattacher à un programme existant.",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-armee-de-terre-fr, p. 5, 6"
+ },
+ {
+  "code": "EMAT-CYBER",
+  "groupe": "EMAT-CYBER",
+  "role": "EMAT",
+  "armee": "Terre",
+  "libelle": "Cyberguerre terrestre et guerre électronique",
+  "description": "Protection des réseaux Scorpion et SICS, brouillage, interception, unités cyber de réaction rapide.",
+  "categorie": "Piste capacitaire",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Piste de la fiche : coût, volume et délai évalués par l'animateur ou les arbitres ; tuile ≥ 100 M€, sinon rattacher à un programme existant.",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-armee-de-terre-fr, p. 5, 6"
+ },
+ {
+  "code": "EMAT-FEUX",
+  "groupe": "EMAT-FEUX",
+  "role": "EMAT",
+  "armee": "Terre",
+  "libelle": "Dissuasion conventionnelle et feux profonds",
+  "description": "LRM longue portée (type HIMARS, M270), missiles balistiques tactiques conventionnels, appui-feu autonome.",
+  "categorie": "Piste capacitaire",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Piste de la fiche : coût, volume et délai évalués par l'animateur ou les arbitres ; tuile ≥ 100 M€, sinon rattacher à un programme existant.",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-armee-de-terre-fr, p. 5, 6"
+ },
+ {
+  "code": "EMAT-SPATIAL",
+  "groupe": "EMAT-SPATIAL",
+  "role": "EMAT",
+  "armee": "Terre",
+  "libelle": "Appui spatialisé militaire",
+  "description": "Géolocalisation, imagerie multispectrale, communications déployables, surveillance logistique adverse.",
+  "categorie": "Piste capacitaire",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Piste de la fiche : coût, volume et délai évalués par l'animateur ou les arbitres ; tuile ≥ 100 M€, sinon rattacher à un programme existant.",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-armee-de-terre-fr, p. 5, 6"
+ },
+ {
+  "code": "EMAT-COOP",
+  "groupe": "EMAT-COOP",
+  "role": "EMAT",
+  "armee": "Terre",
+  "libelle": "Coopérations OTAN / UE",
+  "description": "MGCS, achats mutualisés (drones, sol-air), brigades conjointes, achats en complément national (Boxer, Lynx).",
+  "categorie": "Piste capacitaire",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Piste de la fiche : coût, volume et délai évalués par l'animateur ou les arbitres ; tuile ≥ 100 M€, sinon rattacher à un programme existant.",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": null,
+  "source": "strat_role-armee-de-terre-fr, p. 5, 6"
+ },
+ {
+  "code": "EMAT-TITAN",
+  "groupe": "TITAN",
+  "role": "EMAT",
+  "armee": "Terre",
+  "libelle": "Brigade Titan (1 à 2 brigades Leclerc d'ici 2040)",
+  "description": "Matériel requis par brigade : 96 MGCS, 160 successeurs VBCI, 120 VBAE, 18 SABC.",
+  "categorie": "Capacité",
+  "statut_cout": "renvoi",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Horizon 2040.",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": "Non chiffré dans la fiche Terre ; la DGA donne 3,2 Md€ + 400 M€/an (DGA-TITAN).",
+  "source": "strat_role-armee-de-terre-fr, p. 3"
+ },
+ {
+  "code": "EMAAE-BSA",
+  "groupe": "SAMPT",
+  "role": "EMAAE",
+  "armee": "Air et Espace",
+  "libelle": "Brigade anti-aérienne (type SAMP/T NG) : exploitation",
+  "description": "Structure cible : 4 batteries SAMP/T NG (1 radar + 1 C2 + 4 lanceurs), 2 batteries SHORAD (MICA VL / Mistral), 1 radar longue portée + 1 C2 brigade.",
+  "categorie": "Capacité",
+  "statut_cout": "fourchette",
+  "cout": 200,
+  "cout_max": 300,
+  "unite": "M€/an (exploitation)",
+  "periodicite": "annuel",
+  "etalement": null,
+  "annuel": true,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": "200 M€/an en version dégradée ; 300 M€/an pour une capacité complète avec MCO renforcé.",
+  "delai": null,
+  "conditions": null,
+  "partenaires": null,
+  "effets": "Défense sol-air de théâtre.",
+  "type_pion": "Capacité",
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": "Investissement initial : voir DGA-SAMPT (400 M€ par pion, 3 lanceurs et non 4).",
+  "source": "strat_role-armee-de-l-air-fr, p. 3"
+ },
+ {
+  "code": "EMAAE-SEAD",
+  "groupe": "EMAAE-SEAD",
+  "role": "EMAAE",
+  "armee": "Air et Espace",
+  "libelle": "Capacité SEAD",
+  "description": "Escadron Rafale F5 ou NGF en configuration SEAD, nacelles EW, missiles anti-radar (chiffré côté DGA : DGA-SEAD).",
+  "categorie": "Piste capacitaire",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Piste de la fiche : coût, volume et délai évalués par l'animateur ou les arbitres ; tuile ≥ 100 M€, sinon rattacher à un programme existant.",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "À vérifier : le guide de la fiche vise la « LPM 2035-2040 » (p4)",
+  "alerte": null,
+  "source": "strat_role-armee-de-l-air-fr, p. 4, 5, 6"
+ },
+ {
+  "code": "EMAAE-IA",
+  "groupe": "EMAAE-IA",
+  "role": "EMAAE",
+  "armee": "Air et Espace",
+  "libelle": "IA opérationnelle embarquée",
+  "description": "Ciblage, guerre électronique, détection ; supervision humaine intégrée au C2.",
+  "categorie": "Piste capacitaire",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Piste de la fiche : coût, volume et délai évalués par l'animateur ou les arbitres ; tuile ≥ 100 M€, sinon rattacher à un programme existant.",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "À vérifier : le guide de la fiche vise la « LPM 2035-2040 » (p4)",
+  "alerte": null,
+  "source": "strat_role-armee-de-l-air-fr, p. 4, 5, 6"
+ },
+ {
+  "code": "EMAAE-DRONES",
+  "groupe": "EMAAE-DRONES",
+  "role": "EMAAE",
+  "armee": "Air et Espace",
+  "libelle": "Drones, munitions autonomes et essaims",
+  "description": "Drones kamikazes ou de harcèlement compatibles Reaper, Eurodrone.",
+  "categorie": "Piste capacitaire",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Piste de la fiche : coût, volume et délai évalués par l'animateur ou les arbitres ; tuile ≥ 100 M€, sinon rattacher à un programme existant.",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "À vérifier : le guide de la fiche vise la « LPM 2035-2040 » (p4)",
+  "alerte": null,
+  "source": "strat_role-armee-de-l-air-fr, p. 4, 5, 6"
+ },
+ {
+  "code": "EMAAE-SPATIAL",
+  "groupe": "EMAAE-SPATIAL",
+  "role": "EMAAE",
+  "armee": "Air et Espace",
+  "libelle": "Capacités spatiales militaires",
+  "description": "Surveillance, antisatellite passif ou actif, lancements nationaux, ARGONAUTE.",
+  "categorie": "Piste capacitaire",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Piste de la fiche : coût, volume et délai évalués par l'animateur ou les arbitres ; tuile ≥ 100 M€, sinon rattacher à un programme existant.",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "À vérifier : le guide de la fiche vise la « LPM 2035-2040 » (p4)",
+  "alerte": null,
+  "source": "strat_role-armee-de-l-air-fr, p. 4, 5, 6"
+ },
+ {
+  "code": "EMAAE-FURTIF",
+  "groupe": "EMAAE-FURTIF",
+  "role": "EMAAE",
+  "armee": "Air et Espace",
+  "libelle": "Furtivité et supériorité multi-domaines",
+  "description": "Signature multibande SCAF, Loyal Wingman furtifs, brouillage actif.",
+  "categorie": "Piste capacitaire",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Piste de la fiche : coût, volume et délai évalués par l'animateur ou les arbitres ; tuile ≥ 100 M€, sinon rattacher à un programme existant.",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "À vérifier : le guide de la fiche vise la « LPM 2035-2040 » (p4)",
+  "alerte": null,
+  "source": "strat_role-armee-de-l-air-fr, p. 4, 5, 6"
+ },
+ {
+  "code": "EMAAE-LOG",
+  "groupe": "EMAAE-LOG",
+  "role": "EMAAE",
+  "armee": "Air et Espace",
+  "libelle": "Logistique projetable et soutien avancé",
+  "description": "Bases aériennes avancées, extension de pistes, renforcement MRTT / A400M.",
+  "categorie": "Piste capacitaire",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Piste de la fiche : coût, volume et délai évalués par l'animateur ou les arbitres ; tuile ≥ 100 M€, sinon rattacher à un programme existant.",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "À vérifier : le guide de la fiche vise la « LPM 2035-2040 » (p4)",
+  "alerte": null,
+  "source": "strat_role-armee-de-l-air-fr, p. 4, 5, 6"
+ },
+ {
+  "code": "EMAAE-CYBER",
+  "groupe": "EMAAE-CYBER",
+  "role": "EMAAE",
+  "armee": "Air et Espace",
+  "libelle": "Cyberguerre aérienne",
+  "description": "Cybersécurité SCAF, drones, liaisons ; guerre électronique offensive.",
+  "categorie": "Piste capacitaire",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Piste de la fiche : coût, volume et délai évalués par l'animateur ou les arbitres ; tuile ≥ 100 M€, sinon rattacher à un programme existant.",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "À vérifier : le guide de la fiche vise la « LPM 2035-2040 » (p4)",
+  "alerte": null,
+  "source": "strat_role-armee-de-l-air-fr, p. 4, 5, 6"
+ },
+ {
+  "code": "EMAAE-PROF",
+  "groupe": "EMAAE-PROF",
+  "role": "EMAAE",
+  "armee": "Air et Espace",
+  "libelle": "Frappe dans la profondeur conventionnelle",
+  "description": "Missiles air-sol longue portée, saturation des zones aériennes ennemies.",
+  "categorie": "Piste capacitaire",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Piste de la fiche : coût, volume et délai évalués par l'animateur ou les arbitres ; tuile ≥ 100 M€, sinon rattacher à un programme existant.",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "À vérifier : le guide de la fiche vise la « LPM 2035-2040 » (p4)",
+  "alerte": null,
+  "source": "strat_role-armee-de-l-air-fr, p. 4, 5, 6"
+ },
+ {
+  "code": "EMAAE-COOP",
+  "groupe": "EMAAE-COOP",
+  "role": "EMAAE",
+  "armee": "Air et Espace",
+  "libelle": "Coopérations OTAN / UE",
+  "description": "SCAF, drones MALE/HALE, munitions intelligentes, satellites partagés (EU SST).",
+  "categorie": "Piste capacitaire",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Piste de la fiche : coût, volume et délai évalués par l'animateur ou les arbitres ; tuile ≥ 100 M€, sinon rattacher à un programme existant.",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "À vérifier : le guide de la fiche vise la « LPM 2035-2040 » (p4)",
+  "alerte": null,
+  "source": "strat_role-armee-de-l-air-fr, p. 4, 5, 6"
+ },
+ {
+  "code": "EMAAE-C130H",
+  "groupe": "EMAAE-C130H",
+  "role": "EMAAE",
+  "armee": "Air et Espace",
+  "libelle": "Retrait ou remplacement des C-130H",
+  "description": "C-130H en fin de vie et coûteux ; C-130J conservés pour missions spéciales (p3).",
+  "categorie": "Piste capacitaire",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Piste de la fiche : coût, volume et délai évalués par l'animateur ou les arbitres ; tuile ≥ 100 M€, sinon rattacher à un programme existant.",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "À vérifier : le guide de la fiche vise la « LPM 2035-2040 » (p4)",
+  "alerte": null,
+  "source": "strat_role-armee-de-l-air-fr, p. 4, 5, 6"
+ },
+ {
+  "code": "EMM-FDA",
+  "groupe": "EMM-FDA",
+  "role": "EMM",
+  "armee": "Marine",
+  "libelle": "Remplacement des frégates de défense aérienne (Forbin)",
+  "description": "Protection des groupes aéronavals contre missiles hypersoniques et saturation de drones (p4).",
+  "categorie": "Piste capacitaire",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Piste de la fiche : coût, volume et délai évalués par l'animateur ou les arbitres ; tuile ≥ 100 M€, sinon rattacher à un programme existant.",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "À vérifier : le guide de la fiche vise la « LPM 2035-2040 » (p4)",
+  "alerte": null,
+  "source": "strat_role-marine-fr, p. 4 à 8"
+ },
+ {
+  "code": "EMM-MAWS",
+  "groupe": "EMM-MAWS",
+  "role": "EMM",
+  "armee": "Marine",
+  "libelle": "MAWS, successeur des Atlantique 2",
+  "description": "Arbitrage entre solution européenne, nationale ou achat américain (P-8 Poseidon) (p4).",
+  "categorie": "Piste capacitaire",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Piste de la fiche : coût, volume et délai évalués par l'animateur ou les arbitres ; tuile ≥ 100 M€, sinon rattacher à un programme existant.",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "À vérifier : le guide de la fiche vise la « LPM 2035-2040 » (p4)",
+  "alerte": null,
+  "source": "strat_role-marine-fr, p. 4 à 8"
+ },
+ {
+  "code": "EMM-IA",
+  "groupe": "EMM-IA",
+  "role": "EMM",
+  "armee": "Marine",
+  "libelle": "IA navale et commandement embarqué",
+  "description": "IA sur frégate, SNA ou drone de surface ; doctrine interarmées validée par le CEMA.",
+  "categorie": "Piste capacitaire",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Piste de la fiche : coût, volume et délai évalués par l'animateur ou les arbitres ; tuile ≥ 100 M€, sinon rattacher à un programme existant.",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "À vérifier : le guide de la fiche vise la « LPM 2035-2040 » (p4)",
+  "alerte": null,
+  "source": "strat_role-marine-fr, p. 4 à 8"
+ },
+ {
+  "code": "EMM-DRONES",
+  "groupe": "EMM-DRONES",
+  "role": "EMM",
+  "armee": "Marine",
+  "libelle": "Drones, munitions autonomes et essaims maritimes",
+  "description": "Munitions à détection passive, déploiement par USV ou frégates.",
+  "categorie": "Piste capacitaire",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Piste de la fiche : coût, volume et délai évalués par l'animateur ou les arbitres ; tuile ≥ 100 M€, sinon rattacher à un programme existant.",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "À vérifier : le guide de la fiche vise la « LPM 2035-2040 » (p4)",
+  "alerte": null,
+  "source": "strat_role-marine-fr, p. 4 à 8"
+ },
+ {
+  "code": "EMM-ROBOT",
+  "groupe": "EMM-ROBOT",
+  "role": "EMM",
+  "armee": "Marine",
+  "libelle": "Robotique navale et sous-marine",
+  "description": "USV de surveillance portuaire, URV de lutte anti-mines et guerre des fonds marins.",
+  "categorie": "Piste capacitaire",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Piste de la fiche : coût, volume et délai évalués par l'animateur ou les arbitres ; tuile ≥ 100 M€, sinon rattacher à un programme existant.",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "À vérifier : le guide de la fiche vise la « LPM 2035-2040 » (p4)",
+  "alerte": null,
+  "source": "strat_role-marine-fr, p. 4 à 8"
+ },
+ {
+  "code": "EMM-FURTIF",
+  "groupe": "EMM-FURTIF",
+  "role": "EMM",
+  "armee": "Marine",
+  "libelle": "Furtivité multi-domaine",
+  "description": "Camouflage thermique, revêtement adaptatif, leurres numériques.",
+  "categorie": "Piste capacitaire",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Piste de la fiche : coût, volume et délai évalués par l'animateur ou les arbitres ; tuile ≥ 100 M€, sinon rattacher à un programme existant.",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "À vérifier : le guide de la fiche vise la « LPM 2035-2040 » (p4)",
+  "alerte": null,
+  "source": "strat_role-marine-fr, p. 4 à 8"
+ },
+ {
+  "code": "EMM-LOG",
+  "groupe": "EMM-LOG",
+  "role": "EMM",
+  "armee": "Marine",
+  "libelle": "Logistique projetable",
+  "description": "Renforcement des BRF, points de repli à l'étranger, déploiement portuaire temporaire.",
+  "categorie": "Piste capacitaire",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Piste de la fiche : coût, volume et délai évalués par l'animateur ou les arbitres ; tuile ≥ 100 M€, sinon rattacher à un programme existant.",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "À vérifier : le guide de la fiche vise la « LPM 2035-2040 » (p4)",
+  "alerte": null,
+  "source": "strat_role-marine-fr, p. 4 à 8"
+ },
+ {
+  "code": "EMM-CYBER",
+  "groupe": "EMM-CYBER",
+  "role": "EMM",
+  "armee": "Marine",
+  "libelle": "Cyberguerre navale",
+  "description": "Protection des frégates, SNLE, SNA ; déni d'accès ; renseignement cyber.",
+  "categorie": "Piste capacitaire",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Piste de la fiche : coût, volume et délai évalués par l'animateur ou les arbitres ; tuile ≥ 100 M€, sinon rattacher à un programme existant.",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "À vérifier : le guide de la fiche vise la « LPM 2035-2040 » (p4)",
+  "alerte": null,
+  "source": "strat_role-marine-fr, p. 4 à 8"
+ },
+ {
+  "code": "EMM-FRAPPE",
+  "groupe": "EMM-FRAPPE",
+  "role": "EMM",
+  "armee": "Marine",
+  "libelle": "Dissuasion conventionnelle et frappe navale",
+  "description": "MdCN sur frégates et sous-marins, frappe mer-terre longue distance.",
+  "categorie": "Piste capacitaire",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Piste de la fiche : coût, volume et délai évalués par l'animateur ou les arbitres ; tuile ≥ 100 M€, sinon rattacher à un programme existant.",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "À vérifier : le guide de la fiche vise la « LPM 2035-2040 » (p4)",
+  "alerte": null,
+  "source": "strat_role-marine-fr, p. 4 à 8"
+ },
+ {
+  "code": "EMM-SPATIAL",
+  "groupe": "EMM-SPATIAL",
+  "role": "EMM",
+  "armee": "Marine",
+  "libelle": "Capacité spatiale appliquée à la Marine",
+  "description": "Surveillance satellite des routes maritimes et des ZEE.",
+  "categorie": "Piste capacitaire",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Piste de la fiche : coût, volume et délai évalués par l'animateur ou les arbitres ; tuile ≥ 100 M€, sinon rattacher à un programme existant.",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "À vérifier : le guide de la fiche vise la « LPM 2035-2040 » (p4)",
+  "alerte": null,
+  "source": "strat_role-marine-fr, p. 4 à 8"
+ },
+ {
+  "code": "EMM-COOP",
+  "groupe": "EMM-COOP",
+  "role": "EMM",
+  "armee": "Marine",
+  "libelle": "Coopérations OTAN / UE",
+  "description": "Co-construction de frégates, normalisation des munitions, mise en réseau des ZEE (France, Italie, Grèce).",
+  "categorie": "Piste capacitaire",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Piste de la fiche : coût, volume et délai évalués par l'animateur ou les arbitres ; tuile ≥ 100 M€, sinon rattacher à un programme existant.",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "À vérifier : le guide de la fiche vise la « LPM 2035-2040 » (p4)",
+  "alerte": null,
+  "source": "strat_role-marine-fr, p. 4 à 8"
+ },
+ {
+  "code": "EMM-EST",
+  "groupe": "EMM-EST",
+  "role": "EMM",
+  "armee": "Marine",
+  "libelle": "Soutien des opérations sur le flanc Est",
+  "description": "Lignes logistiques maritimes, escorte de convois, infrastructures sous-marines, accès Baltique et mer du Nord, lutte ASM.",
+  "categorie": "Piste capacitaire",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Piste de la fiche : coût, volume et délai évalués par l'animateur ou les arbitres ; tuile ≥ 100 M€, sinon rattacher à un programme existant.",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "À vérifier : le guide de la fiche vise la « LPM 2035-2040 » (p4)",
+  "alerte": null,
+  "source": "strat_role-marine-fr, p. 4 à 8"
+ },
+ {
+  "code": "EMM-STOCKS",
+  "groupe": "EMM-STOCKS",
+  "role": "EMM",
+  "armee": "Marine",
+  "libelle": "Stocks de munitions navales",
+  "description": "Besoins en MdCN, Exocet, Aster, MU90 et munitions téléopérées ; prix unitaires dans la fiche DGA.",
+  "categorie": "Piste capacitaire",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Piste de la fiche : coût, volume et délai évalués par l'animateur ou les arbitres ; tuile ≥ 100 M€, sinon rattacher à un programme existant.",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "À vérifier : le guide de la fiche vise la « LPM 2035-2040 » (p4)",
+  "alerte": null,
+  "source": "strat_role-marine-fr, p. 4 à 8"
+ },
+ {
+  "code": "EMM-CABLES",
+  "groupe": "EMM-CABLES",
+  "role": "EMM",
+  "armee": "Marine",
+  "libelle": "Protection des infrastructures critiques",
+  "description": "Câbles sous-marins, réseaux énergétiques, infrastructures offshore (p3).",
+  "categorie": "Piste capacitaire",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Piste de la fiche : coût, volume et délai évalués par l'animateur ou les arbitres ; tuile ≥ 100 M€, sinon rattacher à un programme existant.",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "À vérifier : le guide de la fiche vise la « LPM 2035-2040 » (p4)",
+  "alerte": null,
+  "source": "strat_role-marine-fr, p. 4 à 8"
+ },
+ {
+  "code": "EMM-PANG2",
+  "groupe": "PA2",
+  "role": "EMM",
+  "armee": "Marine",
+  "libelle": "Second porte-avions (PA-NG 2)",
+  "description": "Format permanent à deux groupes aéronavals.",
+  "categorie": "Programme naval",
+  "statut_cout": "renvoi",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": "Calendrier obligatoire sur 5 ans, au moins une action de développement/financement par an ; capacité des cales limitée ; seules Toulon et Brest peuvent accueillir le bâtiment, vérifier les quais.",
+  "partenaires": null,
+  "effets": null,
+  "type_pion": null,
+  "edition": "À vérifier : chronologie PANG 2036-2038",
+  "alerte": "Coût dans la fiche DGA (DGA-PANG2, DGA-GAN2, quais).",
+  "source": "strat_role-marine-fr, p. 4, 5"
+ },
+ {
+  "code": "EMM-CDG",
+  "groupe": "PA-CDG",
+  "role": "EMM",
+  "armee": "Marine",
+  "libelle": "Maintien exceptionnel du Charles de Gaulle en 2037",
+  "description": "Deux porte-avions la même année (l'un en fin de vie, l'autre en essais).",
+  "categorie": "Programme naval",
+  "statut_cout": "renvoi",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": null,
+  "conditions": null,
+  "partenaires": null,
+  "effets": "Symbole politique fort (année présidentielle).",
+  "type_pion": null,
+  "edition": "À vérifier : chronologie PANG 2036-2038",
+  "alerte": "Coût dans la fiche DGA (DGA-CDG, 1 Md€).",
+  "source": "strat_role-marine-fr, p. 5"
+ },
+ {
+  "code": "COCA-SPATIAL",
+  "groupe": "COCA-SPATIAL",
+  "role": "COCA",
+  "armee": "Air et Espace",
+  "libelle": "Programme capacitaire spatial d'urgence",
+  "description": "Nouveau satellite ou système de contre-mesures spatiales, lancé à la suite du scénario « menace satellitaire ».",
+  "categorie": "Programme issu d'un scénario",
+  "statut_cout": "non_chiffre",
+  "cout": null,
+  "cout_max": null,
+  "unite": "",
+  "periodicite": "",
+  "etalement": null,
+  "annuel": false,
+  "proposable_tel_quel": false,
+  "dorese": null,
+  "dorese_note": null,
+  "delai": "Effet dans 3 à 5 tours",
+  "conditions": null,
+  "partenaires": null,
+  "effets": "Le rapport COCA peut créer une urgence stratégique, annuler ou requalifier une tuile.",
+  "type_pion": null,
+  "edition": "2027-2032 (en-tête de la fiche)",
+  "alerte": "La même fiche existe en version « Red team » (chef d'équipe DGRIS au lieu de MEAE).",
+  "source": "strat_role-coca-fr, p. 5"
+ }
 ];
 
 </script>
@@ -1245,7 +5373,7 @@ window.STRAT_OPTIONS = [
     dorese: "Passer à 100 % (ajout des DORESE)",
     ajout: "Ajouter un pion",
     retrait: "Retirer un pion du socle",
-    libre: "Ligne libre (investissement, option…)"
+    libre: "Option du catalogue ou pion sur mesure"
   };
 
   function parametresParDefaut() {
@@ -1365,6 +5493,7 @@ window.STRAT_OPTIONS = [
       var plafond = (Number((params.plafonds || {})[a]) || 0) * CASE;
       var total = totalSocle + totalDemandes;
       res[a] = {
+        annee: a,
         socle: socle,
         demandes: demandes,
         totalSocle: totalSocle,
@@ -1435,6 +5564,221 @@ window.STRAT_OPTIONS = [
     return blocs;
   }
 
+
+  // ---------- Placement sur la table (grille de 30 colonnes) ----------
+  // Pose les pions avec leur forme réelle, groupe par groupe (dépenses fixes, puis chaque armée).
+  // Pions rigides : socle et pions ajoutés (largeur x hauteur, rotation permise).
+  // Les DORESE d'une capacité à 100 % sont posées au contact de la capacité.
+  // Les montants libres (investissements, options, pions sur mesure) sont sécables :
+  // ils comblent les cases restantes de leur groupe.
+  var LARGEUR = 30;
+  var ORDRE_GROUPES = ["Fixes", "Interarmées", "Terre", "Marine", "Air et Espace"];
+
+  function Plateau(lignesInit) {
+    this.l = LARGEUR;
+    this.h = lignesInit;
+    this.occ = [];
+    for (var i = 0; i < this.l * this.h; i++) this.occ.push(null);
+  }
+  Plateau.prototype.agrandir = function (n) {
+    for (var i = 0; i < n * this.l; i++) this.occ.push(null);
+    this.h += n;
+  };
+  Plateau.prototype.libre = function (r, c) {
+    return r >= 0 && c >= 0 && c < this.l && r < this.h && this.occ[r * this.l + c] === null;
+  };
+  Plateau.prototype.tient = function (r, c, w, h) {
+    if (c + w > this.l || r + h > this.h) return false;
+    for (var i = r; i < r + h; i++) for (var j = c; j < c + w; j++) if (!this.libre(i, j)) return false;
+    return true;
+  };
+  Plateau.prototype.marquer = function (r, c, w, h, id) {
+    for (var i = r; i < r + h; i++) for (var j = c; j < c + w; j++) this.occ[i * this.l + j] = id;
+  };
+  // Première position libre (haut-gauche d'abord) à partir de la rangée r0.
+  Plateau.prototype.chercher = function (w, h, r0) {
+    for (;;) {
+      for (var r = r0; r < this.h; r++) {
+        for (var c = 0; c < this.l; c++) {
+          if (this.tient(r, c, w, h)) return { r: r, c: c, w: w, h: h };
+          if (w !== h && this.tient(r, c, h, w)) return { r: r, c: c, w: h, h: w };
+        }
+      }
+      this.agrandir(Math.max(h, w > this.l ? 1 : 1));
+      if (w > this.l && h > this.l) return null;
+    }
+  };
+  Plateau.prototype.premiereLigneLibre = function () {
+    for (var k = 0; k < this.occ.length; k++) if (this.occ[k] === null) return Math.floor(k / this.l);
+    return this.h;
+  };
+
+  function placerAnnee(pions, lignes, params, annee) {
+    var idx = indexPions(pions);
+    params = params || parametresParDefaut();
+    var tableCases = Number(params.table) || 600;
+    var plateau = new Plateau(Math.ceil(tableCases / LARGEUR));
+    var pieces = [];
+    var retires = {}, passes100 = {};
+    lignes.forEach(function (l) {
+      if (!quantite(l, annee)) return;
+      if (l.type === "retrait") retires[l.pion] = true;
+      if (l.type === "dorese") passes100[l.pion] = l;
+    });
+
+    // Constitution des groupes.
+    var groupes = {};
+    ORDRE_GROUPES.forEach(function (g) { groupes[g] = { rigides: [], secables: [] }; });
+    function groupe(nom) { return groupes[nom] || groupes["Interarmées"]; }
+    pions.forEach(function (p) {
+      if (!estDansSocle(p, annee, params) || retires[p.id]) return;
+      var l100 = passes100[p.id];
+      var g = p.type === "gris" ? "Fixes" : (l100 ? armeeDeLigne(l100, idx) : p.armee);
+      groupe(g).rigides.push({ pion: p, w: p.l || 1, h: p.h || 1, armee: g === "Fixes" ? p.armee : g, nature: p.type,
+        libelle: p.nom, niveau: l100 ? 100 : 50, dorese: l100 ? nbDorese(p) : 0, detailDorese: p.dorese, socle: true });
+    });
+    lignes.forEach(function (l) {
+      var q = quantite(l, annee);
+      if (!q || l.type === "dorese" || l.type === "retrait") return;
+      var arm = armeeDeLigne(l, idx);
+      if (l.type === "ajout") {
+        var p = idx[l.pion];
+        if (!p) return;
+        for (var i = 0; i < q; i++) {
+          var cent = Number(l.niveau) === 100;
+          groupe(arm).rigides.push({ pion: p, w: p.l || 1, h: p.h || 1, armee: arm, nature: p.type, libelle: "+ " + p.nom,
+            niveau: cent ? 100 : 50, dorese: cent ? nbDorese(p) : 0, detailDorese: p.dorese, role: l.role, ligne: l.id });
+        }
+      } else if (l.type === "libre") {
+        var n = Math.round((Number(l.cout_unitaire) || 0) * q / CASE);
+        if (n > 0) groupe(arm).secables.push({ cases: n, armee: arm, nature: "libre", libelle: l.libelle || "Ligne libre", role: l.role, ligne: l.id, horsCatalogue: !l.modele });
+      }
+    });
+
+    var cellules = []; // cases isolées : DORESE et montants sécables
+    ORDRE_GROUPES.forEach(function (nomG) {
+      var g = groupes[nomG];
+      if (!g.rigides.length && !g.secables.length) return;
+      var r0 = plateau.premiereLigneLibre();
+      g.rigides.sort(function (a, b) { return (b.w * b.h + b.dorese) - (a.w * a.h + a.dorese) || b.w - a.w; });
+      g.rigides.forEach(function (it) {
+        var id = pieces.length;
+        var pos;
+        // Avec DORESE : on cherche d'abord une place pour la capacité et ses DORESE en bande à droite.
+        if (it.dorese) {
+          var col = Math.ceil(it.dorese / it.h);
+          pos = null;
+          for (var r = r0; r < plateau.h && !pos; r++) {
+            for (var c = 0; c < plateau.l; c++) {
+              if (plateau.tient(r, c, it.w + col, it.h)) { pos = { r: r, c: c, w: it.w, h: it.h }; break; }
+            }
+          }
+          if (!pos) pos = plateau.chercher(it.w, it.h, r0);
+        } else {
+          pos = plateau.chercher(it.w, it.h, r0);
+        }
+        plateau.marquer(pos.r, pos.c, pos.w, pos.h, id);
+        pieces.push({ r: pos.r, c: pos.c, w: pos.w, h: pos.h, armee: it.armee, nature: it.nature, libelle: it.libelle,
+          niveau: it.nature === "capacite" ? it.niveau : null, role: it.role || null, groupe: nomG, cases: pos.w * pos.h });
+        // DORESE au contact : cases libres voisines de la capacité (ou de ses DORESE déjà posées).
+        var types = [];
+        ["ao", "mco", "rh"].forEach(function (k) { for (var n = 0; n < (it.detailDorese || {})[k]; n++) types.push(k); });
+        var amas = [{ r: pos.r, c: pos.c, w: pos.w, h: pos.h }];
+        types.slice(0, it.dorese).forEach(function (t) {
+          var cand = voisinLibre(plateau, amas);
+          if (!cand) { var p2 = plateau.chercher(1, 1, r0); cand = { r: p2.r, c: p2.c, loin: true }; }
+          plateau.marquer(cand.r, cand.c, 1, 1, "d" + id);
+          amas.push({ r: cand.r, c: cand.c, w: 1, h: 1 });
+          cellules.push({ r: cand.r, c: cand.c, armee: it.armee, nature: "dorese", type: t, libelle: "DORESE " + t.toUpperCase() + " · " + it.libelle, role: it.role || null, loin: !!cand.loin });
+        });
+      });
+      // Montants sécables : on comble les trous du groupe, dans l'ordre de lecture.
+      g.secables.forEach(function (it) {
+        var reste = it.cases;
+        var k = r0 * plateau.l;
+        while (reste > 0) {
+          if (k >= plateau.occ.length) plateau.agrandir(1);
+          if (plateau.occ[k] === null) {
+            plateau.occ[k] = "s";
+            cellules.push({ r: Math.floor(k / plateau.l), c: k % plateau.l, armee: it.armee, nature: "libre", libelle: it.libelle, role: it.role, horsCatalogue: it.horsCatalogue });
+            reste--;
+          }
+          k++;
+        }
+      });
+    });
+
+    return {
+      largeur: LARGEUR,
+      hauteur: Math.max(plateau.h, Math.ceil(tableCases / LARGEUR)),
+      table: tableCases,
+      plafond: Number((params.plafonds || {})[annee]) || 0,
+      occupees: plateau.occ.filter(function (x) { return x !== null; }).length,
+      pieces: pieces,
+      cellules: cellules
+    };
+  }
+
+  function voisinLibre(plateau, amas) {
+    var meilleur = null;
+    amas.forEach(function (b) {
+      for (var r = b.r - 1; r <= b.r + b.h; r++) {
+        for (var c = b.c - 1; c <= b.c + b.w; c++) {
+          var bord = (r === b.r - 1 || r === b.r + b.h) !== (c === b.c - 1 || c === b.c + b.w); // côté, pas coin
+          if (!bord || !plateau.libre(r, c)) continue;
+          if (!meilleur || r * plateau.l + c < meilleur.r * plateau.l + meilleur.c) meilleur = { r: r, c: c };
+        }
+      }
+    });
+    return meilleur;
+  }
+
+
+  // ---------- Arbitrage CEMA ----------
+  // params.arbitrages[idLigne] = { statut: 'attente'|'retenu'|'differe'|'renonce', decalage: n }
+  var STATUTS = { attente: "En attente", retenu: "Retenu", differe: "Différé", renonce: "Renoncé" };
+
+  function arbitrageDe(ligne, params) {
+    var a = ((params || {}).arbitrages || {})[ligne.id];
+    return a && STATUTS[a.statut] ? a : { statut: "attente", decalage: 0 };
+  }
+
+  // Ligne telle qu'elle pèse après arbitrage (null si renoncée). Un différé décale les années ;
+  // ce qui sort de la période est reporté hors LPM.
+  function ligneArbitree(ligne, params) {
+    var a = arbitrageDe(ligne, params);
+    if (a.statut === "renonce") return null;
+    if (a.statut !== "differe" || !Number(a.decalage)) return ligne;
+    var n = Number(a.decalage), qte = {};
+    ANNEES.forEach(function (an) {
+      var q = (ligne.qte || {})[an];
+      if (q && ANNEES.indexOf(an + n) !== -1) qte[an + n] = (qte[an + n] || 0) + Number(q);
+    });
+    var copie = JSON.parse(JSON.stringify(ligne));
+    copie.qte = qte;
+    return copie;
+  }
+
+  function lignesApresArbitrage(lignes, params) {
+    return lignes.map(function (l) { return ligneArbitree(l, params); }).filter(Boolean);
+  }
+
+  // Montant reporté au-delà de 2032 par un différé (M€).
+  function reportHorsLpm(ligne, params, idx) {
+    var a = arbitrageDe(ligne, params);
+    if (a.statut !== "differe") return 0;
+    var avant = coutLigne(ligne, idx).total;
+    var apres = coutLigne(ligneArbitree(ligne, params), idx).total;
+    return avant - apres;
+  }
+
+  // Arrondi d'un prix à la case de 100 M€ (au moins une case).
+  function arrondiCase(m) {
+    var n = Number(m) || 0;
+    if (n <= 0) return 0;
+    return Math.max(CASE, Math.round(n / CASE) * CASE);
+  }
+
   var API = {
     CASE: CASE,
     ANNEES: ANNEES,
@@ -1449,7 +5793,15 @@ window.STRAT_OPTIONS = [
     coutLigne: coutLigne,
     armeeDeLigne: armeeDeLigne,
     synthese: synthese,
-    blocsAnnee: blocsAnnee
+    blocsAnnee: blocsAnnee,
+    placerAnnee: placerAnnee,
+    STATUTS: STATUTS,
+    arbitrageDe: arbitrageDe,
+    ligneArbitree: ligneArbitree,
+    lignesApresArbitrage: lignesApresArbitrage,
+    reportHorsLpm: reportHorsLpm,
+    arrondiCase: arrondiCase,
+    LARGEUR: LARGEUR
   };
 
   if (typeof module !== "undefined" && module.exports) module.exports = API;
@@ -1632,9 +5984,20 @@ window.STRAT_OPTIONS = [
   var M = window.STRAT_MOTEUR;
   var S = window.STRAT_STOCKAGE;
   var PIONS = window.STRAT_PIONS || [];
-  var OPTIONS = window.STRAT_OPTIONS || [];
+  var CATALOGUE = window.STRAT_CATALOGUE_ROLES || [];
+  function optionDe(code) { return code ? CATALOGUE.filter(function (o) { return o.code === code; })[0] || null : null; }
+  function fourchette(o) {
+    var u = o.annuel ? "/an" : (o.periodicite && o.periodicite !== "non précisée" ? " (" + o.periodicite + ")" : "");
+    if (o.cout === null || o.cout === undefined) return o.statut_cout === "a_definir" ? "coût à définir" : "non chiffré";
+    if (o.cout_max && o.cout_max !== o.cout) return o.cout + " à " + o.cout_max + " M€" + u;
+    return o.cout + " M€" + u;
+  }
   var IDX = M.indexPions(PIONS);
   var ROLES_EDITION_PARAMS = ["Animateur", "SC-Plans", "CEMA"];
+  var ROLES_ARBITRAGE = ["CEMA", "Animateur"];
+  var ROLES_VUE_COMPLETE = ["CEMA", "Animateur", "SC-Plans"];
+  function vueComplete() { return ROLES_VUE_COMPLETE.indexOf(etat.role) !== -1; }
+  function visible(l) { return vueComplete() || l.role === etat.role; }
 
   var etat = {
     partie: null, // { id, nom, params }
@@ -1642,7 +6005,8 @@ window.STRAT_OPTIONS = [
     role: "",
     lignes: [],
     onglet: "demande",
-    anneeTable: M.ANNEES[0]
+    anneeTable: M.ANNEES[0],
+    vueTable: "demandes"
   };
   var enAttente = {}; // id de ligne -> minuteur d'enregistrement
   var signatureLignes = "";
@@ -1776,6 +6140,7 @@ window.STRAT_OPTIONS = [
     else rendreBilan();
     if (etat.onglet === "synthese") rendreSynthese();
     if (etat.onglet === "table") rendreTable();
+    if (etat.onglet === "arbitrage" && (complet || !$("vue-arbitrage").contains(actif))) rendreArbitrage();
     if (etat.onglet === "parametres" && (complet || !$("form-parametres").contains(actif))) rendreParametres();
   }
 
@@ -1784,7 +6149,7 @@ window.STRAT_OPTIONS = [
     document.querySelectorAll(".onglets button").forEach(function (b) {
       b.setAttribute("aria-selected", b.getAttribute("data-onglet") === nom ? "true" : "false");
     });
-    ["demande", "synthese", "table", "parametres"].forEach(function (v) { $("vue-" + v).hidden = v !== nom; });
+    ["demande", "synthese", "table", "arbitrage", "parametres"].forEach(function (v) { $("vue-" + v).hidden = v !== nom; });
     memoriser();
     rendre(true);
   }
@@ -1815,7 +6180,7 @@ window.STRAT_OPTIONS = [
     var r = role(etat.role);
     var l = { id: nouvelId(), role: etat.role, type: type, qte: {}, justification: "", cree_le: new Date().toISOString() };
     if (type === "libre") {
-      l.libelle = ""; l.cout_unitaire = 100; l.dorese = { ao: 0, mco: 0, rh: 0 }; l.armee = r.armee;
+      l.libelle = ""; l.modele = null; l.cout_unitaire = 100; l.dorese = { ao: 0, mco: 0, rh: 0 }; l.armee = r.armee;
     } else {
       var candidats = pionsPour(type);
       var duRole = candidats.filter(function (p) { return p.armee === r.armee; });
@@ -1869,31 +6234,71 @@ window.STRAT_OPTIONS = [
     // Objet
     var objet = el("td", { classe: "objet" });
     if (l.type === "libre") {
-      var choix = el("select", { "aria-label": "Modèle de ligne" });
-      choix.appendChild(el("option", { value: "", texte: "Modèle (facultatif)…" }));
-      OPTIONS.forEach(function (o) { choix.appendChild(el("option", { value: o.code, texte: o.role + " · " + o.libelle + " · " + md(o.cout) + "/an" })); });
-      var lib = el("input", { value: l.libelle || "", placeholder: "Intitulé (ex. Renforcement Roumanie)", "aria-label": "Intitulé" });
-      var cu = el("input", { classe: "court", type: "number", step: 100, value: l.cout_unitaire, "aria-label": "Montant annuel en M€" });
+      var choix = el("select", { "aria-label": "Option du catalogue" });
+      choix.appendChild(el("option", { value: "", texte: "Pion sur mesure (hors catalogue)" }));
+      var rolesCat = vueComplete()
+        ? [etat.role].concat(M.ROLES.map(function (r) { return r.code; }).filter(function (c) { return c !== etat.role; }))
+        : [etat.role];
+      rolesCat.forEach(function (rc) {
+        var opts = CATALOGUE.filter(function (o) { return o.role === rc; });
+        if (!opts.length) return;
+        var g = el("optgroup", { label: "Fiche " + rc });
+        opts.forEach(function (o) { g.appendChild(el("option", { value: o.code, texte: o.libelle + " · " + fourchette(o) })); });
+        choix.appendChild(g);
+      });
+      choix.value = l.modele || "";
+      var o = optionDe(l.modele);
+      var lib = el("input", { value: l.libelle || "", placeholder: "Intitulé du pion", "aria-label": "Intitulé" });
+      var cu = el("input", { classe: "court", type: "number", min: 0, step: 100, value: l.cout_unitaire, "aria-label": "Prix fixé en M€" });
+      var noteCu = el("div", { classe: "sous" });
       var d = l.dorese || { ao: 0, mco: 0, rh: 0 };
       function champDor(k, nomCourt) {
         var i = el("input", { type: "number", min: 0, step: 1, value: d[k] || 0, "aria-label": "DORESE " + nomCourt });
         i.addEventListener("input", function () { l.dorese = l.dorese || {}; l.dorese[k] = Number(i.value) || 0; changer(); });
         return el("label", null, [nomCourt + " ", i]);
       }
+      function majNote(brut) {
+        var txt = [];
+        if (!l.cout_unitaire) txt.push("Fixez le prix : la ligne ne compte pas tant qu'il est à 0");
+        if (brut !== undefined && Number(brut) !== l.cout_unitaire && l.cout_unitaire) txt.push("Arrondi à la case : " + md(l.cout_unitaire));
+        if (brut === undefined && o && o.cout && o.cout % M.CASE && l.cout_unitaire) txt.push("Prix de la fiche " + md(o.cout) + ", arrondi à " + md(l.cout_unitaire) + " : à confirmer");
+        if (o && o.cout !== null && o.cout !== undefined) {
+          var hautO = o.cout_max || o.cout;
+          if (l.cout_unitaire < M.arrondiCase(o.cout) && l.cout_unitaire < o.cout || l.cout_unitaire > Math.max(M.arrondiCase(hautO), hautO)) txt.push("Hors fourchette de la fiche (" + fourchette(o) + ")");
+        }
+        noteCu.textContent = txt.join(" · ");
+        noteCu.className = "sous" + (txt.length ? " alerte-texte" : "");
+      }
       choix.addEventListener("change", function () {
-        var o = OPTIONS.filter(function (x) { return x.code === choix.value; })[0];
-        if (!o) return;
-        l.libelle = o.libelle; l.cout_unitaire = o.cout; l.armee = o.armee; l.source = o.source;
-        l.dorese = o.dorese ? { ao: o.dorese.ao, mco: o.dorese.mco, rh: o.dorese.rh } : { ao: 0, mco: 0, rh: 0 };
+        var opt = optionDe(choix.value);
+        if (!opt) { l.modele = null; l.source = null; changer(); rendreDemande(); return; }
+        l.modele = opt.code; l.libelle = opt.libelle; l.armee = opt.armee; l.source = opt.source;
+        l.cout_unitaire = opt.cout ? M.arrondiCase(opt.cout) : 0;
+        l.dorese = opt.dorese ? { ao: opt.dorese.ao || 0, mco: opt.dorese.mco || 0, rh: opt.dorese.rh || 0 } : { ao: 0, mco: 0, rh: 0 };
         changer(); rendreDemande();
       });
       lib.addEventListener("input", function () { l.libelle = lib.value; enregistrer(l); });
-      cu.addEventListener("input", function () { l.cout_unitaire = Number(cu.value) || 0; changer(); });
+      cu.addEventListener("input", function () { l.cout_unitaire = M.arrondiCase(cu.value); majChiffres(); majNote(cu.value); enregistrer(l); });
+      cu.addEventListener("change", function () { cu.value = l.cout_unitaire; majNote(); });
       objet.appendChild(choix);
       objet.appendChild(el("div", { style: "margin-top:.25rem" }, [lib]));
-      objet.appendChild(el("div", { classe: "dor" }, [el("label", null, ["M€ par exemplaire et par an ", cu])]));
+      if (o) {
+        var infos = [fourchette(o) + (o.periodicite ? " · " + o.periodicite : "")];
+        if (o.etalement) infos.push("Étalement : " + o.etalement);
+        if (o.delai) infos.push("Délai : " + o.delai);
+        objet.appendChild(el("div", { classe: "sous", texte: "Fiche : " + infos.join(" · ") }));
+        if (o.alerte) objet.appendChild(el("div", { classe: "sous alerte-texte", texte: o.alerte }));
+        if (o.source || o.edition) objet.appendChild(el("div", { classe: "sous", texte: [o.source, o.edition].filter(Boolean).join(" · ") }));
+        if (o.conditions) objet.appendChild(el("details", { classe: "sous" }, [el("summary", { texte: "Conditions" }), el("p", { texte: o.conditions })]));
+      } else {
+        var val = ((params().validations || {})[l.id]);
+        objet.appendChild(el("div", { classe: "badge " + (val ? "badge-ok" : "badge-attente"), texte: val ? "Sur mesure · validé par l'animateur" : "Sur mesure · à valider par l'animateur" }));
+      }
+      objet.appendChild(el("div", { classe: "dor" }, [el("label", null, ["Prix fixé (M€ par an) ", cu])]));
+      objet.appendChild(noteCu);
       objet.appendChild(el("div", { classe: "dor" }, ["DORESE incluses :", champDor("ao", "AO"), champDor("mco", "MCO"), champDor("rh", "RH")]));
-      if (l.source) objet.appendChild(el("div", { classe: "sous", texte: "Source : " + l.source }));
+      objet.appendChild(el("div", { classe: "sous", texte: "Les cases des années indiquent combien de fois ce prix est posé. Pour un investissement étalé, posez une fois par année concernée." }));
+      majNote();
     } else {
       var sp = selectPion(l);
       sp.addEventListener("change", function () { l.pion = sp.value; changer(); rendreDemande(); });
@@ -2019,6 +6424,9 @@ window.STRAT_OPTIONS = [
     rangee(["Total sur la table"], function (s) { return s.total; });
     rangee(["Plafond"], function (s) { return s.plafond; });
     rangee(["Marge (+) ou dépassement (−)"], function (s) { return s.marge; }, function (v) { return v < 0 ? "neg" : "pos"; });
+    var synArb = M.synthese(PIONS, M.lignesApresArbitrage(etat.lignes, params()), params());
+    rangee(["Total après arbitrage"], function (x) { return synArb[x.annee].total; });
+    rangee(["Marge après arbitrage"], function (x) { return synArb[x.annee].marge; }, function (v) { return v < 0 ? "neg" : "pos"; });
     rangee(["dont DORESE demandées"], function (s) { return (s.dorese.ao + s.dorese.mco + s.dorese.rh) * M.CASE; });
     t.appendChild(corps);
 
@@ -2027,7 +6435,8 @@ window.STRAT_OPTIONS = [
     vider(tr2);
     tr2.appendChild(el("thead", null, [el("tr", null, [el("th", { texte: "Rôle" }), el("th", { classe: "num", texte: "Lignes" })].concat(M.ANNEES.map(function (a) { return el("th", { classe: "num", texte: String(a) }); })).concat([el("th", { classe: "num", texte: "Total" })]))]));
     var c2 = el("tbody");
-    var rolesPresents = M.ROLES.filter(function (r) { return etat.lignes.some(function (l) { return l.role === r.code; }); });
+    var rolesPresents = M.ROLES.filter(function (r) { return (vueComplete() || r.code === etat.role) && etat.lignes.some(function (l) { return l.role === r.code; }); });
+    $("note-vue").textContent = vueComplete() ? "" : "Vue limitée à vos postes de dépense : le détail des autres rôles est réservé au CEMA, au SC-Plans et à l'animateur. Les totaux par armée restent visibles.";
     if (!rolesPresents.length) c2.appendChild(el("tr", null, [el("td", { colspan: 3 + M.ANNEES.length, classe: "vide-etat", texte: "Aucune demande saisie dans cette partie." })]));
     rolesPresents.forEach(function (r) {
       var s = M.synthese(PIONS, etat.lignes, params(), function (l) { return l.role === r.code; });
@@ -2045,14 +6454,110 @@ window.STRAT_OPTIONS = [
     t3.appendChild(el("thead", null, [el("tr", null, [el("th", { texte: "Rôle" }), el("th", { texte: "Type" }), el("th", { texte: "Objet" }), el("th", { texte: "Armée" })]
       .concat(M.ANNEES.map(function (a) { return el("th", { classe: "num", texte: String(a) }); })).concat([el("th", { classe: "num", texte: "Total" }), el("th", { texte: "Justification" })]))]));
     var c3 = el("tbody");
-    if (!etat.lignes.length) c3.appendChild(el("tr", null, [el("td", { colspan: 6 + M.ANNEES.length, classe: "vide-etat", texte: "Les lignes des joueurs apparaîtront ici." })]));
-    etat.lignes.forEach(function (l) {
+    var lignesVisibles = etat.lignes.filter(visible);
+    if (!lignesVisibles.length) c3.appendChild(el("tr", null, [el("td", { colspan: 6 + M.ANNEES.length, classe: "vide-etat", texte: vueComplete() ? "Les lignes des joueurs apparaîtront ici." : "Vos lignes apparaîtront ici." })]));
+    lignesVisibles.forEach(function (l) {
       var c = M.coutLigne(l, IDX);
       c3.appendChild(el("tr", null, [el("td", { texte: l.role }), el("td", { texte: M.TYPES_LIGNE[l.type] || l.type }), el("td", { texte: libelleLigne(l) }), el("td", { texte: M.armeeDeLigne(l, IDX) })]
         .concat(M.ANNEES.map(function (a) { return el("td", { classe: "num", texte: c.annees[a].cout ? md(c.annees[a].cout) : "·" }); }))
         .concat([el("td", { classe: "num", texte: md(c.total) }), el("td", { texte: l.justification || "" })])));
     });
     t3.appendChild(c3);
+  }
+
+  // ---------- Arbitrage ----------
+  var fileParams = Promise.resolve();
+  function modifierParams(fn) {
+    // Lecture puis écriture, à la suite, pour ne pas écraser un arbitrage voisin.
+    fileParams = fileParams.then(function () {
+      return S.lireEtat(etat.partie.nom, etat.mdp).then(function (e) {
+        var p = e.partie.params && e.partie.params.plafonds ? e.partie.params : M.parametresParDefaut();
+        fn(p);
+        return S.majParams(etat.partie.nom, etat.mdp, p).then(function () { etat.partie.params = p; rendre(false); });
+      });
+    }).catch(function (e) { toast("Non enregistré : " + e.message); });
+    return fileParams;
+  }
+
+  function rendreArbitrage() {
+    var p = params();
+    var edit = ROLES_ARBITRAGE.indexOf(etat.role) !== -1;
+    $("aide-arbitrage").textContent = (edit
+      ? "Pour chaque ligne : retenue, différée d'une à trois années, ou renoncée. "
+      : "Lecture seule : seuls le CEMA et l'animateur arbitrent. ")
+      + "Un différé décale la ligne ; ce qui dépasse 2032 est reporté hors LPM.";
+    var dem = M.synthese(PIONS, etat.lignes, p);
+    var arb = M.synthese(PIONS, M.lignesApresArbitrage(etat.lignes, p), p);
+    var t = $("table-arb-annees");
+    vider(t);
+    t.appendChild(el("thead", null, [el("tr", null, [el("th", { texte: "M€" })].concat(M.ANNEES.map(function (a) { return el("th", { classe: "num", texte: String(a) }); })))]));
+    var c = el("tbody");
+    [["Total demandé", function (a) { return dem[a].total; }],
+     ["Total après arbitrage", function (a) { return arb[a].total; }],
+     ["Plafond", function (a) { return arb[a].plafond; }],
+     ["Marge après arbitrage", function (a) { return arb[a].marge; }, true]].forEach(function (r) {
+      c.appendChild(el("tr", null, [el("td", { texte: r[0] })].concat(M.ANNEES.map(function (a) {
+        var v = r[1](a); return el("td", { classe: "num " + (r[2] ? (v < 0 ? "neg" : "pos") : ""), texte: md(v) });
+      }))));
+    });
+    t.appendChild(c);
+
+    var tl = $("table-arb-lignes");
+    vider(tl);
+    tl.appendChild(el("thead", null, [el("tr", null, ["Rôle", "Objet", "Armée", "Demandé (6 ans)", "Décision", "Après arbitrage", "Sur mesure"].map(function (h, i) { return el("th", { classe: i === 3 || i === 5 ? "num" : "", texte: h }); }))]));
+    var cl = el("tbody");
+    var aArbitrer = etat.lignes.filter(visible);
+    if (!aArbitrer.length) cl.appendChild(el("tr", null, [el("td", { colspan: 7, classe: "vide-etat", texte: "Aucune demande à arbitrer pour l'instant." })]));
+    aArbitrer.forEach(function (l) {
+      var a = M.arbitrageDe(l, p);
+      var avant = M.coutLigne(l, IDX).total;
+      var la = M.ligneArbitree(l, p);
+      var apres = la ? M.coutLigne(la, IDX).total : 0;
+      var st = el("select", { "aria-label": "Décision", disabled: edit ? null : "disabled" });
+      Object.keys(M.STATUTS).forEach(function (k) { st.appendChild(el("option", { value: k, texte: M.STATUTS[k] })); });
+      st.value = a.statut;
+      var dec = el("select", { "aria-label": "Décalage", disabled: edit ? null : "disabled", hidden: a.statut === "differe" ? null : "hidden" });
+      [1, 2, 3].forEach(function (n) { dec.appendChild(el("option", { value: n, texte: "de " + n + " an" + (n > 1 ? "s" : "") })); });
+      dec.value = String(a.decalage || 1);
+      function enreg() {
+        var val = { statut: st.value, decalage: st.value === "differe" ? Number(dec.value) : 0 };
+        modifierParams(function (pp) { pp.arbitrages = pp.arbitrages || {}; pp.arbitrages[l.id] = val; });
+      }
+      st.addEventListener("change", function () { dec.hidden = st.value !== "differe"; enreg(); });
+      dec.addEventListener("change", enreg);
+      var celMesure = el("td");
+      if (l.type === "libre" && !l.modele) {
+        var cb = el("input", { type: "checkbox", id: "valide-" + l.id, disabled: edit ? null : "disabled" });
+        cb.checked = !!(p.validations || {})[l.id];
+        cb.addEventListener("change", function () { modifierParams(function (pp) { pp.validations = pp.validations || {}; pp.validations[l.id] = cb.checked; }); });
+        celMesure.appendChild(el("label", { for: cb.id }, [cb, " validé"]));
+      }
+      var report = M.reportHorsLpm(l, p, IDX);
+      cl.appendChild(el("tr", { classe: "arb-ligne" }, [
+        el("td", { texte: l.role }),
+        el("td", { classe: "statut-" + a.statut, texte: libelleLigne(l) }),
+        el("td", { texte: M.armeeDeLigne(l, IDX) }),
+        el("td", { classe: "num", texte: md(avant) }),
+        el("td", null, [st, " ", dec]),
+        el("td", { classe: "num", texte: md(apres) + (report ? " (+" + md(report) + " hors LPM)" : "") }),
+        celMesure
+      ]));
+    });
+    tl.appendChild(cl);
+
+    var tr = $("table-renoncements");
+    vider(tr);
+    var ren = etat.lignes.filter(function (l) { return visible(l) && M.arbitrageDe(l, p).statut === "renonce"; });
+    tr.appendChild(el("thead", null, [el("tr", null, ["Rôle", "Objet", "Armée", "Montant renoncé (6 ans)", "Justification du demandeur"].map(function (h, i) { return el("th", { classe: i === 3 ? "num" : "", texte: h }); }))]));
+    var cr = el("tbody");
+    if (!ren.length) cr.appendChild(el("tr", null, [el("td", { colspan: 5, classe: "vide-etat", texte: "Aucun renoncement pour l'instant." })]));
+    var totalRen = 0;
+    ren.forEach(function (l) {
+      var v = M.coutLigne(l, IDX).total; totalRen += v;
+      cr.appendChild(el("tr", null, [el("td", { texte: l.role }), el("td", { texte: libelleLigne(l) }), el("td", { texte: M.armeeDeLigne(l, IDX) }), el("td", { classe: "num", texte: md(v) }), el("td", { texte: l.justification || "" })]));
+    });
+    tr.appendChild(cr);
+    if (ren.length) tr.appendChild(el("tfoot", null, [el("tr", null, [el("td", { colspan: 3, texte: "Total renoncé" }), el("td", { classe: "num", texte: md(totalRen) }), el("td")])]));
   }
 
   function libelleLigne(l) {
@@ -2067,7 +6572,7 @@ window.STRAT_OPTIONS = [
     var sep = ";";
     var ent = ["Rôle", "Type", "Objet", "Armée imputée"].concat(M.ANNEES.map(String)).concat(["Total (M€)", "Justification"]);
     var lignes = [ent.join(sep)];
-    etat.lignes.forEach(function (l) {
+    etat.lignes.filter(visible).forEach(function (l) {
       var c = M.coutLigne(l, IDX);
       var v = [l.role, M.TYPES_LIGNE[l.type], libelleLigne(l), M.armeeDeLigne(l, IDX)]
         .concat(M.ANNEES.map(function (a) { return c.annees[a].cout; })).concat([c.total, (l.justification || "").replace(/\s+/g, " ")]);
@@ -2083,56 +6588,66 @@ window.STRAT_OPTIONS = [
     sel.value = String(etat.anneeTable);
     var a = etat.anneeTable;
     var p = params();
-    var blocs = M.blocsAnnee(PIONS, etat.lignes, p, a);
-    var syn = M.synthese(PIONS, etat.lignes, p)[a];
-    var tableCases = Number(p.table) || 600;
-    var plafondCases = Number(p.plafonds[a]) || 0;
-    var occupees = blocs.reduce(function (s, b) { return s + b.cases; }, 0);
-    var total = Math.max(tableCases, Math.ceil(occupees / 30) * 30);
+    var lignesVues = etat.vueTable === "arbitrage" ? M.lignesApresArbitrage(etat.lignes, p) : etat.lignes;
+    var t = M.placerAnnee(PIONS, lignesVues, p, a);
+    var syn = M.synthese(PIONS, lignesVues, p)[a];
 
     var ch = $("table-chiffres");
     vider(ch);
-    [["Cases occupées", occupees + " / " + plafondCases + " (plafond)"], ["Montant", md(syn.total)], [syn.marge >= 0 ? "Marge" : "Dépassement", md(Math.abs(syn.marge))]].forEach(function (x, i) {
+    [["Cases occupées", t.occupees + " sur " + t.plafond + " autorisées"], ["Montant", md(syn.total)], [syn.marge >= 0 ? "Marge" : "Dépassement", md(Math.abs(syn.marge))]].forEach(function (x, i) {
       ch.appendChild(el("span", { classe: i === 2 ? (syn.marge >= 0 ? "pos" : "neg") : "" }, [x[0] + " : ", el("b", { texte: x[1] })]));
     });
 
     var pl = $("plateau");
     vider(pl);
-    var cellules = [];
-    blocs.forEach(function (b) {
-      for (var i = 0; i < b.cases; i++) cellules.push({ bloc: b, debut: i === 0 });
-    });
-    for (var k = 0; k < total; k++) {
-      var c = cellules[k];
-      var classes = ["case"];
-      var style = "";
-      var titre = "Case libre";
-      if (c) {
-        classes.push("pleine");
-        var b = c.bloc;
-        var couleur = b.nature === "gris" ? "var(--gris)" : b.nature === "violet" ? "var(--violet)" : couleurArmee(b.armee);
-        if (b.nature === "orange") couleur = "var(--inter)";
-        style = "background:" + couleur;
-        if (b.nature === "capacite" && b.niveau !== 100) classes.push("c50");
-        if (b.nature === "dorese") classes.push("dor");
-        if (c.debut) classes.push("debut");
-        titre = b.libelle + " · " + b.armee + (b.nature === "capacite" ? " · " + (b.niveau === 100 ? "100 %" : "50 %") : "") + (b.role ? " · demande " + b.role : "");
-      }
-      if (k >= plafondCases && k < tableCases) classes.push(c ? "debord" : "hors");
-      if (k >= tableCases) classes.push("debord");
-      if (k >= plafondCases && !c) titre = k < tableCases ? "Au-delà du plafond " + a : "Hors table";
-      pl.appendChild(el("div", { classe: classes.join(" "), style: style, title: titre }));
+    pl.style.gridTemplateRows = "repeat(" + t.hauteur + ", var(--case))";
+    // Fond : une case par emplacement, rouge pâle au-delà du plafond, hachurée hors table.
+    for (var k = 0; k < t.hauteur * t.largeur; k++) {
+      var cl = "fond";
+      if (k >= t.table) cl += " fond-horstable";
+      else if (k >= t.plafond) cl += " fond-hors";
+      pl.appendChild(el("div", { classe: cl, style: "grid-row:" + (Math.floor(k / t.largeur) + 1) + ";grid-column:" + (k % t.largeur + 1) }));
     }
+    function depasse(r, c, w, h) {
+      for (var i = r; i < r + h; i++) for (var j = c; j < c + w; j++) if (i * t.largeur + j >= t.plafond) return true;
+      return false;
+    }
+    t.pieces.forEach(function (x) {
+      var couleur = x.groupe === "Fixes" ? "var(--gris)" : x.nature === "violet" ? "var(--violet)" : couleurArmee(x.armee);
+      var classes = ["pion"];
+      if (x.niveau === 50) classes.push("pion-50");
+      if (depasse(x.r, x.c, x.w, x.h)) classes.push("pion-debord");
+      if (x.w * x.h <= 2) classes.push("pion-petit");
+      if (x.role && !vueComplete() && x.role !== etat.role) x.libelle = "Demande " + x.armee;
+      var titre = x.libelle + " · " + x.armee + " · " + x.cases + " case" + (x.cases > 1 ? "s" : "") + (x.niveau ? " · " + x.niveau + " %" : "") + (x.role && (vueComplete() || x.role === etat.role) ? " · demande " + x.role : "");
+      pl.appendChild(el("div", { classe: classes.join(" "), title: titre,
+        style: "grid-row:" + (x.r + 1) + " / span " + x.h + ";grid-column:" + (x.c + 1) + " / span " + x.w + ";background:" + couleur }, [
+        el("span", { texte: x.libelle.replace(/^Capacité /, "").replace(/^Brigade /, "Bde ") })
+      ]));
+    });
+    t.cellules.forEach(function (x) {
+      var classes = ["pion", "pion-case"];
+      if (x.nature === "dorese") classes.push("pion-dorese");
+      if (x.horsCatalogue) classes.push("pion-mesure");
+      if (x.r * t.largeur + x.c >= t.plafond) classes.push("pion-debord");
+      if (x.role && !vueComplete() && x.role !== etat.role) x.libelle = x.nature === "dorese" ? "DORESE" : "Demande " + x.armee;
+      pl.appendChild(el("div", { classe: classes.join(" "), title: x.libelle + " · " + x.armee + (x.role && (vueComplete() || x.role === etat.role) ? " · demande " + x.role : ""),
+        style: "grid-row:" + (x.r + 1) + ";grid-column:" + (x.c + 1) + ";background:" + couleurArmee(x.armee) }, [
+        el("span", { texte: x.nature === "dorese" ? { ao: "AO", mco: "M", rh: "RH" }[x.type] : "" })
+      ]));
+    });
 
     var lg = $("legende");
     vider(lg);
-    var items = [["n-gris", "Dépense fixe"], ["n-violet", "Investissement"]].map(function (x) { return el("span", null, [el("span", { classe: "case pleine", style: "background:var(--" + (x[0] === "n-gris" ? "gris" : "violet") + ")" }), x[1]]); });
-    M.ARMEES.forEach(function (arm) { items.push(el("span", null, [el("span", { classe: "case pleine", style: "background:" + couleurArmee(arm) }), arm])); });
-    items.push(el("span", null, [el("span", { classe: "case pleine c50", style: "background:var(--terre)" }), "Capacité à 50 %"]));
-    items.push(el("span", null, [el("span", { classe: "case pleine dor", style: "background:var(--terre)" }), "DORESE"]));
-    items.push(el("span", null, [el("span", { classe: "case hors" }), "Au-delà du plafond"]));
-    items.push(el("span", null, [el("span", { classe: "case pleine debord", style: "background:var(--marine)" }), "Pion au-delà du plafond"]));
-    items.forEach(function (i) { lg.appendChild(i); });
+    function puce(style, classe, texte) { return el("span", null, [el("span", { classe: "puce-legende " + (classe || ""), style: style }), texte]); }
+    lg.appendChild(puce("background:var(--gris)", "", "Dépense fixe"));
+    lg.appendChild(puce("background:var(--violet)", "", "Investissement"));
+    M.ARMEES.forEach(function (arm) { lg.appendChild(puce("background:" + couleurArmee(arm), "", arm)); });
+    lg.appendChild(puce("background:var(--terre)", "pion-50", "Capacité à 50 %"));
+    lg.appendChild(puce("background:var(--terre)", "pion-dorese", "DORESE (AO, MCO, RH)"));
+    lg.appendChild(puce("background:var(--terre)", "pion-mesure", "Pion sur mesure"));
+    lg.appendChild(puce("", "fond-hors", "Au-delà du plafond"));
+    lg.appendChild(puce("background:var(--marine)", "pion-debord", "Pion au-delà du plafond"));
   }
 
   // ---------- Paramètres ----------
@@ -2220,6 +6735,7 @@ window.STRAT_OPTIONS = [
       enregistrer(l);
       rendreDemande();
     });
+    $("table-vue").addEventListener("change", function () { etat.vueTable = $("table-vue").value; rendreTable(); });
     $("table-annee").addEventListener("change", function () { etat.anneeTable = Number($("table-annee").value); rendreTable(); });
     $("form-parametres").addEventListener("submit", enregistrerParametres);
     $("btn-copier-csv").addEventListener("click", function () {

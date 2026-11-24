@@ -5,9 +5,20 @@
   var M = window.STRAT_MOTEUR;
   var S = window.STRAT_STOCKAGE;
   var PIONS = window.STRAT_PIONS || [];
-  var OPTIONS = window.STRAT_OPTIONS || [];
+  var CATALOGUE = window.STRAT_CATALOGUE_ROLES || [];
+  function optionDe(code) { return code ? CATALOGUE.filter(function (o) { return o.code === code; })[0] || null : null; }
+  function fourchette(o) {
+    var u = o.annuel ? "/an" : (o.periodicite && o.periodicite !== "non précisée" ? " (" + o.periodicite + ")" : "");
+    if (o.cout === null || o.cout === undefined) return o.statut_cout === "a_definir" ? "coût à définir" : "non chiffré";
+    if (o.cout_max && o.cout_max !== o.cout) return o.cout + " à " + o.cout_max + " M€" + u;
+    return o.cout + " M€" + u;
+  }
   var IDX = M.indexPions(PIONS);
   var ROLES_EDITION_PARAMS = ["Animateur", "SC-Plans", "CEMA"];
+  var ROLES_ARBITRAGE = ["CEMA", "Animateur"];
+  var ROLES_VUE_COMPLETE = ["CEMA", "Animateur", "SC-Plans"];
+  function vueComplete() { return ROLES_VUE_COMPLETE.indexOf(etat.role) !== -1; }
+  function visible(l) { return vueComplete() || l.role === etat.role; }
 
   var etat = {
     partie: null, // { id, nom, params }
@@ -15,7 +26,8 @@
     role: "",
     lignes: [],
     onglet: "demande",
-    anneeTable: M.ANNEES[0]
+    anneeTable: M.ANNEES[0],
+    vueTable: "demandes"
   };
   var enAttente = {}; // id de ligne -> minuteur d'enregistrement
   var signatureLignes = "";
@@ -149,6 +161,7 @@
     else rendreBilan();
     if (etat.onglet === "synthese") rendreSynthese();
     if (etat.onglet === "table") rendreTable();
+    if (etat.onglet === "arbitrage" && (complet || !$("vue-arbitrage").contains(actif))) rendreArbitrage();
     if (etat.onglet === "parametres" && (complet || !$("form-parametres").contains(actif))) rendreParametres();
   }
 
@@ -157,7 +170,7 @@
     document.querySelectorAll(".onglets button").forEach(function (b) {
       b.setAttribute("aria-selected", b.getAttribute("data-onglet") === nom ? "true" : "false");
     });
-    ["demande", "synthese", "table", "parametres"].forEach(function (v) { $("vue-" + v).hidden = v !== nom; });
+    ["demande", "synthese", "table", "arbitrage", "parametres"].forEach(function (v) { $("vue-" + v).hidden = v !== nom; });
     memoriser();
     rendre(true);
   }
@@ -188,7 +201,7 @@
     var r = role(etat.role);
     var l = { id: nouvelId(), role: etat.role, type: type, qte: {}, justification: "", cree_le: new Date().toISOString() };
     if (type === "libre") {
-      l.libelle = ""; l.cout_unitaire = 100; l.dorese = { ao: 0, mco: 0, rh: 0 }; l.armee = r.armee;
+      l.libelle = ""; l.modele = null; l.cout_unitaire = 100; l.dorese = { ao: 0, mco: 0, rh: 0 }; l.armee = r.armee;
     } else {
       var candidats = pionsPour(type);
       var duRole = candidats.filter(function (p) { return p.armee === r.armee; });
@@ -242,31 +255,71 @@
     // Objet
     var objet = el("td", { classe: "objet" });
     if (l.type === "libre") {
-      var choix = el("select", { "aria-label": "Modèle de ligne" });
-      choix.appendChild(el("option", { value: "", texte: "Modèle (facultatif)…" }));
-      OPTIONS.forEach(function (o) { choix.appendChild(el("option", { value: o.code, texte: o.role + " · " + o.libelle + " · " + md(o.cout) + "/an" })); });
-      var lib = el("input", { value: l.libelle || "", placeholder: "Intitulé (ex. Renforcement Roumanie)", "aria-label": "Intitulé" });
-      var cu = el("input", { classe: "court", type: "number", step: 100, value: l.cout_unitaire, "aria-label": "Montant annuel en M€" });
+      var choix = el("select", { "aria-label": "Option du catalogue" });
+      choix.appendChild(el("option", { value: "", texte: "Pion sur mesure (hors catalogue)" }));
+      var rolesCat = vueComplete()
+        ? [etat.role].concat(M.ROLES.map(function (r) { return r.code; }).filter(function (c) { return c !== etat.role; }))
+        : [etat.role];
+      rolesCat.forEach(function (rc) {
+        var opts = CATALOGUE.filter(function (o) { return o.role === rc; });
+        if (!opts.length) return;
+        var g = el("optgroup", { label: "Fiche " + rc });
+        opts.forEach(function (o) { g.appendChild(el("option", { value: o.code, texte: o.libelle + " · " + fourchette(o) })); });
+        choix.appendChild(g);
+      });
+      choix.value = l.modele || "";
+      var o = optionDe(l.modele);
+      var lib = el("input", { value: l.libelle || "", placeholder: "Intitulé du pion", "aria-label": "Intitulé" });
+      var cu = el("input", { classe: "court", type: "number", min: 0, step: 100, value: l.cout_unitaire, "aria-label": "Prix fixé en M€" });
+      var noteCu = el("div", { classe: "sous" });
       var d = l.dorese || { ao: 0, mco: 0, rh: 0 };
       function champDor(k, nomCourt) {
         var i = el("input", { type: "number", min: 0, step: 1, value: d[k] || 0, "aria-label": "DORESE " + nomCourt });
         i.addEventListener("input", function () { l.dorese = l.dorese || {}; l.dorese[k] = Number(i.value) || 0; changer(); });
         return el("label", null, [nomCourt + " ", i]);
       }
+      function majNote(brut) {
+        var txt = [];
+        if (!l.cout_unitaire) txt.push("Fixez le prix : la ligne ne compte pas tant qu'il est à 0");
+        if (brut !== undefined && Number(brut) !== l.cout_unitaire && l.cout_unitaire) txt.push("Arrondi à la case : " + md(l.cout_unitaire));
+        if (brut === undefined && o && o.cout && o.cout % M.CASE && l.cout_unitaire) txt.push("Prix de la fiche " + md(o.cout) + ", arrondi à " + md(l.cout_unitaire) + " : à confirmer");
+        if (o && o.cout !== null && o.cout !== undefined) {
+          var hautO = o.cout_max || o.cout;
+          if (l.cout_unitaire < M.arrondiCase(o.cout) && l.cout_unitaire < o.cout || l.cout_unitaire > Math.max(M.arrondiCase(hautO), hautO)) txt.push("Hors fourchette de la fiche (" + fourchette(o) + ")");
+        }
+        noteCu.textContent = txt.join(" · ");
+        noteCu.className = "sous" + (txt.length ? " alerte-texte" : "");
+      }
       choix.addEventListener("change", function () {
-        var o = OPTIONS.filter(function (x) { return x.code === choix.value; })[0];
-        if (!o) return;
-        l.libelle = o.libelle; l.cout_unitaire = o.cout; l.armee = o.armee; l.source = o.source;
-        l.dorese = o.dorese ? { ao: o.dorese.ao, mco: o.dorese.mco, rh: o.dorese.rh } : { ao: 0, mco: 0, rh: 0 };
+        var opt = optionDe(choix.value);
+        if (!opt) { l.modele = null; l.source = null; changer(); rendreDemande(); return; }
+        l.modele = opt.code; l.libelle = opt.libelle; l.armee = opt.armee; l.source = opt.source;
+        l.cout_unitaire = opt.cout ? M.arrondiCase(opt.cout) : 0;
+        l.dorese = opt.dorese ? { ao: opt.dorese.ao || 0, mco: opt.dorese.mco || 0, rh: opt.dorese.rh || 0 } : { ao: 0, mco: 0, rh: 0 };
         changer(); rendreDemande();
       });
       lib.addEventListener("input", function () { l.libelle = lib.value; enregistrer(l); });
-      cu.addEventListener("input", function () { l.cout_unitaire = Number(cu.value) || 0; changer(); });
+      cu.addEventListener("input", function () { l.cout_unitaire = M.arrondiCase(cu.value); majChiffres(); majNote(cu.value); enregistrer(l); });
+      cu.addEventListener("change", function () { cu.value = l.cout_unitaire; majNote(); });
       objet.appendChild(choix);
       objet.appendChild(el("div", { style: "margin-top:.25rem" }, [lib]));
-      objet.appendChild(el("div", { classe: "dor" }, [el("label", null, ["M€ par exemplaire et par an ", cu])]));
+      if (o) {
+        var infos = [fourchette(o) + (o.periodicite ? " · " + o.periodicite : "")];
+        if (o.etalement) infos.push("Étalement : " + o.etalement);
+        if (o.delai) infos.push("Délai : " + o.delai);
+        objet.appendChild(el("div", { classe: "sous", texte: "Fiche : " + infos.join(" · ") }));
+        if (o.alerte) objet.appendChild(el("div", { classe: "sous alerte-texte", texte: o.alerte }));
+        if (o.source || o.edition) objet.appendChild(el("div", { classe: "sous", texte: [o.source, o.edition].filter(Boolean).join(" · ") }));
+        if (o.conditions) objet.appendChild(el("details", { classe: "sous" }, [el("summary", { texte: "Conditions" }), el("p", { texte: o.conditions })]));
+      } else {
+        var val = ((params().validations || {})[l.id]);
+        objet.appendChild(el("div", { classe: "badge " + (val ? "badge-ok" : "badge-attente"), texte: val ? "Sur mesure · validé par l'animateur" : "Sur mesure · à valider par l'animateur" }));
+      }
+      objet.appendChild(el("div", { classe: "dor" }, [el("label", null, ["Prix fixé (M€ par an) ", cu])]));
+      objet.appendChild(noteCu);
       objet.appendChild(el("div", { classe: "dor" }, ["DORESE incluses :", champDor("ao", "AO"), champDor("mco", "MCO"), champDor("rh", "RH")]));
-      if (l.source) objet.appendChild(el("div", { classe: "sous", texte: "Source : " + l.source }));
+      objet.appendChild(el("div", { classe: "sous", texte: "Les cases des années indiquent combien de fois ce prix est posé. Pour un investissement étalé, posez une fois par année concernée." }));
+      majNote();
     } else {
       var sp = selectPion(l);
       sp.addEventListener("change", function () { l.pion = sp.value; changer(); rendreDemande(); });
@@ -392,6 +445,9 @@
     rangee(["Total sur la table"], function (s) { return s.total; });
     rangee(["Plafond"], function (s) { return s.plafond; });
     rangee(["Marge (+) ou dépassement (−)"], function (s) { return s.marge; }, function (v) { return v < 0 ? "neg" : "pos"; });
+    var synArb = M.synthese(PIONS, M.lignesApresArbitrage(etat.lignes, params()), params());
+    rangee(["Total après arbitrage"], function (x) { return synArb[x.annee].total; });
+    rangee(["Marge après arbitrage"], function (x) { return synArb[x.annee].marge; }, function (v) { return v < 0 ? "neg" : "pos"; });
     rangee(["dont DORESE demandées"], function (s) { return (s.dorese.ao + s.dorese.mco + s.dorese.rh) * M.CASE; });
     t.appendChild(corps);
 
@@ -400,7 +456,8 @@
     vider(tr2);
     tr2.appendChild(el("thead", null, [el("tr", null, [el("th", { texte: "Rôle" }), el("th", { classe: "num", texte: "Lignes" })].concat(M.ANNEES.map(function (a) { return el("th", { classe: "num", texte: String(a) }); })).concat([el("th", { classe: "num", texte: "Total" })]))]));
     var c2 = el("tbody");
-    var rolesPresents = M.ROLES.filter(function (r) { return etat.lignes.some(function (l) { return l.role === r.code; }); });
+    var rolesPresents = M.ROLES.filter(function (r) { return (vueComplete() || r.code === etat.role) && etat.lignes.some(function (l) { return l.role === r.code; }); });
+    $("note-vue").textContent = vueComplete() ? "" : "Vue limitée à vos postes de dépense : le détail des autres rôles est réservé au CEMA, au SC-Plans et à l'animateur. Les totaux par armée restent visibles.";
     if (!rolesPresents.length) c2.appendChild(el("tr", null, [el("td", { colspan: 3 + M.ANNEES.length, classe: "vide-etat", texte: "Aucune demande saisie dans cette partie." })]));
     rolesPresents.forEach(function (r) {
       var s = M.synthese(PIONS, etat.lignes, params(), function (l) { return l.role === r.code; });
@@ -418,14 +475,110 @@
     t3.appendChild(el("thead", null, [el("tr", null, [el("th", { texte: "Rôle" }), el("th", { texte: "Type" }), el("th", { texte: "Objet" }), el("th", { texte: "Armée" })]
       .concat(M.ANNEES.map(function (a) { return el("th", { classe: "num", texte: String(a) }); })).concat([el("th", { classe: "num", texte: "Total" }), el("th", { texte: "Justification" })]))]));
     var c3 = el("tbody");
-    if (!etat.lignes.length) c3.appendChild(el("tr", null, [el("td", { colspan: 6 + M.ANNEES.length, classe: "vide-etat", texte: "Les lignes des joueurs apparaîtront ici." })]));
-    etat.lignes.forEach(function (l) {
+    var lignesVisibles = etat.lignes.filter(visible);
+    if (!lignesVisibles.length) c3.appendChild(el("tr", null, [el("td", { colspan: 6 + M.ANNEES.length, classe: "vide-etat", texte: vueComplete() ? "Les lignes des joueurs apparaîtront ici." : "Vos lignes apparaîtront ici." })]));
+    lignesVisibles.forEach(function (l) {
       var c = M.coutLigne(l, IDX);
       c3.appendChild(el("tr", null, [el("td", { texte: l.role }), el("td", { texte: M.TYPES_LIGNE[l.type] || l.type }), el("td", { texte: libelleLigne(l) }), el("td", { texte: M.armeeDeLigne(l, IDX) })]
         .concat(M.ANNEES.map(function (a) { return el("td", { classe: "num", texte: c.annees[a].cout ? md(c.annees[a].cout) : "·" }); }))
         .concat([el("td", { classe: "num", texte: md(c.total) }), el("td", { texte: l.justification || "" })])));
     });
     t3.appendChild(c3);
+  }
+
+  // ---------- Arbitrage ----------
+  var fileParams = Promise.resolve();
+  function modifierParams(fn) {
+    // Lecture puis écriture, à la suite, pour ne pas écraser un arbitrage voisin.
+    fileParams = fileParams.then(function () {
+      return S.lireEtat(etat.partie.nom, etat.mdp).then(function (e) {
+        var p = e.partie.params && e.partie.params.plafonds ? e.partie.params : M.parametresParDefaut();
+        fn(p);
+        return S.majParams(etat.partie.nom, etat.mdp, p).then(function () { etat.partie.params = p; rendre(false); });
+      });
+    }).catch(function (e) { toast("Non enregistré : " + e.message); });
+    return fileParams;
+  }
+
+  function rendreArbitrage() {
+    var p = params();
+    var edit = ROLES_ARBITRAGE.indexOf(etat.role) !== -1;
+    $("aide-arbitrage").textContent = (edit
+      ? "Pour chaque ligne : retenue, différée d'une à trois années, ou renoncée. "
+      : "Lecture seule : seuls le CEMA et l'animateur arbitrent. ")
+      + "Un différé décale la ligne ; ce qui dépasse 2032 est reporté hors LPM.";
+    var dem = M.synthese(PIONS, etat.lignes, p);
+    var arb = M.synthese(PIONS, M.lignesApresArbitrage(etat.lignes, p), p);
+    var t = $("table-arb-annees");
+    vider(t);
+    t.appendChild(el("thead", null, [el("tr", null, [el("th", { texte: "M€" })].concat(M.ANNEES.map(function (a) { return el("th", { classe: "num", texte: String(a) }); })))]));
+    var c = el("tbody");
+    [["Total demandé", function (a) { return dem[a].total; }],
+     ["Total après arbitrage", function (a) { return arb[a].total; }],
+     ["Plafond", function (a) { return arb[a].plafond; }],
+     ["Marge après arbitrage", function (a) { return arb[a].marge; }, true]].forEach(function (r) {
+      c.appendChild(el("tr", null, [el("td", { texte: r[0] })].concat(M.ANNEES.map(function (a) {
+        var v = r[1](a); return el("td", { classe: "num " + (r[2] ? (v < 0 ? "neg" : "pos") : ""), texte: md(v) });
+      }))));
+    });
+    t.appendChild(c);
+
+    var tl = $("table-arb-lignes");
+    vider(tl);
+    tl.appendChild(el("thead", null, [el("tr", null, ["Rôle", "Objet", "Armée", "Demandé (6 ans)", "Décision", "Après arbitrage", "Sur mesure"].map(function (h, i) { return el("th", { classe: i === 3 || i === 5 ? "num" : "", texte: h }); }))]));
+    var cl = el("tbody");
+    var aArbitrer = etat.lignes.filter(visible);
+    if (!aArbitrer.length) cl.appendChild(el("tr", null, [el("td", { colspan: 7, classe: "vide-etat", texte: "Aucune demande à arbitrer pour l'instant." })]));
+    aArbitrer.forEach(function (l) {
+      var a = M.arbitrageDe(l, p);
+      var avant = M.coutLigne(l, IDX).total;
+      var la = M.ligneArbitree(l, p);
+      var apres = la ? M.coutLigne(la, IDX).total : 0;
+      var st = el("select", { "aria-label": "Décision", disabled: edit ? null : "disabled" });
+      Object.keys(M.STATUTS).forEach(function (k) { st.appendChild(el("option", { value: k, texte: M.STATUTS[k] })); });
+      st.value = a.statut;
+      var dec = el("select", { "aria-label": "Décalage", disabled: edit ? null : "disabled", hidden: a.statut === "differe" ? null : "hidden" });
+      [1, 2, 3].forEach(function (n) { dec.appendChild(el("option", { value: n, texte: "de " + n + " an" + (n > 1 ? "s" : "") })); });
+      dec.value = String(a.decalage || 1);
+      function enreg() {
+        var val = { statut: st.value, decalage: st.value === "differe" ? Number(dec.value) : 0 };
+        modifierParams(function (pp) { pp.arbitrages = pp.arbitrages || {}; pp.arbitrages[l.id] = val; });
+      }
+      st.addEventListener("change", function () { dec.hidden = st.value !== "differe"; enreg(); });
+      dec.addEventListener("change", enreg);
+      var celMesure = el("td");
+      if (l.type === "libre" && !l.modele) {
+        var cb = el("input", { type: "checkbox", id: "valide-" + l.id, disabled: edit ? null : "disabled" });
+        cb.checked = !!(p.validations || {})[l.id];
+        cb.addEventListener("change", function () { modifierParams(function (pp) { pp.validations = pp.validations || {}; pp.validations[l.id] = cb.checked; }); });
+        celMesure.appendChild(el("label", { for: cb.id }, [cb, " validé"]));
+      }
+      var report = M.reportHorsLpm(l, p, IDX);
+      cl.appendChild(el("tr", { classe: "arb-ligne" }, [
+        el("td", { texte: l.role }),
+        el("td", { classe: "statut-" + a.statut, texte: libelleLigne(l) }),
+        el("td", { texte: M.armeeDeLigne(l, IDX) }),
+        el("td", { classe: "num", texte: md(avant) }),
+        el("td", null, [st, " ", dec]),
+        el("td", { classe: "num", texte: md(apres) + (report ? " (+" + md(report) + " hors LPM)" : "") }),
+        celMesure
+      ]));
+    });
+    tl.appendChild(cl);
+
+    var tr = $("table-renoncements");
+    vider(tr);
+    var ren = etat.lignes.filter(function (l) { return visible(l) && M.arbitrageDe(l, p).statut === "renonce"; });
+    tr.appendChild(el("thead", null, [el("tr", null, ["Rôle", "Objet", "Armée", "Montant renoncé (6 ans)", "Justification du demandeur"].map(function (h, i) { return el("th", { classe: i === 3 ? "num" : "", texte: h }); }))]));
+    var cr = el("tbody");
+    if (!ren.length) cr.appendChild(el("tr", null, [el("td", { colspan: 5, classe: "vide-etat", texte: "Aucun renoncement pour l'instant." })]));
+    var totalRen = 0;
+    ren.forEach(function (l) {
+      var v = M.coutLigne(l, IDX).total; totalRen += v;
+      cr.appendChild(el("tr", null, [el("td", { texte: l.role }), el("td", { texte: libelleLigne(l) }), el("td", { texte: M.armeeDeLigne(l, IDX) }), el("td", { classe: "num", texte: md(v) }), el("td", { texte: l.justification || "" })]));
+    });
+    tr.appendChild(cr);
+    if (ren.length) tr.appendChild(el("tfoot", null, [el("tr", null, [el("td", { colspan: 3, texte: "Total renoncé" }), el("td", { classe: "num", texte: md(totalRen) }), el("td")])]));
   }
 
   function libelleLigne(l) {
@@ -440,7 +593,7 @@
     var sep = ";";
     var ent = ["Rôle", "Type", "Objet", "Armée imputée"].concat(M.ANNEES.map(String)).concat(["Total (M€)", "Justification"]);
     var lignes = [ent.join(sep)];
-    etat.lignes.forEach(function (l) {
+    etat.lignes.filter(visible).forEach(function (l) {
       var c = M.coutLigne(l, IDX);
       var v = [l.role, M.TYPES_LIGNE[l.type], libelleLigne(l), M.armeeDeLigne(l, IDX)]
         .concat(M.ANNEES.map(function (a) { return c.annees[a].cout; })).concat([c.total, (l.justification || "").replace(/\s+/g, " ")]);
@@ -456,56 +609,66 @@
     sel.value = String(etat.anneeTable);
     var a = etat.anneeTable;
     var p = params();
-    var blocs = M.blocsAnnee(PIONS, etat.lignes, p, a);
-    var syn = M.synthese(PIONS, etat.lignes, p)[a];
-    var tableCases = Number(p.table) || 600;
-    var plafondCases = Number(p.plafonds[a]) || 0;
-    var occupees = blocs.reduce(function (s, b) { return s + b.cases; }, 0);
-    var total = Math.max(tableCases, Math.ceil(occupees / 30) * 30);
+    var lignesVues = etat.vueTable === "arbitrage" ? M.lignesApresArbitrage(etat.lignes, p) : etat.lignes;
+    var t = M.placerAnnee(PIONS, lignesVues, p, a);
+    var syn = M.synthese(PIONS, lignesVues, p)[a];
 
     var ch = $("table-chiffres");
     vider(ch);
-    [["Cases occupées", occupees + " / " + plafondCases + " (plafond)"], ["Montant", md(syn.total)], [syn.marge >= 0 ? "Marge" : "Dépassement", md(Math.abs(syn.marge))]].forEach(function (x, i) {
+    [["Cases occupées", t.occupees + " sur " + t.plafond + " autorisées"], ["Montant", md(syn.total)], [syn.marge >= 0 ? "Marge" : "Dépassement", md(Math.abs(syn.marge))]].forEach(function (x, i) {
       ch.appendChild(el("span", { classe: i === 2 ? (syn.marge >= 0 ? "pos" : "neg") : "" }, [x[0] + " : ", el("b", { texte: x[1] })]));
     });
 
     var pl = $("plateau");
     vider(pl);
-    var cellules = [];
-    blocs.forEach(function (b) {
-      for (var i = 0; i < b.cases; i++) cellules.push({ bloc: b, debut: i === 0 });
-    });
-    for (var k = 0; k < total; k++) {
-      var c = cellules[k];
-      var classes = ["case"];
-      var style = "";
-      var titre = "Case libre";
-      if (c) {
-        classes.push("pleine");
-        var b = c.bloc;
-        var couleur = b.nature === "gris" ? "var(--gris)" : b.nature === "violet" ? "var(--violet)" : couleurArmee(b.armee);
-        if (b.nature === "orange") couleur = "var(--inter)";
-        style = "background:" + couleur;
-        if (b.nature === "capacite" && b.niveau !== 100) classes.push("c50");
-        if (b.nature === "dorese") classes.push("dor");
-        if (c.debut) classes.push("debut");
-        titre = b.libelle + " · " + b.armee + (b.nature === "capacite" ? " · " + (b.niveau === 100 ? "100 %" : "50 %") : "") + (b.role ? " · demande " + b.role : "");
-      }
-      if (k >= plafondCases && k < tableCases) classes.push(c ? "debord" : "hors");
-      if (k >= tableCases) classes.push("debord");
-      if (k >= plafondCases && !c) titre = k < tableCases ? "Au-delà du plafond " + a : "Hors table";
-      pl.appendChild(el("div", { classe: classes.join(" "), style: style, title: titre }));
+    pl.style.gridTemplateRows = "repeat(" + t.hauteur + ", var(--case))";
+    // Fond : une case par emplacement, rouge pâle au-delà du plafond, hachurée hors table.
+    for (var k = 0; k < t.hauteur * t.largeur; k++) {
+      var cl = "fond";
+      if (k >= t.table) cl += " fond-horstable";
+      else if (k >= t.plafond) cl += " fond-hors";
+      pl.appendChild(el("div", { classe: cl, style: "grid-row:" + (Math.floor(k / t.largeur) + 1) + ";grid-column:" + (k % t.largeur + 1) }));
     }
+    function depasse(r, c, w, h) {
+      for (var i = r; i < r + h; i++) for (var j = c; j < c + w; j++) if (i * t.largeur + j >= t.plafond) return true;
+      return false;
+    }
+    t.pieces.forEach(function (x) {
+      var couleur = x.groupe === "Fixes" ? "var(--gris)" : x.nature === "violet" ? "var(--violet)" : couleurArmee(x.armee);
+      var classes = ["pion"];
+      if (x.niveau === 50) classes.push("pion-50");
+      if (depasse(x.r, x.c, x.w, x.h)) classes.push("pion-debord");
+      if (x.w * x.h <= 2) classes.push("pion-petit");
+      if (x.role && !vueComplete() && x.role !== etat.role) x.libelle = "Demande " + x.armee;
+      var titre = x.libelle + " · " + x.armee + " · " + x.cases + " case" + (x.cases > 1 ? "s" : "") + (x.niveau ? " · " + x.niveau + " %" : "") + (x.role && (vueComplete() || x.role === etat.role) ? " · demande " + x.role : "");
+      pl.appendChild(el("div", { classe: classes.join(" "), title: titre,
+        style: "grid-row:" + (x.r + 1) + " / span " + x.h + ";grid-column:" + (x.c + 1) + " / span " + x.w + ";background:" + couleur }, [
+        el("span", { texte: x.libelle.replace(/^Capacité /, "").replace(/^Brigade /, "Bde ") })
+      ]));
+    });
+    t.cellules.forEach(function (x) {
+      var classes = ["pion", "pion-case"];
+      if (x.nature === "dorese") classes.push("pion-dorese");
+      if (x.horsCatalogue) classes.push("pion-mesure");
+      if (x.r * t.largeur + x.c >= t.plafond) classes.push("pion-debord");
+      if (x.role && !vueComplete() && x.role !== etat.role) x.libelle = x.nature === "dorese" ? "DORESE" : "Demande " + x.armee;
+      pl.appendChild(el("div", { classe: classes.join(" "), title: x.libelle + " · " + x.armee + (x.role && (vueComplete() || x.role === etat.role) ? " · demande " + x.role : ""),
+        style: "grid-row:" + (x.r + 1) + ";grid-column:" + (x.c + 1) + ";background:" + couleurArmee(x.armee) }, [
+        el("span", { texte: x.nature === "dorese" ? { ao: "AO", mco: "M", rh: "RH" }[x.type] : "" })
+      ]));
+    });
 
     var lg = $("legende");
     vider(lg);
-    var items = [["n-gris", "Dépense fixe"], ["n-violet", "Investissement"]].map(function (x) { return el("span", null, [el("span", { classe: "case pleine", style: "background:var(--" + (x[0] === "n-gris" ? "gris" : "violet") + ")" }), x[1]]); });
-    M.ARMEES.forEach(function (arm) { items.push(el("span", null, [el("span", { classe: "case pleine", style: "background:" + couleurArmee(arm) }), arm])); });
-    items.push(el("span", null, [el("span", { classe: "case pleine c50", style: "background:var(--terre)" }), "Capacité à 50 %"]));
-    items.push(el("span", null, [el("span", { classe: "case pleine dor", style: "background:var(--terre)" }), "DORESE"]));
-    items.push(el("span", null, [el("span", { classe: "case hors" }), "Au-delà du plafond"]));
-    items.push(el("span", null, [el("span", { classe: "case pleine debord", style: "background:var(--marine)" }), "Pion au-delà du plafond"]));
-    items.forEach(function (i) { lg.appendChild(i); });
+    function puce(style, classe, texte) { return el("span", null, [el("span", { classe: "puce-legende " + (classe || ""), style: style }), texte]); }
+    lg.appendChild(puce("background:var(--gris)", "", "Dépense fixe"));
+    lg.appendChild(puce("background:var(--violet)", "", "Investissement"));
+    M.ARMEES.forEach(function (arm) { lg.appendChild(puce("background:" + couleurArmee(arm), "", arm)); });
+    lg.appendChild(puce("background:var(--terre)", "pion-50", "Capacité à 50 %"));
+    lg.appendChild(puce("background:var(--terre)", "pion-dorese", "DORESE (AO, MCO, RH)"));
+    lg.appendChild(puce("background:var(--terre)", "pion-mesure", "Pion sur mesure"));
+    lg.appendChild(puce("", "fond-hors", "Au-delà du plafond"));
+    lg.appendChild(puce("background:var(--marine)", "pion-debord", "Pion au-delà du plafond"));
   }
 
   // ---------- Paramètres ----------
@@ -593,6 +756,7 @@
       enregistrer(l);
       rendreDemande();
     });
+    $("table-vue").addEventListener("change", function () { etat.vueTable = $("table-vue").value; rendreTable(); });
     $("table-annee").addEventListener("change", function () { etat.anneeTable = Number($("table-annee").value); rendreTable(); });
     $("form-parametres").addEventListener("submit", enregistrerParametres);
     $("btn-copier-csv").addEventListener("click", function () {

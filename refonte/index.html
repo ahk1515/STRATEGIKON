@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>STRATEGIKON LPM</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700&family=Saira+Stencil+One&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ===== Accueil ===== -->
+<section id="ecran-accueil" class="accueil">
+  <div class="accueil-fond" aria-hidden="true"></div>
+  <div class="accueil-in">
+    <p class="surtitre">École de guerre · exercice de programmation militaire</p>
+    <h1 class="logo">STRATEGIKON</h1>
+    <p class="accroche">Six années, 600 cases par an, un plafond qui ne bouge pas. Chaque pôle défend ses capacités ; le CEMA tranche.</p>
+
+    <div class="etapes-accueil" id="etape-partie">
+      <div class="carte-acces">
+        <h2>Rejoindre une partie</h2>
+        <form id="form-rejoindre" autocomplete="off">
+          <label for="rej-partie">Partie</label>
+          <select id="rej-partie" required></select>
+          <label for="rej-mdp">Mot de passe</label>
+          <input id="rej-mdp" type="password" required>
+          <button class="btn-laiton" type="submit">Entrer</button>
+          <p class="erreur" id="rej-erreur" role="alert"></p>
+        </form>
+      </div>
+      <div class="carte-acces carte-discrete">
+        <h2>Ouvrir une nouvelle partie</h2>
+        <form id="form-creer" autocomplete="off">
+          <label for="cre-nom">Nom de la partie</label>
+          <input id="cre-nom" placeholder="Bageia 5" maxlength="80" required>
+          <div class="deux">
+            <div><label for="cre-mdp">Mot de passe</label><input id="cre-mdp" type="password" minlength="4" required></div>
+            <div><label for="cre-mdp2">Confirmation</label><input id="cre-mdp2" type="password" minlength="4" required></div>
+          </div>
+          <button class="btn-contour" type="submit">Ouvrir la partie</button>
+          <p class="erreur" id="cre-erreur" role="alert"></p>
+        </form>
+      </div>
+    </div>
+
+    <div id="etape-role" hidden>
+      <h2 class="titre-roles">Quel pôle incarnez-vous dans <span id="nom-partie-role"></span> ?</h2>
+      <div class="roles" id="grille-roles"></div>
+      <button class="btn-lien" id="btn-retour-partie" type="button">Choisir une autre partie</button>
+    </div>
+    <p class="note-mode" id="note-mode"></p>
+  </div>
+</section>
+
+<!-- ===== Partie ===== -->
+<section id="ecran-partie" hidden>
+  <header class="poste">
+    <div class="poste-in">
+      <span class="logo-petit">STRATEGIKON</span>
+      <span class="poste-partie" id="poste-partie"></span>
+      <button class="insigne" id="btn-role" type="button" title="Changer de pôle"><span id="insigne-code"></span><small id="insigne-nom"></small></button>
+      <span class="mode" id="mode"></span>
+      <button class="btn-lien" id="btn-quitter" type="button">Quitter</button>
+    </div>
+    <div class="jauges" id="jauges" aria-label="Budget par année"></div>
+  </header>
+
+  <nav class="parcours" role="tablist">
+    <button role="tab" data-onglet="composer" aria-selected="true"><b>1</b> Composer ma demande</button>
+    <button role="tab" data-onglet="table" aria-selected="false"><b>2</b> La table</button>
+    <button role="tab" data-onglet="arbitrage" aria-selected="false"><b>3</b> Arbitrage</button>
+    <button role="tab" data-onglet="bilan" aria-selected="false">Bilan</button>
+    <button role="tab" data-onglet="reglages" aria-selected="false" id="onglet-reglages">Réglages</button>
+  </nav>
+
+  <main class="scene">
+    <!-- 1. Composer -->
+    <div class="vue vue-composer" id="vue-composer">
+      <aside class="arsenal">
+        <div class="arsenal-tete">
+          <h2>Arsenal</h2>
+          <input id="recherche" type="search" placeholder="Chercher un pion, une option…" aria-label="Chercher">
+          <div class="filtres" id="filtres" role="group" aria-label="Filtrer"></div>
+        </div>
+        <div class="cartes-pions" id="arsenal"></div>
+      </aside>
+      <section class="dossier">
+        <div class="dossier-tete">
+          <div>
+            <h2 id="titre-dossier">Ma demande</h2>
+            <p class="aide">Chaque fiche se pose sur la table les années cochées. Tout est enregistré au fil de l'eau.</p>
+          </div>
+          <div class="dossier-total" id="dossier-total"></div>
+        </div>
+        <div id="fiches"></div>
+      </section>
+    </div>
+
+    <!-- 2. Table -->
+    <div class="vue" id="vue-table" hidden>
+      <div class="table-tete">
+        <div class="annees" id="annees-table" role="group" aria-label="Année"></div>
+        <div class="bascule" role="group" aria-label="Vue">
+          <button type="button" data-vue="demandes" aria-pressed="true">Toutes les demandes</button>
+          <button type="button" data-vue="arbitrage" aria-pressed="false">Après arbitrage</button>
+        </div>
+      </div>
+      <div class="table-cadre">
+        <div class="table-releve" id="table-releve"></div>
+        <div class="defile"><div class="plateau" id="plateau"></div></div>
+        <div class="legende" id="legende"></div>
+      </div>
+    </div>
+
+    <!-- 3. Arbitrage -->
+    <div class="vue" id="vue-arbitrage" hidden>
+      <div class="arb-tete">
+        <div>
+          <h2>Arbitrage du CEMA</h2>
+          <p class="aide" id="aide-arbitrage"></p>
+        </div>
+      </div>
+      <div class="arb-annees" id="arb-annees"></div>
+      <div class="arb-colonnes">
+        <div><h3>Demandes</h3><div id="arb-lignes"></div></div>
+        <div><h3>Renoncements</h3><div id="arb-renoncements"></div></div>
+      </div>
+    </div>
+
+    <!-- Bilan -->
+    <div class="vue" id="vue-bilan" hidden>
+      <div class="arb-tete">
+        <div><h2>Bilan de la partie</h2><p class="aide" id="note-vue"></p></div>
+        <div class="actions">
+          <button class="btn-contour" id="btn-copier-csv" type="button">Copier en CSV</button>
+          <button class="btn-contour" id="btn-telecharger-csv" type="button">Télécharger le CSV</button>
+        </div>
+      </div>
+      <div class="trajectoire" id="trajectoire"></div>
+      <div class="defile cadre"><table class="tableau" id="table-synthese"></table></div>
+      <h3>Toutes les lignes visibles</h3>
+      <div class="defile cadre"><table class="tableau" id="table-toutes"></table></div>
+    </div>
+
+    <!-- Réglages -->
+    <div class="vue" id="vue-reglages" hidden>
+      <h2>Réglages de la partie</h2>
+      <p class="aide" id="aide-parametres"></p>
+      <form id="form-parametres" class="reglages">
+        <fieldset><legend>Plafond annuel (cases de 100 M€)</legend><div class="plafonds" id="plafonds"></div></fieldset>
+        <fieldset><legend>Pions de scénario posés sur la table</legend><div id="aleas"></div></fieldset>
+        <button class="btn-laiton" type="submit" id="btn-parametres">Enregistrer</button>
+        <p class="note-mode" id="param-etat" role="status"></p>
+      </form>
+    </div>
+  </main>
+</section>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script src="../js/config.js"></script>
+<script src="../data/pions.js"></script>
+<script src="../data/catalogue_roles.js"></script>
+<script src="../js/moteur.js"></script>
+<script src="../js/stockage.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

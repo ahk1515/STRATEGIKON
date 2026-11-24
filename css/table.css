@@ -321,3 +321,13 @@ button.jeton-option { color: #222; }
 .regle-alerte { color: var(--attente); }
 .regle-surcotautomatique { color: #6d52a8; }
 .regle-drapeau { color: var(--laiton); }
+.marque-alerte { position: absolute; left: 3px; top: 3px; z-index: 5; display: grid; place-items: center; width: 14px; height: 14px; border-radius: 50%; background: #e8a200; color: #111; font: 700 .62rem/1 var(--f-texte); box-shadow: 0 0 0 1px #111; }
+.drapeau-pion ~ .marque-alerte { left: 21px; }
+.pion-case .marque-alerte { width: 11px; height: 11px; left: auto; right: 1px; top: 1px; font-size: .5rem; }
+.alertes { list-style: none; padding: 0; margin: .4rem 0 0; display: grid; gap: .45rem; }
+.alertes li { display: grid; gap: .15rem; border-left: 3px solid #e8a200; padding-left: .5rem; font-size: .85rem; }
+.alertes li.alerte-info { border-left-color: var(--trait); }
+.alertes small { color: var(--sourdine); font-size: .72rem; }
+.alertes .btn-lien { padding: 0; font-size: .78rem; }
+.liste-demande .num .badge { margin-left: .25rem; }
+.puce-alerte { display: inline-grid !important; place-items: center; border-radius: 50%; background: #e8a200; color: #111; font-size: .6rem; font-weight: 700; }

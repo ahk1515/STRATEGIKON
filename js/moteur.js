@@ -762,6 +762,100 @@
     return { debuts: debuts, horsLpm: horsLpm, charge: charge };
   }
 
+  // ---------- Alertes tirées des règles des fiches de rôle ----------
+  // Jamais bloquantes : elles signalent. niveau « alerte » = règle enfreinte ; « info » = rappel utile.
+  // catalogue : options des fiches (pour le délai de mise en service et les partenaires).
+  var REGLE_DELAI = [
+    [/^DGA-SEAD/, "DGA-13"], [/^DGA-IA-/, "DGA-14"], [/^DGA-LAD-/, "DGA-15"], [/^DGA-STOCK-/, "DGA-12"], [/^DGA-EURODRONE/, "DGA-16"],
+    [/^DGA-QUAI-/, "DGA-17"], [/^DGA-CHAR-/, "DGA-18"], [/^DGA-MGCS-/, "DGA-19"], [/^DGA-(VBCI-NG|VBAE|TIGRE-SUCC|HIL)/, "DGA-20"],
+    [/^DGA-(AED|HYPER|ESSAIM|ARGONAUTE)/, "DGA-24"]
+  ];
+  var ANNEE_DECISION = ANNEES[0];
+  // Année de mise en service au plus tôt, d'après le champ « délai » de la fiche (null si rien d'exploitable).
+  function miseEnService(option, debut) {
+    var d = String((option && option.delai) || "");
+    if (!d) return null;
+    var an = d.match(/(?:Livraison initiale|production à partir de)\s+(\d{4})/i);
+    if (an) return Number(an[1]) + (/production à partir/i.test(d) && /1 an après/i.test(d) ? 1 : 0);
+    if (/^Immédiat/i.test(d)) return null;
+    var n = d.match(/N\+(\d+)/) || d.match(/(\d+)-\d+\s*ans/) || d.match(/(\d+)\s*(?:à\s*\d+\s*)?(?:ans?|tours)/);
+    return n ? debut + Number(n[1]) : null;
+  }
+  function premiereAnnee(l, idx) {
+    var c = coutLigne(l, idx);
+    for (var k = 0; k < ANNEES.length; k++) if (c.annees[ANNEES[k]].cout || quantite(l, ANNEES[k])) return ANNEES[k];
+    return null;
+  }
+  function alertes(pions, lignes, params, catalogue) {
+    params = params || parametresParDefaut();
+    var idx = indexPions(pions);
+    var opts = {};
+    (catalogue || []).forEach(function (o) { opts[o.code] = o; });
+    var res = [];
+    function ajouter(regle, l, niveau, message, annee) { res.push({ regle: regle, ligne: l ? l.id : null, role: l ? l.role : null, niveau: niveau, message: message, annee: annee || null }); }
+    var eff = lignes.map(function (l) { return { brute: l, e: ligneEffective(l, params) }; })
+      .filter(function (x) { return arbitrageDe(x.brute, params).statut !== "renonce"; });
+
+    eff.forEach(function (x) {
+      var l = x.brute, e = x.e, o = opts[l.modele];
+      var debut = premiereAnnee(e, idx);
+      if (debut === null) return;
+      var c = coutLigne(e, idx);
+      // Délais de mise en service (DGA-12 à DGA-20, DGA-24).
+      if (o) {
+        var regle = null;
+        REGLE_DELAI.forEach(function (r) { if (!regle && r[0].test(o.code)) regle = r[1]; });
+        var ms = miseEnService(o, l.cible && debutDe(l, params) === null ? ANNEE_DECISION : debut);
+        if (regle && ms) {
+          if (ms > ANNEES[ANNEES.length - 1]) ajouter(regle, l, "alerte", "Mise en service au plus tôt en " + ms + ", après la LPM : payé sans effet avant 2033 (" + o.delai + ").");
+          else if (ms > debut) ajouter(regle, l, "info", "Payé dès " + debut + ", mais opérationnel au plus tôt en " + ms + " (" + o.delai + ").");
+        }
+        // Partenaires d'une capacité multinationale (DGRIS-01, DGRIS-02).
+        if (o.partenaires && !/pays hôte/i.test(o.partenaires)) {
+          var f = financementDe(l, params);
+          if (f.mode !== "mutualise") ajouter("DGRIS-02", l, "alerte", "Programme avec partenaires (" + o.partenaires + ") : la part française n'est pas explicitée. Proposez un montage mutualisé.");
+          else if (!f.valide) ajouter("DGRIS-01", l, "alerte", "Capacité multinationale non acquise : l'animateur n'a pas encore jugé le partenaire plausible.");
+        }
+      }
+      // Second porte-avions : 5 annuités consécutives et un quai (DGA-23, EMM-01, DGA-22).
+      if (/PANG2/.test(l.modele || "")) {
+        var ans = ANNEES.filter(function (a) { return c.annees[a].cout > 0; });
+        if (ans.length < 5) ajouter("EMM-01", l, "alerte", "Second PA-NG : calendrier obligatoire sur 5 années avec au moins une annuité par an ; " + ans.length + " année(s) seulement dans la LPM.");
+        var quai = eff.some(function (y) { return /QUAI-PERM/.test(y.brute.modele || "") && premiereAnnee(y.e, idx) !== null; });
+        if (!quai) ajouter("DGA-22", l, "alerte", "Pas de quai permanent porte-avions dans la demande : seul le quai permanent permet un double PA.");
+      }
+      // Cadence industrielle : ±25 % d'une année à l'autre (DGA-01).
+      if (l.type === "libre" || l.type === "ajout") {
+        for (var k = 1; k < ANNEES.length; k++) {
+          var a0 = c.annees[ANNEES[k - 1]].cout, a1 = c.annees[ANNEES[k]].cout;
+          if (a0 > 0 && a1 > 0 && Math.abs(a1 - a0) / a0 > 0.25) {
+            ajouter("DGA-01", l, "alerte", "Cadence : de " + a0 + " à " + a1 + " M€ entre " + ANNEES[k - 1] + " et " + ANNEES[k] + " (plus de 25 % d'écart).", ANNEES[k]);
+            break;
+          }
+        }
+      }
+      // Nouvelle capacité : 3 ans d'activation (SCP-04).
+      if (l.type === "ajout" && !(l.cible && debutDe(l, params) === null) && debut + 3 > ANNEES[ANNEES.length - 1]) {
+        ajouter("SCP-04", l, "info", "Nouvelle capacité posée en " + debut + " : 3 ans d'activation, opérationnelle en " + (debut + 3) + ".");
+      }
+      // Dissolution : 2 à 3 ans pour retirer une capacité (SCP-05).
+      if (l.type === "retrait" && debut < ANNEE_DECISION + 2) {
+        ajouter("SCP-05", l, "alerte", "Dissolution comptée dès " + debut + " : retirer une capacité prend 2 à 3 ans, l'économie n'est pas réaliste avant " + (ANNEE_DECISION + 2) + ".");
+      }
+      // Défection d'un allié (DGRIS-03).
+      if (defectionDe(l, params)) ajouter("DGRIS-03", l, "alerte", "Défection de l'allié : la part française remonte, la ligne est à réarbitrer.");
+    });
+    // Masse salariale : au plus 4 DORESE RH de plus par an, toutes armées confondues (SGA-01).
+    var prec = 0;
+    ANNEES.forEach(function (a) {
+      var rh = 0;
+      eff.forEach(function (x) { var d = coutLigne(x.e, idx).annees[a].dorese.rh; if (d > 0) rh += d; });
+      if (rh - prec > 4) ajouter("SGA-01", null, "alerte", "Masse salariale : +" + (rh - prec) + " DORESE RH en " + a + " (au plus 4 de plus par an, toutes armées confondues).", a);
+      prec = rh;
+    });
+    return res;
+  }
+
   var API = {
     CASE: CASE,
     ANNEES: ANNEES,
@@ -812,7 +906,9 @@
     tranchesDe: tranchesDe,
     ligneEffective: ligneEffective,
     lignesEnTrajectoire: lignesEnTrajectoire,
-    etalerAuto: etalerAuto
+    etalerAuto: etalerAuto,
+    alertes: alertes,
+    miseEnService: miseEnService
   };
 
   if (typeof module !== "undefined" && module.exports) module.exports = API;

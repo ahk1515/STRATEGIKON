@@ -274,8 +274,36 @@
   }
 
   // ---------- Rendu ----------
+  // Alertes des règles des fiches : recalculées à chaque rendu, jamais bloquantes.
+  var ALERTES = [];
+  function calculerAlertes() {
+    try { ALERTES = M.alertes(PIONS, etat.lignes, paramsPhase(), CATALOGUE); } catch (e) { ALERTES = []; }
+  }
+  function alertesDe(id) { return ALERTES.filter(function (a) { return a.ligne === id; }); }
+  function alertesVisibles() { return ALERTES.filter(function (a) { var l = ligneDe(a.ligne); return !a.ligne || (l && visible(l)); }); }
+  function regleDe(id) { return REGLES.filter(function (r) { return r.id === id; })[0] || null; }
+  function marqueAlerte(liste) {
+    var fortes = liste.filter(function (a) { return a.niveau === "alerte"; });
+    if (!fortes.length) return null;
+    return el("span", { classe: "marque-alerte", title: fortes.map(function (a) { return a.regle + " : " + a.message; }).join("\n") }, ["!"]);
+  }
+  function listeAlertes(liste, avecLigne) {
+    var ul = el("ul", { classe: "alertes" });
+    liste.forEach(function (a) {
+      var r = regleDe(a.regle), l = ligneDe(a.ligne);
+      ul.appendChild(el("li", { classe: "alerte-" + a.niveau }, [
+        el("span", { classe: "regle-tete" }, [el("b", { texte: a.niveau === "alerte" ? "Alerte" : "À savoir" }), el("span", { classe: "badge", texte: a.regle }),
+          avecLigne && l ? el("button", { type: "button", classe: "btn-lien", texte: libelleLigne(l) + " · " + l.role, onclick: function () { etat.selection = { ligne: l.id, pion: l.pion || null }; etat.volet = "selection"; rendre(true); } }) : null]),
+        el("span", { texte: a.message }),
+        r ? el("small", { texte: r.regle + (r.qui_peut_lever ? " · Levée : " + r.qui_peut_lever : "") + " · " + r.source + (r.pages ? " p. " + r.pages : "") }) : null
+      ]));
+    });
+    return ul;
+  }
+
   function rendre(complet) {
     if (enCible()) etat.annee = FIN;
+    calculerAlertes();
     rendreParcours();
     rendreJauges();
     rendreTable();
@@ -359,6 +387,7 @@
       ? "Les demandes à trancher sont regroupées en bas, dans le cadre « Demandes à arbitrer ». Cliquez sur l'une d'elles pour la retenir, la différer ou y renoncer."
       : filtre ? "Vos pions seuls, regroupés. Cliquez sur un pion pour le modifier, sur une case vide pour en poser un nouveau. « Toute la table » les remet parmi les autres."
       : "Les pions en place sont votre point de départ. Cliquez sur un pion pour le modifier, sur une case vide pour en poser un nouveau.")
+      + (function () { var n = alertesVisibles().filter(function (a) { return a.niveau === "alerte"; }).length; return n ? " " + n + " alerte" + (n > 1 ? "s" : "") + " des fiches (pastille « ! »)." : ""; })()
       + (flot.sous.length ? " " + flot.sous.length + " demande" + (flot.sous.length > 1 ? "s passent" : " passe") + " sous la ligne de flottaison (barre rouge)." : "");
 
     var pl = $("plateau");
@@ -428,6 +457,8 @@
       }
       if (mq && mq.defection) notes.push("défection de l'allié");
       if (x.ligne && sousLigne[x.ligne]) notes.push("sous la ligne de flottaison");
+      var ma = x.ligne && !cache ? marqueAlerte(alertesDe(x.ligne)) : null;
+      if (ma) { enfants.push(ma); notes.push("alerte des fiches"); }
       if (pion && pion.type === "capacite" && M.nbDorese(pion) && !petit && aire >= 4) {
         var co = el("span", { classe: "fig-coins" });
         ["ao", "mco", "rh"].forEach(function (k) {
@@ -439,7 +470,7 @@
       pl.appendChild(el("button", { type: "button", classe: cl.join(" "), title: nom + (x.niveau ? " · " + (x.niveau === 50 ? "face rouge (dégradée)" : "à 100 %") : "") + (x.role && !cache ? " · " + x.role : "") + (x.statut ? " · " + M.STATUTS[x.statut].toLowerCase() : x.socle ? " · socle arbitré" : " · retenu") + (notes.length ? " · " + notes.join(" · ") : ""),
         style: "grid-row:" + (x.r + 1) + " / span " + x.h + ";grid-column:" + (x.c + 1) + " / span " + x.w + ";--bande:" + bande, onclick: choisir(x) }, enfants));
     });
-    var drapeauxPoses = {};
+    var drapeauxPoses = {}, alertesPosees = {};
     t.cellules.forEach(function (x) {
       var cl = ["pion", "pion-case", "pion-clic"];
       cl.push(x.nature === "dorese" ? "jeton" : "jeton-option");
@@ -451,6 +482,8 @@
       if (x.enveloppe) cl.push("jeton-enveloppe");
       var drap = x.marques && x.marques.contrainte && x.ligne && !drapeauxPoses[x.ligne];
       if (drap) drapeauxPoses[x.ligne] = true;
+      var alerteCase = null;
+      if (x.ligne && x.nature !== "dorese" && !alertesPosees[x.ligne] && !masque(x)) { alerteCase = marqueAlerte(alertesDe(x.ligne)); if (alerteCase) alertesPosees[x.ligne] = true; }
       if (x.r * t.largeur + x.c >= t.plafond) cl.push("pion-debord");
       if (x.role && x.role === etat.role) cl.push("pion-mien");
       var cible = x.nature === "dorese" && x.parent !== undefined ? t.pieces[x.parent] : x;
@@ -462,7 +495,7 @@
       var titre = nom + (x.allie ? " · part alliée (ne compte pas pour la France)" : "") + (x.enveloppe ? " · cliquez pour voir l'enveloppe" : "");
       pl.appendChild(el("button", { type: "button", classe: cl.join(" "), title: titre, style: "grid-row:" + (x.r + 1) + ";grid-column:" + (x.c + 1) + ";--bande:" + couleur(x.armee),
         onclick: x.enveloppe ? function () { etat.volet = "enveloppes"; rendre(true); } : x.ligne && x.nature !== "dorese" ? choisir(x) : x.ligne ? choisir({ ligne: x.ligne, pion: cible.pion }) : choisir(cible) },
-        [ic, drap ? el("span", { classe: "drapeau drapeau-pion" }) : null]));
+        [ic, drap ? el("span", { classe: "drapeau drapeau-pion" }) : null, alerteCase]));
     });
     etat.neuf = null;
 
@@ -494,6 +527,7 @@
     lg.appendChild(el("span", null, [el("span", { classe: "drapeau" }), "Contrainte politique"]));
     lg.appendChild(puce("background:var(--carte)", "jeton-allie", "Part alliée, hors budget"));
     lg.appendChild(puce("background:var(--carte)", "pion-sous", "Sous la ligne de flottaison"));
+    lg.appendChild(el("span", null, [el("span", { classe: "puce-legende puce-alerte", texte: "!" }), "Alerte des fiches (non bloquante)"]));
     lg.appendChild(el("span", { classe: "note-legende", texte: "Le socle 2027 est considéré comme arbitré." }));
   }
 
@@ -730,6 +764,9 @@
     v.appendChild(el("div", { classe: "badges" }, [badgeDecision(l),
       l.type === "libre" && !l.modele ? el("span", { classe: "badge " + ((params().validations || {})[l.id] ? "badge-ok" : "badge-attente"), texte: (params().validations || {})[l.id] ? "Validé par l'animateur" : "À valider par l'animateur" }) : null]));
 
+    var mesAlertes = alertesDe(l.id);
+    if (mesAlertes.length) v.appendChild(el("section", { classe: "bloc-conception bloc-alertes" }, [el("h3", { texte: "Alertes des fiches de rôle" }),
+      el("p", { classe: "aide", texte: "Elles ne bloquent rien : à vous de les assumer, ou au CEMA de les arbitrer." }), listeAlertes(mesAlertes, false)]));
     var c = chiffre(l);
     var u = M.unitaire(l, IDX);
     var resume = el("dl", { classe: "etat-pion" }, [
@@ -820,7 +857,7 @@
       ]));
     });
     return el("details", { classe: "details-regles" }, [el("summary", { texte: "Règles de jeu " + (etat.role === "Animateur" ? "de toutes les fiches" : "de ma fiche") + " (" + regles.length + ")" }),
-      el("p", { classe: "aide", texte: "Tirées des fiches de rôle. L'outil ne les applique pas encore automatiquement : l'animateur les fait respecter." }), ul]);
+      el("p", { classe: "aide", texte: "Tirées des fiches de rôle. Aucune ne bloque : celles que l'outil sait vérifier sortent en alerte sur le pion et dans la demande ; les autres, l'animateur les fait respecter." }), ul]);
   }
 
   function voletDemande(v) {
@@ -830,6 +867,8 @@
     M.ANNEES.forEach(function (a) { tot += mien[a].totalDemandes; dor += mien[a].dorese.ao + mien[a].dorese.mco + mien[a].dorese.rh; });
     v.appendChild(el("h2", { classe: "volet-titre", texte: "Demande " + etat.role }));
     v.appendChild(el("p", { classe: "total-demande" }, [el("b", { texte: md(tot) }), " sur 2027-2032 · " + dor + " DORESE"]));
+    var mesAl = ALERTES.filter(function (a) { return a.role === etat.role; });
+    if (mesAl.length) v.appendChild(el("details", { classe: "details-regles", open: true }, [el("summary", { texte: "Alertes sur ma demande (" + mesAl.length + ")" }), listeAlertes(mesAl, true)]));
     var rg = blocRegles();
     if (rg) v.appendChild(rg);
     if (!miennes.length) { v.appendChild(el("p", { classe: "vide", texte: "Rien encore. Posez un pion depuis l'onglet « Poser », ou cliquez sur un pion de la table." })); return; }
@@ -837,7 +876,7 @@
     miennes.forEach(function (l) {
       ul.appendChild(el("li", null, [el("button", { type: "button", style: "--c:" + couleur(M.armeeDeLigne(l, IDX)), onclick: function () { etat.selection = { ligne: l.id, pion: l.pion || null }; etat.volet = "selection"; rendre(true); } }, [
         el("span", null, [el("b", null, [(M.contrainteAcquise(l.id, params()) ? el("span", { classe: "prio-pastille" }, [el("span", { classe: "drapeau" })]) : el("span", { classe: "prio-pastille", texte: "P" + M.prioriteDe(l, params()).valeur })), libelleLigne(l)]), el("small", { texte: natureLigne(l) + " · " + anneesDe(l) + (l.cible ? " · modèle 2032" : "") })]),
-        el("span", { classe: "num" }, [md(chiffre(l).total), badgeDecision(l)])
+        el("span", { classe: "num" }, [md(chiffre(l).total), badgeDecision(l), alertesDe(l.id).some(function (a) { return a.niveau === "alerte"; }) ? el("span", { classe: "badge badge-alerte", texte: "alerte" }) : null])
       ])]));
     });
     v.appendChild(ul);
@@ -863,7 +902,7 @@
       groupes[k].forEach(function (l) {
         ul.appendChild(el("li", null, [el("button", { type: "button", style: "--c:" + couleur(M.armeeDeLigne(l, IDX)), onclick: function () { etat.selection = { ligne: l.id, pion: l.pion || null }; etat.volet = "selection"; var a1 = M.ANNEES.filter(function (a) { return M.quantite(l, a); })[0]; if (a1) etat.annee = a1; rendre(true); } }, [
           el("span", null, [el("b", { texte: libelleLigne(l) }), el("small", { texte: l.role + " · " + natureLigne(l) + " · " + anneesDe(l) })]),
-          el("span", { classe: "num", texte: md(chiffre(l).total) })
+          el("span", { classe: "num" }, [md(chiffre(l).total), alertesDe(l.id).some(function (a) { return a.niveau === "alerte"; }) ? el("span", { classe: "badge badge-alerte", texte: "alerte" }) : null])
         ])]));
       });
       v.appendChild(ul);
@@ -892,6 +931,15 @@
       ul.appendChild(el("li", null, [el("span", { classe: "pastille", style: "background:" + couleur(arm) }), arm, el("b", { classe: "num", texte: md(s) })]));
     });
     v.appendChild(ul);
+    v.appendChild(el("h3", { texte: "Règles des fiches : tableau de bord" }));
+    var vis = alertesVisibles(), fortes = vis.filter(function (a) { return a.niveau === "alerte"; });
+    var force = fortes.filter(function (a) { var l = ligneDe(a.ligne); return l && M.arbitrageDe(l, p).statut === "retenu"; });
+    v.appendChild(el("dl", { classe: "etat-pion" }, [
+      el("dt", { texte: "Alertes actives" }), el("dd", { texte: String(fortes.length) }),
+      el("dt", { texte: "Passées en force" }), el("dd", { texte: force.length + " (retenues malgré l'alerte)" }),
+      el("dt", { texte: "À savoir" }), el("dd", { texte: String(vis.length - fortes.length) })
+    ]));
+    if (vis.length) v.appendChild(el("details", { classe: "details-regles" }, [el("summary", { texte: "Voir les alertes" }), listeAlertes(vis, true)]));
     v.appendChild(el("button", { classe: "btn-contour", type: "button", texte: "Télécharger les lignes (CSV)", onclick: telechargerCsv }));
   }
   function telechargerCsv() {

@@ -236,3 +236,39 @@ test("étalement automatique : par priorité, à la première année qui tient ;
   assert.strictEqual(r.debuts.b, M.APRES_LPM);   // plus de place : glisse
   assert.deepStrictEqual(r.horsLpm.sort(), ["b", "z"]);
 });
+
+// ---------- Alertes des fiches de rôle (jamais bloquantes) ----------
+global.window.STRAT_CATALOGUE_ROLES = undefined;
+eval(fs.readFileSync(path.join(__dirname, "../data/catalogue_roles.js"), "utf8"));
+const CAT = global.window.STRAT_CATALOGUE_ROLES;
+const regles = (lignes, p) => M.alertes(PIONS, lignes, p || pp(), CAT).map((a) => a.regle + ":" + a.niveau);
+
+test("alertes : délai de mise en service, après la LPM ou en cours de LPM", () => {
+  const aed = { id: "a", role: "DGA", type: "libre", modele: "DGA-AED-10", cout_unitaire: 300, qte: ANS(1) };
+  assert.deepStrictEqual(regles([aed]), ["DGA-24:alerte"]);
+  const sead = { id: "s", role: "DGA", type: "libre", modele: "DGA-SEAD", cout_unitaire: 400, qte: { 2028: 1 } };
+  assert.deepStrictEqual(regles([sead]), ["DGA-13:info"]);
+  assert.deepStrictEqual(regles([Object.assign({}, sead, { qte: { 2031: 1 } })]), ["DGA-13:alerte"]); // opérationnel en 2034
+  // Modèle 2032 sans année d'entrée : on compte le délai depuis la décision (2027).
+  assert.deepStrictEqual(regles([Object.assign({}, sead, { cible: true, qte: { 2032: 1 } })]), []);
+});
+
+test("alertes : partenaires, défection, dissolution trop rapide, masse salariale", () => {
+  const bfa = { id: "b", role: "DGRIS", type: "libre", modele: "DGRIS-BFA2", cout_unitaire: 400, qte: { 2030: 1 } };
+  assert.deepStrictEqual(regles([bfa]), ["DGRIS-02:alerte"]);
+  const montage = { financements: { b: { mode: "mutualise", part: 50 } } };
+  assert.deepStrictEqual(regles([bfa], pp(montage)), ["DGRIS-01:alerte"]);
+  montage.financements.b.valide = true;
+  assert.deepStrictEqual(regles([bfa], pp(montage)), []);
+  assert.ok(regles([bfa], pp(Object.assign({ defections: { b: true } }, montage))).includes("DGRIS-03:alerte"));
+  assert.deepStrictEqual(regles([{ id: "r", role: "EMAT", type: "retrait", pion: "P19", qte: { 2027: 1 } }]), ["SCP-05:alerte"]);
+  // 2 Serval à 100 % la même année : 2 DORESE RH chacun ? on vérifie le seuil de 4 par an.
+  const rh = (id) => ({ id, role: "EMAT", type: "libre", cout_unitaire: 100, dorese: { ao: 0, mco: 0, rh: 3 }, qte: { 2030: 1 } });
+  assert.ok(regles([rh("x"), rh("y")]).includes("SGA-01:alerte"));
+  assert.ok(!regles([rh("x")]).includes("SGA-01:alerte"));
+});
+
+test("alertes : une ligne renoncée n'alerte plus", () => {
+  const aed = { id: "a", role: "DGA", type: "libre", modele: "DGA-AED-10", cout_unitaire: 300, qte: ANS(1) };
+  assert.deepStrictEqual(regles([aed], pp({ arbitrages: { a: { statut: "renonce" } } })), []);
+});

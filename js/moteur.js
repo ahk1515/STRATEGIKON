@@ -38,9 +38,14 @@
       table: 600, // cases par année (60 Md€)
       plafonds: { 2027: 590, 2028: 580, 2029: 570, 2030: 590, 2031: 590, 2032: 590 }, // cases
       // id de pion orange -> années où il est posé. Photo 2027 : SMV et munitions posés, répétés jusqu'en 2032.
-      aleas: { P12: ANNEES.slice(), P13: ANNEES.slice() }
+      aleas: { P12: ANNEES.slice(), P13: ANNEES.slice() },
+      // Enveloppes internes d'un pôle : les lignes rangées dedans sont payées par l'enveloppe, seul l'excédent pèse en plus.
+      enveloppes: ENVELOPPES_DEFAUT.map(function (e) { return JSON.parse(JSON.stringify(e)); })
     };
   }
+  var ENVELOPPES_DEFAUT = [{ id: "rd-dga", role: "DGA", nom: "R&D", montant: 900, pion: "P10" }];
+  // Contraintes politiques posées d'office (clé : id de ligne, ou « pion:<id> » pour un pion du socle).
+  var CONTRAINTES_DEFAUT = { "pion:P12": { etat: "acquise", par: "MINARM" } };
 
   function indexPions(pions) {
     var idx = {};
@@ -132,11 +137,20 @@
     ANNEES.forEach(function (a) {
       var q = quantite(ligne, a);
       var d = { ao: u.dorese.ao * q, mco: u.dorese.mco * q, rh: u.dorese.rh * q };
-      res.annees[a] = { cout: u.cout * q, dorese: d };
-      res.total += u.cout * q;
+      var cout = coutFixe(ligne, a);
+      cout = cout === null ? u.cout * q : cout;
+      res.annees[a] = { cout: cout, dorese: d };
+      res.total += cout;
       res.totalDorese += d.ao + d.mco + d.rh;
     });
     return res;
+  }
+
+  // Programme en tranches placé sur la trajectoire : montant fixé année par année.
+  function coutFixe(ligne, a) {
+    var c = ligne.cout_annee;
+    if (!c) return null;
+    return Number(c[a]) || 0;
   }
 
   function armeeDeLigne(ligne, idx) {
@@ -164,12 +178,31 @@
         if (estDansSocle(p, a, params)) socle[p.armee] = (socle[p.armee] || 0) + coutSocle(p);
       });
       var dorese = { ao: 0, mco: 0, rh: 0 };
+      var allie = 0, horsEnveloppe = {};
       lignes.forEach(function (l) {
         if (filtre && !filtre(l)) return;
         var c = coutLigne(l, idx).annees[a];
-        var arm = armeeDeLigne(l, idx);
-        demandes[arm] = (demandes[arm] || 0) + c.cout;
         dorese.ao += c.dorese.ao; dorese.mco += c.dorese.mco; dorese.rh += c.dorese.rh;
+        if (enveloppeDe(l, params)) return; // payé par l'enveloppe : seul l'excédent compte, plus bas
+        var f = financements(l, idx, params)[a];
+        var arm = armeeDeLigne(l, idx);
+        demandes[arm] = (demandes[arm] || 0) + f.cout;
+        allie += f.allie + f.subvention;
+      });
+      // Remboursements d'emprunts UE contractés les années précédentes.
+      lignes.forEach(function (l) {
+        if (filtre && !filtre(l)) return;
+        if (enveloppeDe(l, params)) return;
+        var r = remboursements(l, idx, params)[a] || 0;
+        if (r) { var arm = armeeDeLigne(l, idx); demandes[arm] = (demandes[arm] || 0) + r; }
+      });
+      enveloppesDe(params).forEach(function (e) {
+        var et = etatEnveloppe(e, pions, lignes.filter(function (l) { return !filtre || filtre(l); }), params, a);
+        if (et.depassement > 0) {
+          var arm = (idx[e.pion] || {}).armee || "Interarmées";
+          demandes[arm] = (demandes[arm] || 0) + et.depassement;
+          horsEnveloppe[e.id] = et.depassement;
+        }
       });
       var totalSocle = somme(socle);
       var totalDemandes = somme(demandes);
@@ -185,7 +218,9 @@
         plafond: plafond,
         table: (Number(params.table) || 600) * CASE,
         marge: plafond - total,
-        dorese: dorese
+        dorese: dorese,
+        allie: allie,
+        depassementsEnveloppes: horsEnveloppe
       };
     });
     return res;
@@ -343,25 +378,39 @@
       groupe(g).rigides.push({ pion: p, w: p.l || 1, h: p.h || 1, armee: g === "Fixes" ? p.armee : g, nature: p.type,
         libelle: p.nom, niveau: plein ? 100 : 50, dorese: types.length, types: types, socle: true,
         nDepart: dg ? 0 : nbDepart(p), ligneDorese: l100 ? l100.id : null, roleDorese: l100 ? l100.role : null, degrade: dg ? dg.id : null,
-        statutDorese: l100 ? statutDe(l100) : null });
+        statutDorese: l100 ? statutDe(l100) : null, contrainte: contrainteAcquise("pion:" + p.id, params) });
     });
     lignes.forEach(function (l) {
       var q = quantite(l, annee);
       if (!q || l.type === "dorese" || l.type === "retrait" || l.type === "degrade") return;
+      if (enveloppeDe(l, params)) return; // dans l'enveloppe de son pôle : seul l'excédent est posé
       var arm = armeeDeLigne(l, idx);
       var st = statutDe(l);
       var dest = st ? "Attente" : arm;
+      var fin = financementDe(l, params);
+      var marques = { part: partFrancaise(l, idx, params, annee), financement: fin.mode !== "national" ? fin.mode : null, financementActif: financementActif(l, params),
+        defection: defectionDe(l, params), contrainte: contrainteAcquise(l.id, params), contrainteDemandee: !!(contrainteDe(l.id, params) && !contrainteAcquise(l.id, params)) };
       if (l.type === "ajout") {
         var p = idx[l.pion];
         if (!p) return;
         for (var i = 0; i < q; i++) {
           var cent = Number(l.niveau) === 100;
           groupe(dest).rigides.push({ pion: p, w: p.l || 1, h: p.h || 1, armee: arm, nature: p.type, libelle: "+ " + p.nom,
-            niveau: cent ? 100 : 50, dorese: cent ? nbDorese(p) : 0, detailDorese: p.dorese, role: l.role, ligne: l.id, statut: st });
+            niveau: cent ? 100 : 50, dorese: cent ? nbDorese(p) : 0, detailDorese: p.dorese, role: l.role, ligne: l.id, statut: st, marques: marques });
         }
       } else if (l.type === "libre") {
-        var n = Math.round((Number(l.cout_unitaire) || 0) * q / CASE);
-        if (n > 0) groupe(dest).secables.push({ cases: n, armee: arm, nature: "libre", libelle: l.libelle || "Ligne libre", role: l.role, ligne: l.id, horsCatalogue: !l.modele, statut: st });
+        var fixe = coutFixe(l, annee);
+        var n = Math.round((fixe === null ? (Number(l.cout_unitaire) || 0) * q : fixe) / CASE);
+        if (n > 0) groupe(dest).secables.push({ cases: n, armee: arm, nature: "libre", libelle: l.libelle || "Ligne libre", role: l.role, ligne: l.id, horsCatalogue: !l.modele, statut: st, marques: marques });
+      }
+    });
+    // Excédent des enveloppes internes : posé comme un montant sécable, au nom de l'enveloppe.
+    enveloppesDe(params).forEach(function (e) {
+      var et = etatEnveloppe(e, pions, lignes, params, annee);
+      var n = Math.ceil(et.depassement / CASE);
+      if (n > 0) {
+        var arm = (idx[e.pion] || {}).armee || "Interarmées";
+        groupe(arm).secables.push({ cases: n, armee: arm, nature: "libre", libelle: "Excédent enveloppe " + e.nom + " (" + e.role + ")", role: e.role, ligne: null, enveloppe: e.id, statut: null });
       }
     });
 
@@ -392,7 +441,8 @@
         plateau.marquer(pos.r, pos.c, pos.w, pos.h, id);
         pieces.push({ r: pos.r, c: pos.c, w: pos.w, h: pos.h, armee: it.armee, nature: it.nature, libelle: it.libelle,
           pion: it.pion ? it.pion.id : null, ligne: it.ligne || null, socle: !!it.socle, ligneDorese: it.ligneDorese || null, degrade: it.degrade || null,
-          niveau: it.nature === "capacite" ? it.niveau : null, role: it.role || null, groupe: nomG, cases: pos.w * pos.h, statut: it.statut || null });
+          niveau: it.nature === "capacite" ? it.niveau : null, role: it.role || null, groupe: nomG, cases: pos.w * pos.h, statut: it.statut || null,
+          marques: it.marques || (it.contrainte ? { contrainte: true, part: 1 } : null) });
         // DORESE au contact : cases libres voisines de la capacité (ou de ses DORESE déjà posées).
         var types = it.types || typesDorese(it.detailDorese || {});
         var amas = [{ r: pos.r, c: pos.c, w: pos.w, h: pos.h }];
@@ -410,6 +460,7 @@
       // Montants sécables : premier trou libre du groupe, puis cases voisines pour garder le bloc d'un seul tenant.
       g.secables.forEach(function (it) {
         var amas = [];
+        var francaises = it.marques ? Math.round(it.cases * it.marques.part) : it.cases;
         for (var n = 0; n < it.cases; n++) {
           var cand = amas.length ? voisinLibre(plateau, amas, rMin) : null;
           if (!cand) {
@@ -423,7 +474,8 @@
           }
           plateau.marquer(cand.r, cand.c, 1, 1, "s");
           amas.push({ r: cand.r, c: cand.c, w: 1, h: 1 });
-          cellules.push({ r: cand.r, c: cand.c, armee: it.armee, nature: "libre", libelle: it.libelle, role: it.role, horsCatalogue: it.horsCatalogue, ligne: it.ligne, groupe: nomG, statut: it.statut || null });
+          cellules.push({ r: cand.r, c: cand.c, armee: it.armee, nature: "libre", libelle: it.libelle, role: it.role, horsCatalogue: it.horsCatalogue, ligne: it.ligne, groupe: nomG, statut: it.statut || null,
+            marques: it.marques || null, allie: n >= francaises, enveloppe: it.enveloppe || null });
         }
       });
     });
@@ -433,7 +485,10 @@
       hauteur: Math.max(plateau.h, Math.ceil(tableCases / LARGEUR)),
       table: tableCases,
       plafond: Number((params.plafonds || {})[annee]) || 0,
-      occupees: plateau.occ.filter(function (x) { return x !== null; }).length,
+      // Cases payées par la France : la part alliée (hachurée) ne compte pas.
+      occupees: plateau.occ.filter(function (x) { return x !== null; }).length
+        - cellules.filter(function (x) { return x.allie; }).length
+        - pieces.reduce(function (s2, x) { return s2 + (x.marques && x.marques.part < 1 ? Math.round(x.cases * (1 - x.marques.part)) : 0); }, 0),
       pieces: pieces,
       cellules: cellules
     };
@@ -459,6 +514,7 @@
   var STATUTS = { attente: "En attente", retenu: "Retenu", differe: "Différé", renonce: "Renoncé" };
 
   function arbitrageDe(ligne, params) {
+    if (contrainteAcquise(ligne.id, params)) return { statut: "retenu", decalage: 0, contrainte: true };
     var a = ((params || {}).arbitrages || {})[ligne.id];
     return a && STATUTS[a.statut] ? a : { statut: "attente", decalage: 0 };
   }
@@ -499,6 +555,213 @@
     return Math.max(CASE, Math.round(n / CASE) * CASE);
   }
 
+  // ---------- Priorités, contraintes politiques ----------
+  // Le pôle fixe sa priorité (ligne.priorite, 1 à 4) ; le CEMA peut la modifier (params.priorites) :
+  // les deux valeurs sont gardées. Les autres pôles proposent (params.propositions[id] = [{role, p}]).
+  var PRIORITES = [1, 2, 3, 4];
+  function prioriteDe(ligne, params) {
+    var pole = Number(ligne.priorite) || null;
+    var cema = Number(((params || {}).priorites || {})[ligne.id]) || null;
+    return { pole: pole, cema: cema, valeur: cema || pole || 4, fixee: !!(cema || pole), propositions: ((params || {}).propositions || {})[ligne.id] || [] };
+  }
+  // Contrainte politique : « demandee » par un pôle, « acquise » quand MINARM ou l'animateur la cochent.
+  function contrainteDe(cle, params) {
+    var c = ((params || {}).contraintes || {});
+    if (Object.prototype.hasOwnProperty.call(c, cle)) return c[cle] && c[cle].etat ? c[cle] : null;
+    return CONTRAINTES_DEFAUT[cle] || null;
+  }
+  function contrainteAcquise(cle, params) { var c = contrainteDe(cle, params); return !!(c && c.etat === "acquise"); }
+  // Ordre d'empilement : contraintes politiques d'abord, puis P1 à P4, puis ancienneté.
+  function rangEmpilement(ligne, params) { return contrainteAcquise(ligne.id, params) ? 0 : prioriteDe(ligne, params).valeur; }
+  function comparerEmpilement(params) {
+    return function (a, b) { return rangEmpilement(a, params) - rangEmpilement(b, params) || ((a.cree_le || "") < (b.cree_le || "") ? -1 : (a.cree_le || "") > (b.cree_le || "") ? 1 : 0); };
+  }
+
+  // ---------- Modes de financement ----------
+  // params.financements[id] = { mode: 'national'|'mutualise'|'subvention'|'pret', part, partenaires, propose_par, valide }
+  // mutualise : part = part française (%) ; subvention : part subventionnée (%) ; pret : part empruntée (%), remboursée sur 3 ans.
+  var MODES_FINANCEMENT = { national: "National", mutualise: "Mutualisé avec des alliés", subvention: "Subvention UE", pret: "Prêt UE" };
+  var DUREE_REMBOURSEMENT = 3;
+  function financementDe(ligne, params) {
+    var f = ((params || {}).financements || {})[ligne.id];
+    return f && MODES_FINANCEMENT[f.mode] ? f : { mode: "national" };
+  }
+  function defectionDe(ligne, params) { return !!(((params || {}).defections || {})[ligne.id]); }
+  // Le montage ne joue qu'une fois validé par l'animateur, et tant que l'allié tient.
+  function financementActif(ligne, params) {
+    var f = financementDe(ligne, params);
+    return f.mode !== "national" && !!f.valide && !defectionDe(ligne, params);
+  }
+  // Par année : brut (coût plein), cout (part payée par la France cette année), allie, subvention, emprunt.
+  function financements(ligne, idx, params) {
+    var c = coutLigne(ligne, idx);
+    var f = financementDe(ligne, params);
+    var actif = financementActif(ligne, params);
+    var part = Math.max(0, Math.min(100, Number(f.part) || 0));
+    var res = {};
+    ANNEES.forEach(function (a) {
+      var brut = c.annees[a].cout;
+      var o = { brut: brut, cout: brut, allie: 0, subvention: 0, emprunt: 0 };
+      if (actif && brut > 0) {
+        if (f.mode === "mutualise") { o.cout = Math.round(brut * part / 100); o.allie = brut - o.cout; }
+        else if (f.mode === "subvention") { o.subvention = Math.round(brut * part / 100); o.cout = brut - o.subvention; }
+        else if (f.mode === "pret") { o.emprunt = Math.round(brut * part / 100); o.cout = brut - o.emprunt; }
+      }
+      res[a] = o;
+    });
+    return res;
+  }
+  // Remboursement des prêts UE : par parts égales les 3 années suivantes ; au-delà de 2032, hors LPM (clé « hors »).
+  function remboursements(ligne, idx, params) {
+    var res = { hors: 0 };
+    if (!financementActif(ligne, params) || financementDe(ligne, params).mode !== "pret") return res;
+    var f = financements(ligne, idx, params);
+    ANNEES.forEach(function (a) {
+      var e = f[a].emprunt;
+      if (!e) return;
+      var base = Math.floor(e / DUREE_REMBOURSEMENT), reste = e - base * DUREE_REMBOURSEMENT;
+      for (var k = 1; k <= DUREE_REMBOURSEMENT; k++) {
+        var m = base + (k === DUREE_REMBOURSEMENT ? reste : 0);
+        if (ANNEES.indexOf(a + k) !== -1) res[a + k] = (res[a + k] || 0) + m;
+        else res.hors += m;
+      }
+    });
+    return res;
+  }
+  // Part de la ligne comptée pour la France une année donnée (1 = tout).
+  function partFrancaise(ligne, idx, params, annee) {
+    var f = financements(ligne, idx, params)[annee];
+    return f.brut > 0 ? f.cout / f.brut : 1;
+  }
+
+  // ---------- Enveloppes internes ----------
+  function enveloppesDe(params) {
+    var e = (params || {}).enveloppes;
+    return Array.isArray(e) ? e : ENVELOPPES_DEFAUT;
+  }
+  function enveloppeDe(ligne, params) {
+    if (!ligne.enveloppe) return null;
+    return enveloppesDe(params).filter(function (e) { return e.id === ligne.enveloppe; })[0] || null;
+  }
+  // Ce qui tient dans l'enveloppe une année : lignes rangées par priorité, cumul, excédent.
+  function etatEnveloppe(env, pions, lignes, params, annee) {
+    var idx = indexPions(pions);
+    var montant = Number(env.montant) || 0;
+    var dedans = lignes.filter(function (l) { return l.enveloppe === env.id && arbitrageDe(l, params).statut !== "renonce"; }).sort(comparerEmpilement(params));
+    var cumul = 0;
+    var items = [];
+    dedans.forEach(function (l) {
+      var c = financements(l, idx, params)[annee].cout;
+      if (!c) return;
+      cumul += c;
+      items.push({ ligne: l, cout: c, cumul: cumul, tient: cumul <= montant });
+    });
+    return { enveloppe: env, montant: montant, items: items, total: cumul, depassement: Math.max(0, cumul - montant), reste: Math.max(0, montant - cumul) };
+  }
+
+  // ---------- Ligne de flottaison ----------
+  // Base : le socle et les économies (dissolutions, repassages à 50 %). On empile ensuite les demandes :
+  // contraintes politiques, puis P1 à P4. Ce qui passe sous le plafond est à abandonner ou différer.
+  function flottaison(pions, lignes, params, annee) {
+    var idx = indexPions(pions);
+    params = params || parametresParDefaut();
+    var base = 0;
+    pions.forEach(function (p) { if (estDansSocle(p, annee, params)) base += coutSocle(p); });
+    var items = [];
+    lignes.forEach(function (l) {
+      if (arbitrageDe(l, params).statut === "renonce" || enveloppeDe(l, params)) return;
+      var c = financements(l, idx, params)[annee].cout + (remboursements(l, idx, params)[annee] || 0);
+      if (!c) return;
+      if (c < 0) { base += c; return; }
+      items.push({ ligne: l, cout: c, rang: rangEmpilement(l, params), contrainte: contrainteAcquise(l.id, params) });
+    });
+    items.sort(function (a, b) { return comparerEmpilement(params)(a.ligne, b.ligne); });
+    enveloppesDe(params).forEach(function (e) {
+      var et = etatEnveloppe(e, pions, lignes, params, annee);
+      if (!et.depassement) return;
+      var rang = et.items.reduce(function (m, it) { return Math.min(m, rangEmpilement(it.ligne, params)); }, 4);
+      var it = { enveloppe: e, cout: et.depassement, rang: rang, contrainte: false };
+      var k = 0;
+      while (k < items.length && items[k].rang <= rang) k++;
+      items.splice(k, 0, it);
+    });
+    var plafond = (Number((params.plafonds || {})[annee]) || 0) * CASE;
+    var cumul = base;
+    items.forEach(function (it) { cumul += it.cout; it.cumul = cumul; it.sous = cumul > plafond; });
+    return { annee: annee, base: base, plafond: plafond, items: items, total: cumul, marge: plafond - cumul,
+      sous: items.filter(function (it) { return it.sous; }) };
+  }
+
+  // ---------- Parcours : modèle 2032, puis trajectoire ----------
+  // Une ligne « cible » est posée sur le modèle 2032. Sur la trajectoire, params.debuts[id] fixe son année
+  // d'entrée : elle est alors présente de cette année à 2032 ; un programme en tranches (ligne.tranches,
+  // N1, N2…) paie N1 l'année d'entrée, N2 l'année suivante, etc. 2033 = au-delà de la LPM.
+  var APRES_LPM = ANNEES[ANNEES.length - 1] + 1;
+  function debutDe(ligne, params) {
+    var d = ((params || {}).debuts || {})[ligne.id];
+    return d === undefined || d === null ? null : Number(d);
+  }
+  function tranchesDe(ligne) {
+    return (Array.isArray(ligne.tranches) ? ligne.tranches : []).map(Number).filter(function (x) { return x > 0; });
+  }
+  function ligneEffective(ligne, params) {
+    if (!ligne.cible) return ligne;
+    var d = debutDe(ligne, params);
+    var tr = tranchesDe(ligne);
+    var fin = ANNEES[ANNEES.length - 1];
+    var q = Number((ligne.qte || {})[fin]) || 1;
+    var c = JSON.parse(JSON.stringify(ligne));
+    c.qte = {};
+    ANNEES.forEach(function (a) { c.qte[a] = 0; });
+    c.horsLpm = 0;
+    if (d === null) {
+      // Pas encore placée sur la trajectoire : elle ne figure qu'au modèle 2032.
+      c.qte[fin] = q;
+      if (tr.length) { c.cout_annee = {}; c.cout_annee[fin] = tr[0]; }
+      return c;
+    }
+    if (tr.length) {
+      c.cout_annee = {};
+      tr.forEach(function (m, k) {
+        if (d + k <= fin) { c.cout_annee[d + k] = m; c.qte[d + k] = 1; } else c.horsLpm += m;
+      });
+    } else {
+      ANNEES.forEach(function (a) { if (a >= d) c.qte[a] = q; });
+    }
+    return c;
+  }
+  function lignesEnTrajectoire(lignes, params) {
+    return lignes.map(function (l) { return ligneEffective(l, params); });
+  }
+  // Étalement automatique : on place les lignes cibles retenues par ordre d'empilement, chacune à la
+  // première année d'entrée qui tient sous le plafond jusqu'en 2032 ; ce qui ne tient jamais glisse après 2032.
+  function etalerAuto(pions, lignes, params) {
+    var idx = indexPions(pions);
+    var autres = lignesApresArbitrage(lignes.filter(function (l) { return !l.cible; }), params);
+    var syn = synthese(pions, autres, params);
+    var charge = {}, plafond = {};
+    ANNEES.forEach(function (a) { charge[a] = syn[a].total; plafond[a] = syn[a].plafond; });
+    var debuts = {}, horsLpm = [];
+    var cibles = lignes.filter(function (l) { return l.cible && arbitrageDe(l, params).statut === "retenu"; }).sort(comparerEmpilement(params));
+    cibles.forEach(function (l) {
+      var choisi = null, profil = null;
+      for (var k = 0; k < ANNEES.length && choisi === null; k++) {
+        var y = ANNEES[k];
+        var essai = JSON.parse(JSON.stringify(params));
+        essai.debuts = {}; essai.debuts[l.id] = y;
+        var eff = ligneEffective(l, essai);
+        var f = financements(eff, idx, params), r = remboursements(eff, idx, params);
+        var p = {}, ok = true;
+        ANNEES.forEach(function (a) { p[a] = f[a].cout + (r[a] || 0); if (charge[a] + p[a] > plafond[a]) ok = false; });
+        if (ok) { choisi = y; profil = p; }
+      }
+      if (choisi === null) { debuts[l.id] = APRES_LPM; horsLpm.push(l.id); return; }
+      debuts[l.id] = choisi;
+      ANNEES.forEach(function (a) { charge[a] += profil[a]; });
+    });
+    return { debuts: debuts, horsLpm: horsLpm, charge: charge };
+  }
+
   var API = {
     CASE: CASE,
     ANNEES: ANNEES,
@@ -526,7 +789,30 @@
     lignesApresArbitrage: lignesApresArbitrage,
     reportHorsLpm: reportHorsLpm,
     arrondiCase: arrondiCase,
-    LARGEUR: LARGEUR
+    LARGEUR: LARGEUR,
+    PRIORITES: PRIORITES,
+    prioriteDe: prioriteDe,
+    contrainteDe: contrainteDe,
+    contrainteAcquise: contrainteAcquise,
+    comparerEmpilement: comparerEmpilement,
+    MODES_FINANCEMENT: MODES_FINANCEMENT,
+    financementDe: financementDe,
+    financementActif: financementActif,
+    defectionDe: defectionDe,
+    financements: financements,
+    remboursements: remboursements,
+    partFrancaise: partFrancaise,
+    ENVELOPPES_DEFAUT: ENVELOPPES_DEFAUT,
+    enveloppesDe: enveloppesDe,
+    enveloppeDe: enveloppeDe,
+    etatEnveloppe: etatEnveloppe,
+    flottaison: flottaison,
+    APRES_LPM: APRES_LPM,
+    debutDe: debutDe,
+    tranchesDe: tranchesDe,
+    ligneEffective: ligneEffective,
+    lignesEnTrajectoire: lignesEnTrajectoire,
+    etalerAuto: etalerAuto
   };
 
   if (typeof module !== "undefined" && module.exports) module.exports = API;

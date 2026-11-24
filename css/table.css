@@ -65,7 +65,7 @@ button.pion-case { font-size: .55rem; }
 
 .volet { position: sticky; top: 8.6rem; background: var(--panneau); border: 1px solid var(--trait); border-radius: 2px; max-height: calc(100vh - 9.6rem); display: flex; flex-direction: column; min-width: 0; }
 .volet-onglets { display: flex; flex-wrap: wrap; border-bottom: 1px solid var(--trait); background: var(--panneau-haut); }
-.volet-onglets button { cursor: pointer; background: none; border: 0; border-bottom: 2px solid transparent; padding: .55rem .7rem; font-size: .85rem; font-weight: 600; color: var(--sourdine); }
+.volet-onglets button { cursor: pointer; background: none; border: 0; border-bottom: 2px solid transparent; padding: .5rem .5rem; font-size: .8rem; font-weight: 600; color: var(--sourdine); }
 .volet-onglets button[aria-selected="true"] { color: var(--laiton); border-bottom-color: var(--laiton); background: var(--panneau); }
 .volet-corps { overflow-y: auto; padding: 1rem; display: grid; gap: .75rem; align-content: start; }
 .volet-titre { font-size: 1.3rem; line-height: 1.2; }
@@ -205,3 +205,109 @@ button.jeton-option { color: #222; }
 .puce-legende.pion-attente, .puce-legende.pion-renonce { box-shadow: inset 0 0 0 2px var(--attente); }
 .puce-legende.pion-renonce { box-shadow: inset 0 0 0 2px var(--alerte); }
 .note-legende { font-style: italic; }
+
+/* ---------- Lot de conception : étapes, priorités, contraintes, financements, enveloppes, flottaison ---------- */
+.parcours-barre { display: flex; align-items: stretch; gap: .5rem; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.parcours-barre .annees-jauges { flex: 1; padding: 0; min-width: 0; }
+.etapes { display: flex; flex-direction: column; justify-content: center; gap: 2px; padding-block: .25rem; }
+.etapes button { cursor: pointer; display: flex; align-items: center; gap: .4rem; background: none; border: 1px solid transparent; border-radius: 3px; padding: .2rem .55rem; font-family: var(--f-titre); font-size: .88rem; font-weight: 600; color: var(--sourdine); white-space: nowrap; text-align: left; }
+.etapes button b { display: inline-grid; place-items: center; width: 1.25rem; height: 1.25rem; border-radius: 50%; border: 1px solid currentColor; font-size: .72rem; }
+.etapes button[aria-pressed="true"] { color: var(--laiton); border-color: var(--laiton); background: var(--accent-doux); }
+.etapes button[aria-pressed="true"] b { background: var(--laiton); color: #fff; border-color: var(--laiton); }
+@media (max-width: 760px) { .parcours-barre { flex-direction: column; gap: 0; } .etapes { flex-direction: row; } }
+
+/* Drapeau tricolore : contrainte politique */
+.drapeau { display: inline-block; width: 15px; height: 10px; vertical-align: -1px; margin-right: .3rem; background: linear-gradient(90deg, #1b2a6b 0 33.3%, #ffffff 33.3% 66.6%, var(--rouge) 66.6%); box-shadow: 0 0 0 1px rgba(0, 0, 0, .35); }
+.drapeau-pion { position: absolute; left: 3px; top: 3px; margin: 0; z-index: 3; }
+.pion-case .drapeau-pion { width: 11px; height: 7px; left: 1px; top: 1px; }
+.drapeau-titre { margin-right: .45rem; }
+.badge-politique { color: var(--laiton); }
+.badge-politique .drapeau { width: 12px; height: 8px; margin-right: .3rem; }
+.aide.politique { border-left: 3px solid var(--laiton); padding-left: .6rem; }
+
+/* Part alliée ou subventionnée : hachurée, hors budget */
+.part-alliee { position: absolute; right: 0; top: 0; bottom: 0; z-index: 2; pointer-events: none; border-left: 2px solid #1b2a6b;
+  background: repeating-linear-gradient(135deg, rgba(255, 255, 255, .92) 0 3px, rgba(27, 42, 107, .55) 3px 5px); }
+.jeton-allie { background-image: repeating-linear-gradient(135deg, rgba(255, 255, 255, .92) 0 3px, rgba(27, 42, 107, .55) 3px 5px) !important; }
+.puce-legende.jeton-allie { box-shadow: inset 0 0 0 1px #1b2a6b; }
+.marque-fin { position: absolute; left: 3px; bottom: 3px; z-index: 3; display: grid; place-items: center; width: 15px; height: 15px; border-radius: 50%; background: #fff; color: #1b2a6b; box-shadow: 0 0 0 1px #1b2a6b; }
+.marque-fin svg { width: 11px; height: 11px; }
+.marque-fin b { font-size: .5rem; letter-spacing: 0; }
+.marque-proposee { box-shadow: 0 0 0 1px #1b2a6b; opacity: .6; border: 1px dashed #1b2a6b; }
+.pion-defection { outline: 2px dashed var(--alerte); outline-offset: -2px; }
+
+/* Sous la ligne de flottaison : barre rouge en pied de pion */
+.pion-sous { position: relative; }
+.pion-sous::before { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: var(--rouge); z-index: 4; pointer-events: none; }
+.puce-legende.pion-sous { box-shadow: inset 0 -4px 0 var(--rouge); }
+.jeton-enveloppe { box-shadow: inset 0 0 0 2px #6d52a8 !important; }
+
+/* Volet : blocs de conception */
+.bloc-conception { border-top: 1px solid var(--trait); margin-top: .9rem; padding-top: .7rem; }
+.bloc-conception h3 { margin: 0 0 .4rem; display: flex; align-items: center; }
+.bloc-conception .champ { margin-top: .45rem; }
+.prio-etat { display: flex; flex-wrap: wrap; gap: .35rem .9rem; align-items: baseline; font-size: .85rem; color: var(--sourdine); margin: 0; }
+.prio-etat b { color: var(--texte); font-family: var(--f-titre); font-size: 1rem; }
+.prio-retenue b { color: var(--laiton); }
+.segment-prio button { min-width: 2.4rem; }
+.propositions { list-style: none; padding: 0; margin: .5rem 0 0; display: grid; gap: .3rem; }
+.propositions li { display: flex; justify-content: space-between; align-items: center; gap: .5rem; font-size: .85rem; background: var(--accent-doux); padding: .25rem .5rem; border-radius: 3px; }
+.btn-mini { cursor: pointer; font-size: .75rem; border: 1px solid var(--laiton); background: var(--laiton); color: #fff; border-radius: 3px; padding: .1rem .45rem; margin-left: .25rem; }
+.btn-mini-non { background: none; color: var(--laiton); }
+.case-cocher { display: flex; align-items: center; gap: .35rem; font-size: .88rem; margin-top: .45rem; cursor: pointer; }
+.badge-neutre { color: var(--sourdine); }
+.badge-allie { color: #1b2a6b; }
+.details-financement { margin-top: .5rem; font-size: .88rem; }
+.details-financement summary { cursor: pointer; color: var(--laiton); }
+.form-financement { display: grid; gap: .3rem; margin-top: .4rem; }
+.btn-alerte { color: var(--alerte); border-color: var(--alerte); margin-top: .5rem; }
+.prio-pastille { display: inline-grid; place-items: center; min-width: 1.6rem; height: 1.1rem; margin-right: .4rem; border-radius: 2px; font-size: .68rem; background: var(--laiton); color: #fff; vertical-align: 1px; }
+.prio-pastille .drapeau { margin: 0; }
+.prio-pastille:has(.drapeau) { background: none; }
+
+/* Flottaison */
+.flottaison { list-style: none; padding: 0; margin: .6rem 0; display: grid; gap: 2px; }
+.flottaison li > button, .flot-base { width: 100%; display: grid; grid-template-columns: 2.6rem minmax(0, 1fr) auto; gap: .5rem; align-items: center; text-align: left; background: var(--panneau-haut); border: 1px solid var(--trait); border-radius: 2px; padding: .35rem .5rem; font: inherit; cursor: pointer; }
+.flot-base { cursor: default; background: var(--case-vide); }
+.flot-rang { font-family: var(--f-titre); font-weight: 700; color: var(--laiton); font-size: .9rem; }
+.flot-nom { min-width: 0; display: grid; }
+.flot-nom small, .flottaison .num small { color: var(--sourdine); font-size: .72rem; display: block; }
+.flottaison .num { text-align: right; font-variant-numeric: tabular-nums; }
+.flot-sous > button { border-color: rgba(200, 16, 46, .4); background: rgba(200, 16, 46, .05); box-shadow: inset 3px 0 0 var(--rouge); }
+.flot-ligne { position: relative; margin: .45rem 0; height: 0; border-top: 2px solid var(--rouge); }
+.flot-ligne span { position: absolute; right: 0; top: -.75rem; background: var(--rouge); color: #fff; font-size: .7rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: .1rem .45rem; border-radius: 2px; }
+
+/* Enveloppes */
+.enveloppe { border-top: 1px solid var(--trait); padding-top: .6rem; margin-top: .6rem; }
+.env-barre { position: relative; height: 10px; background: var(--case-vide); margin: .3rem 0; display: flex; }
+.env-plein { background: #6d52a8; }
+.env-trop { background: repeating-linear-gradient(135deg, var(--rouge) 0 3px, rgba(200, 16, 46, .45) 3px 6px); }
+.env-barre i { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--texte); }
+.env-deborde button { box-shadow: inset 3px 0 0 var(--rouge); }
+.enveloppes-reglage { display: grid; gap: .4rem; }
+.env-ligne { display: grid; grid-template-columns: 6.5rem minmax(0, 1fr) 5.5rem auto; gap: .35rem; align-items: center; }
+
+/* Trajectoire */
+.defile-x { overflow-x: auto; }
+.tableau-trajectoire { font-size: .8rem; }
+.tableau-trajectoire th, .tableau-trajectoire td { padding: .25rem .3rem; }
+.traj-nom { min-width: 9rem; }
+.traj-nom .btn-lien { text-align: left; padding: 0; font-weight: 600; }
+.traj-nom small { display: block; color: var(--sourdine); font-size: .7rem; }
+.traj-on { background: var(--accent-doux); }
+.traj-hors td { color: var(--sourdine); }
+.traj-marge td { border-top: 2px solid var(--texte); font-weight: 600; }
+.liste-reglage { list-style: none; padding: 0; display: grid; gap: .3rem; }
+.liste-reglage li { display: flex; justify-content: space-between; gap: .5rem; align-items: center; font-size: .85rem; }
+.portee-cible { border-left: 3px solid var(--laiton); padding-left: .6rem; }
+.trajectoire { list-style: none; padding: 0; margin: .8rem 0; display: grid; gap: 4px; }
+.trajectoire li { display: grid; gap: .25rem; border: 1px solid var(--trait); border-radius: 2px; padding: .4rem .5rem; background: var(--panneau-haut); }
+.trajectoire .traj-tete, .trajectoire .traj-marge { background: none; border: 0; padding: .1rem .5rem; font-size: .75rem; color: var(--sourdine); }
+.trajectoire .traj-marge { border-top: 2px solid var(--texte); border-radius: 0; font-weight: 600; color: var(--texte); }
+.traj-nom { display: grid; gap: .15rem; }
+.traj-nom select { font-size: .8rem; padding: .15rem .3rem; justify-self: start; }
+.traj-bande { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 2px; font-size: .74rem; font-variant-numeric: tabular-nums; text-align: center; }
+.traj-bande span { background: var(--case-vide); padding: .1rem 0; min-height: 1.2rem; }
+.traj-bande span.traj-on { background: var(--laiton); color: #fff; font-weight: 600; }
+.traj-entete span, .traj-marge .traj-bande span { background: none; }
+.trajectoire li.traj-hors { opacity: .7; border-style: dashed; }

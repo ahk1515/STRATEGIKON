@@ -31,7 +31,7 @@ Je dépose le code dans le dépôt avec vos deux informations Supabase.
 
 1. Dans le dépôt, **Settings** > **Pages**.
 2. Source : **Deploy from a branch** ; Branch : **main**, dossier **/ (root)** ; cliquez sur **Save**.
-3. Après une à deux minutes, l'outil est en ligne à l'adresse `https://ahk1515.github.io/strategikon/`. La mention « Base partagée » doit apparaître en haut à droite.
+3. Après une à deux minutes, l'outil est en ligne à l'adresse `https://ahk1515.github.io/STRATEGIKON/`. La mention « Base partagée » doit apparaître en haut à droite.
 
 ## Bon à savoir
 

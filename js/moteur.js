@@ -259,7 +259,8 @@
   // Les montants libres (investissements, options, pions sur mesure) sont sécables :
   // ils comblent les cases restantes de leur groupe.
   var LARGEUR = 30;
-  var ORDRE_GROUPES = ["Fixes", "Interarmées", "Terre", "Marine", "Air et Espace"];
+  // « Attente » : les pions ajoutés qui n'ont pas encore été arbitrés, posés côte à côte après le socle.
+  var ORDRE_GROUPES = ["Fixes", "Interarmées", "Terre", "Marine", "Air et Espace", "Attente"];
 
   function Plateau(lignesInit) {
     this.l = LARGEUR;
@@ -295,13 +296,25 @@
       if (w > this.l && h > this.l) return null;
     }
   };
+  Plateau.prototype.apresDerniereLigne = function () {
+    for (var k = this.occ.length - 1; k >= 0; k--) if (this.occ[k] !== null) return Math.floor(k / this.l) + 1;
+    return 0;
+  };
   Plateau.prototype.premiereLigneLibre = function () {
     for (var k = 0; k < this.occ.length; k++) if (this.occ[k] === null) return Math.floor(k / this.l);
     return this.h;
   };
 
   // filtreSocle(pion) -> bool (facultatif) : ne pose que ces pions du socle (vue « ma demande »).
-  function placerAnnee(pions, lignes, params, annee, filtreSocle) {
+  // options.apresArbitrage : les lignes sont déjà arbitrées (différés décalés), seules les « en attente » restent à part.
+  function placerAnnee(pions, lignes, params, annee, filtreSocle, options) {
+    options = options || {};
+    function statutDe(l) {
+      var st = arbitrageDe(l, params).statut;
+      if (st === "retenu") return null;
+      if (options.apresArbitrage && st !== "attente") return null;
+      return st;
+    }
     var idx = indexPions(pions);
     params = params || parametresParDefaut();
     var tableCases = Number(params.table) || 600;
@@ -329,23 +342,26 @@
       var plein = types.length >= nbDorese(p);
       groupe(g).rigides.push({ pion: p, w: p.l || 1, h: p.h || 1, armee: g === "Fixes" ? p.armee : g, nature: p.type,
         libelle: p.nom, niveau: plein ? 100 : 50, dorese: types.length, types: types, socle: true,
-        nDepart: dg ? 0 : nbDepart(p), ligneDorese: l100 ? l100.id : null, roleDorese: l100 ? l100.role : null, degrade: dg ? dg.id : null });
+        nDepart: dg ? 0 : nbDepart(p), ligneDorese: l100 ? l100.id : null, roleDorese: l100 ? l100.role : null, degrade: dg ? dg.id : null,
+        statutDorese: l100 ? statutDe(l100) : null });
     });
     lignes.forEach(function (l) {
       var q = quantite(l, annee);
       if (!q || l.type === "dorese" || l.type === "retrait" || l.type === "degrade") return;
       var arm = armeeDeLigne(l, idx);
+      var st = statutDe(l);
+      var dest = st ? "Attente" : arm;
       if (l.type === "ajout") {
         var p = idx[l.pion];
         if (!p) return;
         for (var i = 0; i < q; i++) {
           var cent = Number(l.niveau) === 100;
-          groupe(arm).rigides.push({ pion: p, w: p.l || 1, h: p.h || 1, armee: arm, nature: p.type, libelle: "+ " + p.nom,
-            niveau: cent ? 100 : 50, dorese: cent ? nbDorese(p) : 0, detailDorese: p.dorese, role: l.role, ligne: l.id });
+          groupe(dest).rigides.push({ pion: p, w: p.l || 1, h: p.h || 1, armee: arm, nature: p.type, libelle: "+ " + p.nom,
+            niveau: cent ? 100 : 50, dorese: cent ? nbDorese(p) : 0, detailDorese: p.dorese, role: l.role, ligne: l.id, statut: st });
         }
       } else if (l.type === "libre") {
         var n = Math.round((Number(l.cout_unitaire) || 0) * q / CASE);
-        if (n > 0) groupe(arm).secables.push({ cases: n, armee: arm, nature: "libre", libelle: l.libelle || "Ligne libre", role: l.role, ligne: l.id, horsCatalogue: !l.modele });
+        if (n > 0) groupe(dest).secables.push({ cases: n, armee: arm, nature: "libre", libelle: l.libelle || "Ligne libre", role: l.role, ligne: l.id, horsCatalogue: !l.modele, statut: st });
       }
     });
 
@@ -353,7 +369,9 @@
     ORDRE_GROUPES.forEach(function (nomG) {
       var g = groupes[nomG];
       if (!g.rigides.length && !g.secables.length) return;
-      var r0 = plateau.premiereLigneLibre();
+      // La zone « Attente » commence sous tout le reste, pour rester à part.
+      var r0 = nomG === "Attente" ? plateau.apresDerniereLigne() + 1 : plateau.premiereLigneLibre(); // une ligne vide pour le titre de la zone
+      var rMin = nomG === "Attente" ? r0 : 0;
       g.rigides.sort(function (a, b) { return (b.w * b.h + b.dorese) - (a.w * a.h + a.dorese) || b.w - a.w; });
       g.rigides.forEach(function (it) {
         var id = pieces.length;
@@ -374,25 +392,26 @@
         plateau.marquer(pos.r, pos.c, pos.w, pos.h, id);
         pieces.push({ r: pos.r, c: pos.c, w: pos.w, h: pos.h, armee: it.armee, nature: it.nature, libelle: it.libelle,
           pion: it.pion ? it.pion.id : null, ligne: it.ligne || null, socle: !!it.socle, ligneDorese: it.ligneDorese || null, degrade: it.degrade || null,
-          niveau: it.nature === "capacite" ? it.niveau : null, role: it.role || null, groupe: nomG, cases: pos.w * pos.h });
+          niveau: it.nature === "capacite" ? it.niveau : null, role: it.role || null, groupe: nomG, cases: pos.w * pos.h, statut: it.statut || null });
         // DORESE au contact : cases libres voisines de la capacité (ou de ses DORESE déjà posées).
         var types = it.types || typesDorese(it.detailDorese || {});
         var amas = [{ r: pos.r, c: pos.c, w: pos.w, h: pos.h }];
         types.slice(0, it.dorese).forEach(function (t, n) {
           var ajoutee = it.socle && n >= (it.nDepart || 0);
-          var cand = voisinLibre(plateau, amas);
+          var cand = voisinLibre(plateau, amas, rMin);
           if (!cand) { var p2 = plateau.chercher(1, 1, r0); cand = { r: p2.r, c: p2.c, loin: true }; }
           plateau.marquer(cand.r, cand.c, 1, 1, "d" + id);
           amas.push({ r: cand.r, c: cand.c, w: 1, h: 1 });
           cellules.push({ r: cand.r, c: cand.c, armee: it.armee, nature: "dorese", type: t, libelle: "DORESE " + t.toUpperCase() + " · " + it.libelle,
-            role: ajoutee ? it.roleDorese : (it.role || null), loin: !!cand.loin, parent: id, ligne: ajoutee ? it.ligneDorese : (it.ligne || null) });
+            role: ajoutee ? it.roleDorese : (it.role || null), loin: !!cand.loin, parent: id, ligne: ajoutee ? it.ligneDorese : (it.ligne || null),
+            groupe: nomG, statut: ajoutee ? (it.statutDorese || null) : (it.statut || null) });
         });
       });
       // Montants sécables : premier trou libre du groupe, puis cases voisines pour garder le bloc d'un seul tenant.
       g.secables.forEach(function (it) {
         var amas = [];
         for (var n = 0; n < it.cases; n++) {
-          var cand = amas.length ? voisinLibre(plateau, amas) : null;
+          var cand = amas.length ? voisinLibre(plateau, amas, rMin) : null;
           if (!cand) {
             var k = r0 * plateau.l;
             while (true) {
@@ -404,7 +423,7 @@
           }
           plateau.marquer(cand.r, cand.c, 1, 1, "s");
           amas.push({ r: cand.r, c: cand.c, w: 1, h: 1 });
-          cellules.push({ r: cand.r, c: cand.c, armee: it.armee, nature: "libre", libelle: it.libelle, role: it.role, horsCatalogue: it.horsCatalogue, ligne: it.ligne });
+          cellules.push({ r: cand.r, c: cand.c, armee: it.armee, nature: "libre", libelle: it.libelle, role: it.role, horsCatalogue: it.horsCatalogue, ligne: it.ligne, groupe: nomG, statut: it.statut || null });
         }
       });
     });
@@ -420,13 +439,13 @@
     };
   }
 
-  function voisinLibre(plateau, amas) {
+  function voisinLibre(plateau, amas, rMin) {
     var meilleur = null;
     amas.forEach(function (b) {
       for (var r = b.r - 1; r <= b.r + b.h; r++) {
         for (var c = b.c - 1; c <= b.c + b.w; c++) {
           var bord = (r === b.r - 1 || r === b.r + b.h) !== (c === b.c - 1 || c === b.c + b.w); // côté, pas coin
-          if (!bord || !plateau.libre(r, c)) continue;
+          if (!bord || r < (rMin || 0) || !plateau.libre(r, c)) continue;
           if (!meilleur || r * plateau.l + c < meilleur.r * plateau.l + meilleur.c) meilleur = { r: r, c: c };
         }
       }

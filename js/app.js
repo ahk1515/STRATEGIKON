@@ -289,8 +289,8 @@
     // Filtre « Ma demande » : on ne pose que mes pions, regroupés sur une table compacte.
     var filtre = etat.maTable;
     var t = filtre
-      ? M.placerAnnee(PIONS, lignes.filter(function (l) { return l.role === etat.role; }), p, etat.annee, function (x) { return pionAMoi(x); })
-      : M.placerAnnee(PIONS, lignes, p, etat.annee);
+      ? M.placerAnnee(PIONS, lignes.filter(function (l) { return l.role === etat.role; }), p, etat.annee, function (x) { return pionAMoi(x); }, { apresArbitrage: etat.vue === "arbitrage" })
+      : M.placerAnnee(PIONS, lignes, p, etat.annee, null, { apresArbitrage: etat.vue === "arbitrage" });
     if (filtre) {
       var bas = 0;
       t.pieces.forEach(function (x) { bas = Math.max(bas, x.r + x.h); });
@@ -307,7 +307,7 @@
       rel.appendChild(el("div", { classe: "releve" }, [el("small", { texte: x[0] }), el("b", { classe: x[2], texte: x[1] })]));
     });
     $("consigne").textContent = arbitre()
-      ? "Cliquez sur une demande posée sur la table pour la retenir, la différer ou y renoncer."
+      ? "Les demandes à trancher sont regroupées en bas, dans le cadre « Demandes à arbitrer ». Cliquez sur l'une d'elles pour la retenir, la différer ou y renoncer."
       : filtre ? "Vos pions seuls, regroupés. Cliquez sur un pion pour le modifier, sur une case vide pour en poser un nouveau. « Toute la table » les remet parmi les autres."
       : "Les pions en place sont votre point de départ. Cliquez sur un pion pour le modifier, sur une case vide pour en poser un nouveau.";
 
@@ -317,6 +317,22 @@
     for (var k = 0; k < t.hauteur * t.largeur; k++) {
       pl.appendChild(el("div", { classe: "fond fond-clic" + (filtre ? "" : k >= t.table ? " fond-horstable" : k >= t.plafond ? " fond-hors" : ""), title: "Poser un nouveau pion en " + etat.annee, style: "grid-row:" + (Math.floor(k / t.largeur) + 1) + ";grid-column:" + (k % t.largeur + 1),
         onclick: function () { etat.selection = null; etat.volet = "poser"; rendre(true); toast("Choisissez à droite le pion à poser en " + etat.annee); } }));
+    }
+    // Zone des demandes non encore arbitrées : un cadre et son titre.
+    var enZone = t.pieces.filter(function (x) { return x.groupe === "Attente"; }).concat(t.cellules.filter(function (x) { return x.groupe === "Attente"; }));
+    if (enZone.length) {
+      var r1 = Math.min.apply(null, enZone.map(function (x) { return x.r; }));
+      var r2 = Math.max.apply(null, enZone.map(function (x) { return x.r + (x.h || 1); }));
+      var parStatut = { attente: {}, differe: {}, renonce: {} };
+      enZone.forEach(function (x) { if (x.ligne && parStatut[x.statut]) parStatut[x.statut][x.ligne] = true; });
+      var attente = Object.keys(parStatut.attente);
+      var montant = attente.reduce(function (acc, id) { var l = ligneDe(id); return acc + (l ? M.coutLigne(l, IDX).annees[etat.annee].cout : 0); }, 0);
+      var morceaux = [attente.length + " en attente d'arbitrage" + (attente.length ? " (" + md(montant) + ")" : "")];
+      var nd = Object.keys(parStatut.differe).length, nr = Object.keys(parStatut.renonce).length;
+      if (nd) morceaux.push(nd + " différée" + (nd > 1 ? "s" : ""));
+      if (nr) morceaux.push(nr + " renoncée" + (nr > 1 ? "s" : ""));
+      pl.appendChild(el("div", { classe: "zone-attente", style: "grid-row:" + r1 + " / " + (r2 + 1) + ";grid-column:1 / -1" }));
+      pl.appendChild(el("div", { classe: "zone-attente-titre", style: "grid-row:" + r1 + ";grid-column:1 / -1" }, [el("span", { texte: "Demandes à arbitrer · " + morceaux.join(" · ") })]));
     }
     function depasse(r, c, w, h) { if (filtre) return false; for (var i = r; i < r + h; i++) for (var j = c; j < c + w; j++) if (i * t.largeur + j >= t.plafond) return true; return false; }
     function masque(x) { return x.role && !vueComplete() && x.role !== etat.role; }
@@ -338,6 +354,7 @@
       if (petit) cl.push("fig-mini");
       if (x.nature === "orange") cl.push("fig-alea");
       if (x.niveau === 50) cl.push("fig-rouge");
+      if (x.statut) cl.push("pion-" + x.statut);
       if (depasse(x.r, x.c, x.w, x.h)) cl.push("pion-debord");
       if (x.role && x.role === etat.role) cl.push("pion-mien");
       if (selectionCorrespond(x)) cl.push("pion-choisi");
@@ -357,12 +374,13 @@
         });
         enfants.push(co);
       }
-      pl.appendChild(el("button", { type: "button", classe: cl.join(" "), title: nom + (x.niveau ? " · " + (x.niveau === 50 ? "face rouge (dégradée)" : "à 100 %") : "") + (x.role && !cache ? " · " + x.role : ""),
+      pl.appendChild(el("button", { type: "button", classe: cl.join(" "), title: nom + (x.niveau ? " · " + (x.niveau === 50 ? "face rouge (dégradée)" : "à 100 %") : "") + (x.role && !cache ? " · " + x.role : "") + (x.statut ? " · " + M.STATUTS[x.statut].toLowerCase() : x.socle ? " · socle arbitré" : " · retenu"),
         style: "grid-row:" + (x.r + 1) + " / span " + x.h + ";grid-column:" + (x.c + 1) + " / span " + x.w + ";--bande:" + bande, onclick: choisir(x) }, enfants));
     });
     t.cellules.forEach(function (x) {
       var cl = ["pion", "pion-case", "pion-clic"];
       cl.push(x.nature === "dorese" ? "jeton" : "jeton-option");
+      if (x.statut) cl.push("pion-" + x.statut);
       if (x.horsCatalogue) cl.push("pion-mesure");
       if (x.r * t.largeur + x.c >= t.plafond) cl.push("pion-debord");
       if (x.role && x.role === etat.role) cl.push("pion-mien");
@@ -400,6 +418,9 @@
     });
     lg.appendChild(puce("background:var(--case-vide)", "pion-mien", "Ma demande"));
     lg.appendChild(puce("background:var(--hors)", "", "Au-delà du plafond"));
+    lg.appendChild(puce("background:var(--carte)", "pion-attente", "En attente d'arbitrage"));
+    lg.appendChild(puce("background:var(--carte)", "pion-renonce", "Renoncé"));
+    lg.appendChild(el("span", { classe: "note-legende", texte: "Le socle 2027 est considéré comme arbitré." }));
   }
 
   // ---------- Volet ----------

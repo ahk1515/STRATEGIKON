@@ -123,3 +123,21 @@ test("repasser une capacité à 50 % rend ses DORESE et les ôte de la table", (
   assert.strictEqual(t.cellules.filter((c) => c.libelle.endsWith("Capacité Rafale")).length, 0);
   assert.strictEqual(t.occupees, 399 - 5);
 });
+
+test("les pions ajoutés en attente d'arbitrage sont posés côte à côte, à part du socle", () => {
+  const L = [
+    { id: "a1", role: "EMAT", type: "ajout", pion: "P24", niveau: 100, qte: { 2027: 1 } },
+    { id: "a2", role: "EMM", type: "ajout", pion: "P42", niveau: 50, qte: { 2027: 1 } },
+    { id: "a3", role: "EMAAE", type: "ajout", pion: "P31", niveau: 50, qte: { 2027: 1 } }
+  ];
+  const p = M.parametresParDefaut();
+  p.arbitrages = { a3: { statut: "retenu" } };
+  const t = M.placerAnnee(PIONS, L, p, 2027);
+  const att = t.pieces.filter((x) => x.groupe === "Attente");
+  assert.deepStrictEqual(att.map((x) => x.statut).sort(), ["attente", "attente"]);
+  const bas = Math.max(...t.pieces.filter((x) => x.groupe !== "Attente").map((x) => x.r + x.h));
+  att.forEach((x) => assert.ok(x.r >= bas, "pion en attente mêlé au socle"));
+  const c130 = t.pieces.find((x) => x.libelle === "+ Capacité C130J");
+  assert.strictEqual(c130.groupe, "Air et Espace");
+  assert.strictEqual(c130.statut, null);
+});

@@ -317,7 +317,8 @@
       var types = typesDorese(doreseDepart(p)).concat(l100 ? typesDorese(doreseManquantes(p)) : []);
       var plein = types.length >= nbDorese(p);
       groupe(g).rigides.push({ pion: p, w: p.l || 1, h: p.h || 1, armee: g === "Fixes" ? p.armee : g, nature: p.type,
-        libelle: p.nom, niveau: plein ? 100 : 50, dorese: types.length, types: types, socle: true });
+        libelle: p.nom, niveau: plein ? 100 : 50, dorese: types.length, types: types, socle: true,
+        nDepart: nbDepart(p), ligneDorese: l100 ? l100.id : null, roleDorese: l100 ? l100.role : null });
     });
     lignes.forEach(function (l) {
       var q = quantite(l, annee);
@@ -361,30 +362,38 @@
         }
         plateau.marquer(pos.r, pos.c, pos.w, pos.h, id);
         pieces.push({ r: pos.r, c: pos.c, w: pos.w, h: pos.h, armee: it.armee, nature: it.nature, libelle: it.libelle,
+          pion: it.pion ? it.pion.id : null, ligne: it.ligne || null, socle: !!it.socle, ligneDorese: it.ligneDorese || null,
           niveau: it.nature === "capacite" ? it.niveau : null, role: it.role || null, groupe: nomG, cases: pos.w * pos.h });
         // DORESE au contact : cases libres voisines de la capacité (ou de ses DORESE déjà posées).
         var types = it.types || typesDorese(it.detailDorese || {});
         var amas = [{ r: pos.r, c: pos.c, w: pos.w, h: pos.h }];
-        types.slice(0, it.dorese).forEach(function (t) {
+        types.slice(0, it.dorese).forEach(function (t, n) {
+          var ajoutee = it.socle && n >= (it.nDepart || 0);
           var cand = voisinLibre(plateau, amas);
           if (!cand) { var p2 = plateau.chercher(1, 1, r0); cand = { r: p2.r, c: p2.c, loin: true }; }
           plateau.marquer(cand.r, cand.c, 1, 1, "d" + id);
           amas.push({ r: cand.r, c: cand.c, w: 1, h: 1 });
-          cellules.push({ r: cand.r, c: cand.c, armee: it.armee, nature: "dorese", type: t, libelle: "DORESE " + t.toUpperCase() + " · " + it.libelle, role: it.role || null, loin: !!cand.loin });
+          cellules.push({ r: cand.r, c: cand.c, armee: it.armee, nature: "dorese", type: t, libelle: "DORESE " + t.toUpperCase() + " · " + it.libelle,
+            role: ajoutee ? it.roleDorese : (it.role || null), loin: !!cand.loin, parent: id, ligne: ajoutee ? it.ligneDorese : (it.ligne || null) });
         });
       });
-      // Montants sécables : on comble les trous du groupe, dans l'ordre de lecture.
+      // Montants sécables : premier trou libre du groupe, puis cases voisines pour garder le bloc d'un seul tenant.
       g.secables.forEach(function (it) {
-        var reste = it.cases;
-        var k = r0 * plateau.l;
-        while (reste > 0) {
-          if (k >= plateau.occ.length) plateau.agrandir(1);
-          if (plateau.occ[k] === null) {
-            plateau.occ[k] = "s";
-            cellules.push({ r: Math.floor(k / plateau.l), c: k % plateau.l, armee: it.armee, nature: "libre", libelle: it.libelle, role: it.role, horsCatalogue: it.horsCatalogue });
-            reste--;
+        var amas = [];
+        for (var n = 0; n < it.cases; n++) {
+          var cand = amas.length ? voisinLibre(plateau, amas) : null;
+          if (!cand) {
+            var k = r0 * plateau.l;
+            while (true) {
+              if (k >= plateau.occ.length) plateau.agrandir(1);
+              if (plateau.occ[k] === null) break;
+              k++;
+            }
+            cand = { r: Math.floor(k / plateau.l), c: k % plateau.l };
           }
-          k++;
+          plateau.marquer(cand.r, cand.c, 1, 1, "s");
+          amas.push({ r: cand.r, c: cand.c, w: 1, h: 1 });
+          cellules.push({ r: cand.r, c: cand.c, armee: it.armee, nature: "libre", libelle: it.libelle, role: it.role, horsCatalogue: it.horsCatalogue, ligne: it.ligne });
         }
       });
     });

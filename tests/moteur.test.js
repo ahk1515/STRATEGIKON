@@ -315,6 +315,21 @@ test("inflation : le plafond effectif baisse dès l'année choisie", () => {
   assert.ok(generales([], p).includes("MEFR-03"));
 });
 
+test("budget piloté : inflation et carburants par année, conquêtes hors table", () => {
+  const p = pp({ inflationAnnees: { 2030: 500 }, carburants: { 2031: 300 }, conquetes: [{ id: "guerre", nom: "C'est la guerre", montant: 8600, annees: [2032] }] });
+  const syn = M.synthese(PIONS, [], p);
+  assert.strictEqual(syn[2030].plafond, 59000 - 500);
+  assert.strictEqual(syn[2031].totalSocle, 39900 + 300);
+  assert.strictEqual(syn[2032].plafond, 59000 + 8600);
+  assert.strictEqual(M.flottaison(PIONS, [], p, 2031).base, 39900 + 300);
+  const t = M.placerAnnee(PIONS, [], p, 2031, null, { zones: true });
+  assert.strictEqual(t.cellules.filter((x) => x.carburant).length, 3);
+  assert.strictEqual(M.conquetesDe(pp()).length, 2);
+  assert.strictEqual(M.conquisDe(pp(), 2032), 0);
+  const g = generales([], p);
+  assert.ok(g.includes("MEFR-03") && g.includes("MEFR-02"));
+});
+
 test("contrats opérationnels : tenus d'office, non tenu après une dissolution retenue", () => {
   const base = M.evaluerContrats(PIONS, [], pp());
   assert.strictEqual(base.length, 10);

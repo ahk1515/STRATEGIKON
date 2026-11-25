@@ -415,3 +415,14 @@ button.jeton-option { color: #222; }
 .scenario-ligne { display: grid; grid-template-columns: 1fr auto; gap: 6px; }
 .scenario-ligne input, .scenario-ligne select { min-width: 0; }
 .bloc-alea { border-left: 4px solid #b3261e; padding-left: 10px; }
+
+/* Conquêtes hors table et budget piloté */
+.conquete { border: 2px dashed #8a2d3b; background: repeating-linear-gradient(135deg, rgba(138,45,59,.05) 0 6px, transparent 6px 12px); position: relative; z-index: 1; pointer-events: none; }
+.conquete-acquise { border-style: solid; border-color: #2e7d32; background: rgba(46,125,50,.08); }
+.conquete-titre { position: absolute; left: 6px; top: 4px; font: 700 .7rem/1.2 "Source Sans 3", system-ui, sans-serif; text-transform: uppercase; letter-spacing: .04em; background: #8a2d3b; color: #fff; padding: 2px 6px; border-radius: 2px; }
+.conquete-acquise .conquete-titre { background: #2e7d32; }
+.budget-annees input[type=number] { width: 5.2rem; }
+.budget-annees td, .budget-annees th { padding: 2px 4px; font-size: .8rem; }
+.form-reglages { overflow-x: auto; }
+.presets { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0 12px; }
+.fond-conquete { background: #f1efe9; }

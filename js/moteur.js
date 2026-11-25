@@ -55,14 +55,30 @@
     energie: { nom: "Choc énergétique", montant: 2800 },
     otan_russie: { nom: "Guerre OTAN-Russie", montant: 4900 }
   };
+  // Plateaux hors table à conquérir (relevé de la table 2032) : budget en plus, année par année.
+  var CONQUETES_DEFAUT = [
+    { id: "guerre", nom: "C'est la guerre", montant: 8600 },
+    { id: "paix", nom: "C'est pas la guerre", montant: 3100 }
+  ];
+  function conquetesDe(params) {
+    var c = (params || {}).conquetes;
+    return (c && c.length ? c : CONQUETES_DEFAUT).map(function (x) { return { id: x.id, nom: x.nom, montant: Number(x.montant) || 0, annees: (x.annees || []).map(Number) }; });
+  }
+  function conquisDe(params, annee) {
+    return conquetesDe(params).reduce(function (t, x) { return t + (x.annees.indexOf(annee) !== -1 ? x.montant : 0); }, 0);
+  }
+  // Surcoûts carburants (MEFR-02), saisis par l'animateur année par année : posés sur la table.
+  function carburantsDe(params, annee) { return Math.max(0, Number((((params || {}).carburants) || {})[annee]) || 0); }
   function inflationDe(params, annee) {
+    var ia = (params || {}).inflationAnnees;
+    if (ia && Object.keys(ia).length) return Math.max(0, Number(ia[annee]) || 0);
     var i = (params || {}).inflation;
     if (!i || !SCENARIOS_INFLATION[i.scenario]) return 0;
     return annee >= (Number(i.debut) || ANNEES[0]) ? SCENARIOS_INFLATION[i.scenario].montant : 0;
   }
   // Plafond effectif d'une année, en M€ : plafond fixé moins l'inflation.
   function plafondMontant(params, annee) {
-    return (Number(((params || {}).plafonds || {})[annee]) || 0) * CASE - inflationDe(params, annee);
+    return (Number(((params || {}).plafonds || {})[annee]) || 0) * CASE - inflationDe(params, annee) + conquisDe(params, annee);
   }
 
   function indexPions(pions) {
@@ -204,6 +220,7 @@
       pions.forEach(function (p) {
         if (estDansSocle(p, a, params)) socle[p.armee] = (socle[p.armee] || 0) + coutSocle(p);
       });
+      if (!filtre) socle["Interarmées"] += carburantsDe(params, a);
       var dorese = { ao: 0, mco: 0, rh: 0 };
       var allie = 0, horsEnveloppe = {};
       lignes.forEach(function (l) {
@@ -445,6 +462,9 @@
         if (n > 0) groupe(dest).secables.push({ cases: n, armee: arm, nature: "libre", libelle: l.libelle || "Ligne libre", role: l.role, ligne: l.id, horsCatalogue: !l.modele, statut: st, marques: marques });
       }
     });
+    // Surcoûts carburants (MEFR-02) : posés comme une dépense fixe de l'année.
+    var nCarb = Math.round(carburantsDe(params, annee) / CASE);
+    if (nCarb > 0 && !filtreSocle) groupe("Fixes").secables.push({ cases: nCarb, armee: "Interarmées", nature: "libre", libelle: "Surcoût carburants (MEFR-02)", role: null, ligne: null, carburant: true, statut: null });
     // Excédent des enveloppes internes : posé comme un montant sécable, au nom de l'enveloppe.
     enveloppesDe(params).forEach(function (e) {
       var et = etatEnveloppe(e, pions, lignes, params, annee);
@@ -514,7 +534,7 @@
           plateau.marquer(cand.r, cand.c, 1, 1, "s");
           amas.push({ r: cand.r, c: cand.c, w: 1, h: 1 });
           cellules.push({ r: cand.r, c: cand.c, armee: it.armee, nature: "libre", libelle: it.libelle, role: it.role, horsCatalogue: it.horsCatalogue, ligne: it.ligne, groupe: nomG, statut: it.statut || null,
-            marques: it.marques || null, allie: n >= francaises, enveloppe: it.enveloppe || null });
+            marques: it.marques || null, allie: n >= francaises, enveloppe: it.enveloppe || null, carburant: !!it.carburant });
         }
       });
     }
@@ -746,6 +766,7 @@
     params = params || parametresParDefaut();
     var base = 0;
     pions.forEach(function (p) { if (estDansSocle(p, annee, params)) base += coutSocle(p); });
+    base += carburantsDe(params, annee);
     var items = [];
     lignes.forEach(function (l) {
       if (arbitrageDe(l, params).statut === "renonce" || enveloppeDe(l, params)) return;
@@ -989,10 +1010,10 @@
     // Alliés défaillants en Baltique (COCA-03) : aléa déclenché par l'animateur.
     if (params.aleaBaltique) ajouter("COCA-03", null, "alerte", "Aléa Baltique : les partenaires européens limitent leur participation ; la France doit fournir jusqu'à 30 % de capacités en plus. Confrontez le modèle retenu (onglet Red team).");
     // Inflation (MEFR-03).
-    if (params.inflation && SCENARIOS_INFLATION[params.inflation.scenario]) {
-      var sc = SCENARIOS_INFLATION[params.inflation.scenario];
-      ajouter("MEFR-03", null, "alerte", "Inflation, scénario « " + sc.nom + " » : −" + sc.montant + " M€ de pouvoir d'achat par an dès " + (Number(params.inflation.debut) || ANNEES[0]) + ", retirés du plafond.");
-    }
+    var infl = ANNEES.filter(function (a) { return inflationDe(params, a) > 0; });
+    if (infl.length) ajouter("MEFR-03", null, "alerte", "Inflation : " + infl.map(function (a) { return a + " −" + inflationDe(params, a) + " M€"; }).join(", ") + " de pouvoir d'achat, retirés du plafond.");
+    var carb = ANNEES.filter(function (a) { return carburantsDe(params, a) > 0; });
+    if (carb.length) ajouter("MEFR-02", null, "alerte", "Surcoûts carburants posés sur la table : " + carb.map(function (a) { return a + " +" + carburantsDe(params, a) + " M€"; }).join(", ") + ".");
     return res;
   }
 
@@ -1362,6 +1383,10 @@
     echangeEnCsv: echangeEnCsv,
     miseEnService: miseEnService,
     SCENARIOS_INFLATION: SCENARIOS_INFLATION,
+    CONQUETES_DEFAUT: CONQUETES_DEFAUT,
+    conquetesDe: conquetesDe,
+    conquisDe: conquisDe,
+    carburantsDe: carburantsDe,
     inflationDe: inflationDe,
     plafondMontant: plafondMontant,
     doreseSup: doreseSup,

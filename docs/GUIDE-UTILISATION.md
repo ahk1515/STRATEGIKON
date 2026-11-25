@@ -122,6 +122,7 @@ Sous la carte d'accueil, une note indique le mode :
   - sur un **pion** ouvre sa fiche dans l'onglet *Sélection* ;
   - sur un jeton d'**excédent d'enveloppe** ouvre l'onglet *Enveloppes*.
   Survoler un pion affiche une infobulle : nom, niveau, porteur, statut, marques.
+- **Sous la table**, en vue *Toute la table* : les **plateaux à conquérir**, « C'est la guerre » (8,6 Md€) et « C'est pas la guerre » (3,1 Md€). En pointillés rouges « à conquérir » ; en vert « conquis en 20XX : ajouté au plafond » quand l'animateur les a accordés pour l'année affichée.
 - **Sous la table** : « Retiré de la table en 20XX » liste les dissolutions et repassages à 50 % de l'année (cliquables).
 - **La légende** explique toutes les marques.
 
@@ -420,7 +421,8 @@ Les 78 règles des fiches de rôle sont toutes consultables (onglet *Ma demande*
 | EMAAE-01 | Aucune décision sur les C-130H en fin de vie (option « Retrait ou remplacement des C-130H »). | alerte |
 | EMM-03 | Aucune ligne de remplacement des FDA Forbin, ou aucune ligne MAWS pour succéder aux Atlantique 2. | alerte |
 | COCA-03 | Aléa Baltique déclenché par l'animateur. | alerte |
-| MEFR-03 | Scénario d'inflation déclenché par l'animateur. | alerte |
+| MEFR-03 | Inflation saisie par l'animateur (années et montants). | alerte |
+| MEFR-02 | Surcoûts carburants saisis par l'animateur. | alerte |
 
 Où les voir : pastille « ! » sur le pion, bloc *Alertes des fiches de rôle* dans la fiche, *Ma demande*, *Bilan* > tableau de bord, badges dans *Arbitrage*. Une alerte se « lève » en corrigeant la demande, ou s'assume : le CEMA peut retenir malgré elle (comptée « passée en force malgré une alerte »). Les règles non vérifiées par l'outil sont à faire respecter par l'animateur. Les alertes générales (fin de vie, stocks, aléas, masse salariale) ne sont rattachées à aucun pion : elles apparaissent dans *Bilan* > tableau de bord.
 
@@ -468,10 +470,14 @@ Les raisons s'affichent dans l'infobulle du pion, en tête du bloc *Avis*, et en
 
 ## 17. Réglages (Animateur, SC-Plans, CEMA)
 
-- **Plafond annuel** en cases de 100 M€, pour chaque année.
+- **Budget année par année** (tableau) : pour chaque année,
+  - le **plafond** en Md€ ;
+  - l'**inflation** en M€ (MEFR-03), retirée du plafond ; les boutons *Stabilisation −850 M€*, *Conflit −1,5 Md€*, *Choc −2,8 Md€*, *Guerre −4,9 Md€* remplissent la colonne à partir de l'année choisie, *Aucune* la vide ;
+  - les **surcoûts carburants** en M€ (MEFR-02), posés sur la table comme une dépense fixe (cases orange « Carburants » dans le paquet Fixes) ;
+  - les **conquêtes** : une case par plateau hors table et par année. « C'est la guerre » (8,6 Md€) et « C'est pas la guerre » (3,1 Md€), cochées pour une année, ajoutent leur budget au plafond de cette année ;
+  - la dernière colonne affiche le **plafond effectif** qui en résulte, mis à jour pendant la saisie.
 - **Pions de scénario posés** : SMV et munitions, case par année.
 - **Aléas tirés des fiches** :
-  - **Inflation (MEFR-03)** : stabilisation européenne −850 M€/an, conflit régional prolongé −1,5 Md€/an, choc énergétique −2,8 Md€/an, guerre OTAN-Russie −4,9 Md€/an, à partir de l'année choisie. Le montant est retiré du plafond de chaque année concernée (jauges, table, flottaison, étalement).
   - **Aléa Baltique (COCA-03)** : les Européens limitent leur participation ; l'onglet *Red team* chiffre le besoin supplémentaire.
   - **Retrait d'une capacité (SCP-05)** : payée encore 2 ou 3 ans après la décision.
 - **Étape de la partie** : celle qu'affiche l'outil à l'entrée des joueurs (*1 · Modèle 2032* ou *2 · Trajectoire 2027-2032*).
@@ -524,7 +530,8 @@ Les fichiers sont nommés `strategikon-<partie>-<type>-<date>-<heure>.json|csv`.
 - **Dissoudre** : économie = coût du pion tel qu'il est posé au départ.
 - **Option ou sur mesure** : prix saisi, arrondi à la case (au moins 100 M€), × nombre d'exemplaires, par année posée ; ou ses tranches.
 - **Socle** : photo 2027 (39,9 Md€), toutes capacités à 100 % sauf l'A400M (il manque 1 DORESE activité).
-- **Total d'une année** = socle + demandes (part française, remboursements de prêts compris, excédents d'enveloppe compris, lignes rangées en enveloppe exclues) ; **marge** = plafond − total.
+- **Plafond effectif** = plafond fixé − inflation + conquêtes accordées pour l'année.
+- **Total d'une année** = socle (carburants compris) + demandes (part française, remboursements de prêts compris, excédents d'enveloppe compris, lignes rangées en enveloppe exclues) ; **marge** = plafond − total.
 - **Après arbitrage** : on retire les renoncées, on décale les différées.
 - **Imputation** : chaque ligne est imputée à une armée (Terre, Marine, Air et Espace, Interarmées).
 

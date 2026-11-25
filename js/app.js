@@ -542,7 +542,7 @@
     // Nom des demandes en cases (options, pions sur mesure) : une étiquette sur la plus longue
     // rangée de cases contiguës de la ligne, pour qu'on lise ce qui est posé.
     var parLigne = {};
-    t.cellules.forEach(function (x) { if (x.ligne && x.nature === "libre") (parLigne[x.ligne] = parLigne[x.ligne] || []).push(x); });
+    t.cellules.forEach(function (x) { if (x.nature === "libre" && (x.ligne || x.carburant)) { var k = x.ligne || "carburants"; (parLigne[k] = parLigne[k] || []).push(x); } });
     Object.keys(parLigne).forEach(function (id) {
       var cs = parLigne[id], meilleur = null;
       cs.forEach(function (x) {
@@ -554,9 +554,25 @@
       if (!meilleur) return;
       var x0 = cs[0];
       pl.appendChild(el("span", { classe: "etiquette-ligne" + (meilleur.w < 3 ? " etiquette-courte" : ""), "aria-hidden": "true",
-        style: "grid-row:" + (meilleur.r + 1) + ";grid-column:" + (meilleur.c + 1) + " / span " + meilleur.w + ";--bande:" + teinte(x0) },
-        [el("b", { texte: court(x0.libelle) }), x0.role ? el("small", { texte: x0.role }) : null]));
+        style: "grid-row:" + (meilleur.r + 1) + ";grid-column:" + (meilleur.c + 1) + " / span " + meilleur.w + ";--bande:" + (x0.carburant ? "var(--orange-carte)" : teinte(x0)) },
+        [el("b", { texte: x0.carburant ? "Carburants " + md(cs.length * M.CASE) : court(x0.libelle) }), x0.role ? el("small", { texte: x0.role }) : null]));
     });
+    // Plateaux hors table à conquérir : posés sous la table, avec leur budget.
+    if (!filtre) {
+      var hAvant = t.hauteur, r0 = t.hauteur + 1;
+      M.conquetesDe(p).forEach(function (c) {
+        var n = Math.round(c.montant / M.CASE), h = Math.max(1, Math.ceil(n / t.largeur)) + 1;
+        var conquis = c.annees.indexOf(etat.annee) !== -1;
+        pl.appendChild(el("div", { classe: "conquete" + (conquis ? " conquete-acquise" : ""), style: "grid-row:" + (r0 + 1) + " / span " + h + ";grid-column:1 / -1" }, [
+          el("span", { classe: "conquete-titre", texte: c.nom + " · " + md(c.montant) + " · " + (conquis ? "conquis en " + etat.annee + " : ajouté au plafond" : "à conquérir") + (c.annees.length && !conquis ? " (conquis en " + c.annees.join(", ") + ")" : "") })]));
+        r0 += h + 1;
+      });
+      t.hauteur = r0;
+      pl.style.gridTemplateRows = "repeat(" + t.hauteur + ", var(--case))";
+      for (var kk = hAvant * t.largeur; kk < t.hauteur * t.largeur; kk++) {
+        pl.insertBefore(el("div", { classe: "fond fond-conquete", style: "grid-row:" + (Math.floor(kk / t.largeur) + 1) + ";grid-column:" + (kk % t.largeur + 1) }), pl.firstChild);
+      }
+    }
     etat.neuf = null;
 
     var hors = $("hors-table");
@@ -1013,7 +1029,14 @@
     v.appendChild(blocContrats());
     var cv = M.couvertureScenarios(p);
     if (cv) v.appendChild(el("p", { classe: "aide" }, [el("b", { texte: "Scénarios de crise (COCA) : " }), cv.taux + " % de couverture · " + cv.satisfaisant + " satisfaisant(s), " + cv.partiel + " partiel(s), " + cv.insuffisant + " insuffisant(s)."]));
-    if (p.inflation && M.SCENARIOS_INFLATION[p.inflation.scenario]) v.appendChild(el("p", { classe: "aide" }, [el("b", { texte: "Inflation : " }), M.SCENARIOS_INFLATION[p.inflation.scenario].nom + ", −" + md(M.SCENARIOS_INFLATION[p.inflation.scenario].montant) + " par an dès " + (p.inflation.debut || M.ANNEES[0]) + " (plafonds réduits)."]));
+    var budgetNotes = M.ANNEES.map(function (a) {
+      var x = [];
+      if (M.inflationDe(p, a)) x.push("inflation −" + md(M.inflationDe(p, a)));
+      if (M.carburantsDe(p, a)) x.push("carburants +" + md(M.carburantsDe(p, a)));
+      if (M.conquisDe(p, a)) x.push("conquête +" + md(M.conquisDe(p, a)));
+      return x.length ? a + " : " + x.join(", ") : null;
+    }).filter(Boolean);
+    if (budgetNotes.length) v.appendChild(el("p", { classe: "aide" }, [el("b", { texte: "Budget piloté par l'animateur : " }), budgetNotes.join(" · ") + "."]));
     var t = el("table", { classe: "mini-tableau" });
     t.appendChild(el("thead", null, [el("tr", null, [el("th", { texte: "Md€" }), el("th", { classe: "num", texte: "Socle" }), el("th", { classe: "num", texte: "Demandes" }), el("th", { classe: "num", texte: "Plafond" }), el("th", { classe: "num", texte: "Marge après arb." })])]));
     var tb = el("tbody");
@@ -1157,10 +1180,48 @@
     var p = params();
     v.appendChild(el("h2", { classe: "volet-titre", texte: "Réglages de la partie" }));
     var f = el("form", { classe: "form-reglages" });
-    f.appendChild(el("h3", { texte: "Plafond annuel, en cases de 100 M€" }));
-    var pf = el("div", { classe: "plafonds" });
-    M.ANNEES.forEach(function (a) { pf.appendChild(el("label", null, [String(a), el("input", { id: "plafond-" + a, type: "number", min: 0, max: 2000, value: p.plafonds[a] })])); });
-    f.appendChild(pf);
+    // Budget de chaque année : plafond, inflation (MEFR-03), carburants (MEFR-02), conquêtes hors table.
+    f.appendChild(el("h3", { texte: "Budget année par année" }));
+    f.appendChild(el("p", { classe: "aide", texte: "Plafond en Md€. L'inflation est retirée du plafond ; les carburants sont posés sur la table ; une conquête cochée ajoute son budget au plafond de l'année." }));
+    var conqs = M.conquetesDe(p);
+    var tb = el("table", { classe: "mini-tableau budget-annees" });
+    tb.appendChild(el("thead", null, [el("tr", null, [el("th", { texte: "" }), el("th", { classe: "num", texte: "Plafond Md€" }), el("th", { classe: "num", texte: "Inflation M€" }), el("th", { classe: "num", texte: "Carburants M€" })]
+      .concat(conqs.map(function (c) { return el("th", { texte: c.nom + " (" + md(c.montant) + ")" }); })).concat([el("th", { classe: "num", texte: "Effectif" })]))]));
+    var corpsB = el("tbody");
+    var effectifs = {};
+    M.ANNEES.forEach(function (a) {
+      var pl = el("input", { id: "plafond-" + a, type: "number", min: 0, max: 200, step: 0.1, value: ((Number(p.plafonds[a]) || 0) / 10).toFixed(1), "aria-label": "Plafond " + a + " en Md€" });
+      var inf = el("input", { id: "inflation-" + a, type: "number", min: 0, step: 50, value: M.inflationDe(p, a) || "", placeholder: "0", "aria-label": "Inflation " + a + " en M€" });
+      var carb = el("input", { id: "carburants-" + a, type: "number", min: 0, step: 100, value: M.carburantsDe(p, a) || "", placeholder: "0", "aria-label": "Carburants " + a + " en M€" });
+      var eff = el("td", { classe: "num" });
+      effectifs[a] = eff;
+      var cases = conqs.map(function (c) { var cb = el("input", { type: "checkbox", "data-conquete": c.id, "data-annee": a, "aria-label": c.nom + " " + a }); cb.checked = c.annees.indexOf(a) !== -1; return el("td", null, [cb]); });
+      corpsB.appendChild(el("tr", null, [el("td", { texte: String(a) }), el("td", { classe: "num" }, [pl]), el("td", { classe: "num" }, [inf]), el("td", { classe: "num" }, [carb])].concat(cases).concat([eff])));
+    });
+    tb.appendChild(corpsB);
+    function majEffectifs() {
+      M.ANNEES.forEach(function (a) {
+        var plaf = Math.round(10 * (Number($("plafond-" + a).value) || 0)) * M.CASE;
+        var conq = conqs.reduce(function (t, c) { var cb = tb.querySelector('input[data-conquete="' + c.id + '"][data-annee="' + a + '"]'); return t + (cb && cb.checked ? c.montant : 0); }, 0);
+        effectifs[a].textContent = md(plaf - (Number($("inflation-" + a).value) || 0) + conq);
+      });
+    }
+    tb.addEventListener("input", majEffectifs);
+    tb.addEventListener("change", majEffectifs);
+    f.appendChild(tb);
+    var presets = el("div", { classe: "presets" }, [el("small", { texte: "Inflation MEFR-03 dès" })]);
+    var dPreset = el("select", { "aria-label": "Inflation à partir de" });
+    M.ANNEES.forEach(function (a) { dPreset.appendChild(el("option", { value: a, texte: String(a) })); });
+    presets.appendChild(dPreset);
+    Object.keys(M.SCENARIOS_INFLATION).forEach(function (k) {
+      var x = M.SCENARIOS_INFLATION[k];
+      presets.appendChild(el("button", { type: "button", classe: "btn-mini", title: x.nom, texte: x.nom.split(" ")[0] + " −" + md(x.montant), onclick: function () {
+        M.ANNEES.forEach(function (a) { $("inflation-" + a).value = a >= Number(dPreset.value) ? x.montant : ""; }); majEffectifs();
+      } }));
+    });
+    presets.appendChild(el("button", { type: "button", classe: "btn-mini btn-mini-non", texte: "Aucune", onclick: function () { M.ANNEES.forEach(function (a) { $("inflation-" + a).value = ""; }); majEffectifs(); } }));
+    f.appendChild(presets);
+    setTimeout(majEffectifs, 0);
     f.appendChild(el("h3", { texte: "Pions de scénario posés" }));
     PIONS.filter(function (x) { return x.type === "orange"; }).forEach(function (o) {
       var an = ((p.aleas || {})[o.id] || []).map(Number);
@@ -1171,14 +1232,6 @@
       }))]));
     });
     f.appendChild(el("h3", { texte: "Aléas tirés des fiches" }));
-    var inf = el("select", { id: "reg-inflation", "aria-label": "Scénario d'inflation" });
-    inf.appendChild(el("option", { value: "", texte: "Pas d'inflation" }));
-    Object.keys(M.SCENARIOS_INFLATION).forEach(function (k) { var x = M.SCENARIOS_INFLATION[k]; inf.appendChild(el("option", { value: k, texte: x.nom + " · −" + md(x.montant) + "/an" })); });
-    inf.value = (p.inflation && p.inflation.scenario) || "";
-    var infDeb = el("select", { id: "reg-inflation-debut", "aria-label": "À partir de" });
-    M.ANNEES.forEach(function (a) { infDeb.appendChild(el("option", { value: a, texte: "dès " + a })); });
-    infDeb.value = String((p.inflation && p.inflation.debut) || M.ANNEES[0]);
-    f.appendChild(el("div", { classe: "champ" }, [el("span", { texte: "Inflation (MEFR-03) : retirée du plafond de chaque année concernée" }), el("div", { classe: "env-ligne" }, [inf, infDeb])]));
     var balt = el("input", { type: "checkbox", id: "reg-baltique" }); balt.checked = !!p.aleaBaltique;
     f.appendChild(el("label", { for: "reg-baltique", classe: "case-cocher" }, [balt, " Aléa Baltique (COCA-03) : les Européens limitent leur participation, +30 % de besoin"]));
     var delai = el("select", { id: "reg-delai-retrait", "aria-label": "Délai de retrait" });
@@ -1222,14 +1275,20 @@
       var plaf = {}, aleas = {};
       var phaseChoisie = ph.value;
       var envOk = envs.filter(function (e) { return e.nom && e.nom.trim(); }).map(function (e) { return { id: e.id, role: e.role, nom: e.nom.trim(), montant: Math.max(0, Number(e.montant) || 0), pion: e.pion || null }; });
-      M.ANNEES.forEach(function (a) { plaf[a] = Math.max(0, Number($("plafond-" + a).value) || 0); });
+      var inflA = {}, carbA = {};
+      M.ANNEES.forEach(function (a) {
+        plaf[a] = Math.max(0, Math.round(10 * (Number($("plafond-" + a).value) || 0)));
+        var i = Math.max(0, Number($("inflation-" + a).value) || 0), c = Math.max(0, Number($("carburants-" + a).value) || 0);
+        if (i) inflA[a] = i; if (c) carbA[a] = c;
+      });
+      var conquetes = conqs.map(function (c) { return { id: c.id, nom: c.nom, montant: c.montant, annees: M.ANNEES.filter(function (a) { var cb = tb.querySelector('input[data-conquete="' + c.id + '"][data-annee="' + a + '"]'); return cb && cb.checked; }) }; });
       f.querySelectorAll("input[type=checkbox][data-pion]").forEach(function (cb) {
         var id = cb.getAttribute("data-pion"); aleas[id] = aleas[id] || [];
         if (cb.checked) aleas[id].push(Number(cb.getAttribute("data-annee")));
       });
-      var inflation = inf.value ? { scenario: inf.value, debut: Number(infDeb.value) } : null;
       var aleaB = balt.checked, delaiR = Number(delai.value);
-      modifierParams(function (pp) { pp.plafonds = plaf; pp.aleas = aleas; pp.phase = phaseChoisie; pp.enveloppes = envOk; pp.inflation = inflation; pp.aleaBaltique = aleaB; pp.delaiRetrait = delaiR; }).then(function () { toast("Réglages enregistrés"); });
+      // L'inflation saisie année par année remplace un éventuel scénario global ; une grille vide n'en garde aucune.
+      modifierParams(function (pp) { pp.plafonds = plaf; pp.aleas = aleas; pp.phase = phaseChoisie; pp.enveloppes = envOk; pp.inflationAnnees = Object.keys(inflA).length ? inflA : { aucune: 0 }; pp.inflation = null; pp.carburants = carbA; pp.conquetes = conquetes; pp.aleaBaltique = aleaB; pp.delaiRetrait = delaiR; }).then(function () { toast("Réglages enregistrés"); });
     });
     v.appendChild(f);
   }

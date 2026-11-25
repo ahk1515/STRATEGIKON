@@ -1,0 +1,428 @@
+{
+ "format": "strategikon-modele-partie",
+ "version": 1,
+ "partie": "GIA56",
+ "source": "Relevé de la table 2032 de la maquette du 25/11/2026 (8 photos), base_pions_2032",
+ "total_attendu_2032": 59900,
+ "lignes": [
+  {
+   "id": "gia56-p19-100",
+   "role": "EMAT",
+   "type": "ajout",
+   "pion": "P19",
+   "niveau": 100,
+   "qte": 1,
+   "justification": "Relevé de la table 2032 (GIA56) : 2e Socle Terre"
+  },
+  {
+   "id": "gia56-p32-100",
+   "role": "EMAAE",
+   "type": "ajout",
+   "pion": "P32",
+   "niveau": 100,
+   "qte": 2,
+   "justification": "Relevé de la table 2032 (GIA56) : 2 Socle Air de plus"
+  },
+  {
+   "id": "gia56-p33-100",
+   "role": "EMAAE",
+   "type": "ajout",
+   "pion": "P33",
+   "niveau": 100,
+   "qte": 1,
+   "justification": "Relevé de la table 2032 (GIA56) : 1 Rafale de plus"
+  },
+  {
+   "id": "gia56-p34-50",
+   "role": "EMM",
+   "type": "ajout",
+   "pion": "P34",
+   "niveau": 50,
+   "qte": 1,
+   "justification": "Relevé de la table 2032 (GIA56) : 2e SNA, face rouge"
+  },
+  {
+   "id": "gia56-p36-100",
+   "role": "EMM",
+   "type": "ajout",
+   "pion": "P36",
+   "niveau": 100,
+   "qte": 3,
+   "justification": "Relevé de la table 2032 (GIA56) : 3 souveraineté et surveillance de plus"
+  },
+  {
+   "id": "gia56-p35-100",
+   "role": "EMM",
+   "type": "ajout",
+   "pion": "P35",
+   "niveau": 100,
+   "qte": 2,
+   "justification": "Relevé de la table 2032 (GIA56) : 2 hélicoptères manœuvre et assaut de plus"
+  },
+  {
+   "id": "gia56-p37-100",
+   "role": "EMM",
+   "type": "ajout",
+   "pion": "P37",
+   "niveau": 100,
+   "qte": 5,
+   "justification": "Relevé de la table 2032 (GIA56) : 5 drones maritimes de plus"
+  },
+  {
+   "id": "gia56-p39-100",
+   "role": "EMM",
+   "type": "ajout",
+   "pion": "P39",
+   "niveau": 100,
+   "qte": 2,
+   "justification": "Relevé de la table 2032 (GIA56) : 2 Atlantique 2 de plus, face bleue"
+  },
+  {
+   "id": "gia56-p39-50",
+   "role": "EMM",
+   "type": "ajout",
+   "pion": "P39",
+   "niveau": 50,
+   "qte": 5,
+   "justification": "Relevé de la table 2032 (GIA56) : 5 Atlantique 2 de plus, face rouge"
+  },
+  {
+   "id": "gia56-p40-50",
+   "role": "EMM",
+   "type": "ajout",
+   "pion": "P40",
+   "niveau": 50,
+   "qte": 2,
+   "justification": "Relevé de la table 2032 (GIA56) : 2 FREMM/FDA de plus, face rouge"
+  },
+  {
+   "id": "gia56-p42-100",
+   "role": "EMM",
+   "type": "ajout",
+   "pion": "P42",
+   "niveau": 100,
+   "qte": 3,
+   "justification": "Relevé de la table 2032 (GIA56) : 3 FDI de plus"
+  },
+  {
+   "id": "gia56-p43-50",
+   "role": "EMM",
+   "type": "ajout",
+   "pion": "P43",
+   "niveau": 50,
+   "qte": 5,
+   "justification": "Relevé de la table 2032 (GIA56) : 5 HIL de plus (dont 1 face rouge)"
+  },
+  {
+   "id": "gia56-p46-100",
+   "role": "EMM",
+   "type": "ajout",
+   "pion": "P46",
+   "niveau": 100,
+   "qte": 1,
+   "justification": "Relevé de la table 2032 (GIA56) : 1 ravitailleur de plus"
+  },
+  {
+   "id": "gia56-p49-50",
+   "role": "SC-Plans",
+   "type": "ajout",
+   "pion": "P49",
+   "niveau": 50,
+   "qte": 1,
+   "justification": "Relevé de la table 2032 (GIA56) : 2e Renseignement, face rouge"
+  },
+  {
+   "id": "gia56-p27-dorese",
+   "role": "EMAAE",
+   "type": "dorese",
+   "pion": "P27",
+   "qte": 1,
+   "justification": "Relevé de la table 2032 (GIA56) : A400M passé à 100 %"
+  },
+  {
+   "id": "gia56-dissuasion",
+   "role": "SC-Plans",
+   "type": "libre",
+   "libelle": "Dissuasion : 3 petits pions",
+   "cout_unitaire": 300,
+   "armee": "Interarmées",
+   "qte": 1,
+   "justification": "Relevé de la table 2032 (GIA56)"
+  },
+  {
+   "id": "gia56-carburants",
+   "role": "MEFR",
+   "type": "libre",
+   "libelle": "Surcoût carburants (5 pions)",
+   "cout_unitaire": 500,
+   "armee": "Interarmées",
+   "qte": 1,
+   "justification": "Relevé de la table 2032 (GIA56) : provision carburants"
+  },
+  {
+   "id": "gia56-sampt",
+   "role": "DGA",
+   "type": "libre",
+   "libelle": "Achat 1 système SAMP/T (1 radar, 1 C2, 3 lanceurs)",
+   "cout_unitaire": 400,
+   "armee": "Air et Espace",
+   "qte": 1,
+   "justification": "Relevé de la table 2032 (GIA56)"
+  },
+  {
+   "id": "gia56-sampt-dorese",
+   "role": "DGA",
+   "type": "libre",
+   "libelle": "DORESE SAMP/T (4 papiers)",
+   "cout_unitaire": 400,
+   "armee": "Air et Espace",
+   "qte": 1,
+   "justification": "Relevé de la table 2032 (GIA56)"
+  },
+  {
+   "id": "gia56-sead",
+   "role": "DGA",
+   "type": "libre",
+   "libelle": "Escadron SEAD Rafale F5 (avion + pod)",
+   "cout_unitaire": 300,
+   "armee": "Air et Espace",
+   "qte": 1,
+   "justification": "Relevé de la table 2032 (GIA56)"
+  },
+  {
+   "id": "gia56-sead-mun",
+   "role": "DGA",
+   "type": "libre",
+   "libelle": "Munitions SEAD",
+   "cout_unitaire": 100,
+   "armee": "Air et Espace",
+   "qte": 1,
+   "justification": "Relevé de la table 2032 (GIA56)"
+  },
+  {
+   "id": "gia56-sead-dorese",
+   "role": "DGA",
+   "type": "libre",
+   "libelle": "DORESE SEAD",
+   "cout_unitaire": 100,
+   "armee": "Air et Espace",
+   "qte": 1,
+   "justification": "Relevé de la table 2032 (GIA56)"
+  },
+  {
+   "id": "gia56-espace",
+   "role": "EMAAE",
+   "type": "libre",
+   "libelle": "Espace",
+   "cout_unitaire": 100,
+   "armee": "Air et Espace",
+   "qte": 1,
+   "justification": "Relevé de la table 2032 (GIA56)"
+  },
+  {
+   "id": "gia56-ia",
+   "role": "DGA",
+   "type": "libre",
+   "libelle": "IA militaire",
+   "cout_unitaire": 100,
+   "armee": "Interarmées",
+   "qte": 1,
+   "justification": "Relevé de la table 2032 (GIA56)"
+  },
+  {
+   "id": "gia56-invest",
+   "role": "DGA",
+   "type": "libre",
+   "libelle": "Investissement (2 pions €)",
+   "cout_unitaire": 200,
+   "armee": "Interarmées",
+   "qte": 1,
+   "justification": "Relevé de la table 2032 (GIA56)"
+  },
+  {
+   "id": "gia56-scaf",
+   "role": "DGA",
+   "type": "libre",
+   "libelle": "SCAF",
+   "cout_unitaire": 200,
+   "armee": "Air et Espace",
+   "qte": 1,
+   "justification": "Relevé de la table 2032 (GIA56) (soutien DGRIS / MEAE)"
+  },
+  {
+   "id": "gia56-wingmann",
+   "role": "DGA",
+   "type": "libre",
+   "libelle": "Achat 3 Wingmann (Loyal Wingmen)",
+   "cout_unitaire": 200,
+   "armee": "Air et Espace",
+   "qte": 1,
+   "justification": "Relevé de la table 2032 (GIA56)"
+  },
+  {
+   "id": "gia56-essaim",
+   "role": "DGA",
+   "type": "libre",
+   "libelle": "Programme essaim de drones FR (2 pions)",
+   "cout_unitaire": 400,
+   "armee": "Interarmées",
+   "qte": 1,
+   "justification": "Relevé de la table 2032 (GIA56)"
+  },
+  {
+   "id": "gia56-drone-terrestre",
+   "role": "DGA",
+   "type": "libre",
+   "libelle": "Programme drone terrestre FR",
+   "cout_unitaire": 200,
+   "armee": "Terre",
+   "qte": 1,
+   "justification": "Relevé de la table 2032 (GIA56)"
+  },
+  {
+   "id": "gia56-smv",
+   "role": "SGA",
+   "type": "libre",
+   "libelle": "SMV (papier)",
+   "cout_unitaire": 900,
+   "armee": "Interarmées",
+   "qte": 1,
+   "justification": "Relevé de la table 2032 (GIA56) : le figuratif 5x5 porte désormais la division de réserve"
+  },
+  {
+   "id": "gia56-roumanie",
+   "role": "DGRIS",
+   "type": "libre",
+   "libelle": "DGRIS Roumanie",
+   "cout_unitaire": 200,
+   "armee": "Interarmées",
+   "qte": 1,
+   "justification": "Relevé de la table 2032 (GIA56)"
+  },
+  {
+   "id": "gia56-djibouti",
+   "role": "DGRIS",
+   "type": "libre",
+   "libelle": "DGRIS Djibouti",
+   "cout_unitaire": 100,
+   "armee": "Interarmées",
+   "qte": 1,
+   "justification": "Relevé de la table 2032 (GIA56)"
+  },
+  {
+   "id": "gia56-pologne",
+   "role": "DGRIS",
+   "type": "libre",
+   "libelle": "DGRIS Hub Pologne",
+   "cout_unitaire": 300,
+   "armee": "Interarmées",
+   "qte": 1,
+   "justification": "Relevé de la table 2032 (GIA56)"
+  },
+  {
+   "id": "gia56-indopacifique",
+   "role": "DGRIS",
+   "type": "libre",
+   "libelle": "DGRIS Indo-Pacifique",
+   "cout_unitaire": 200,
+   "armee": "Interarmées",
+   "qte": 1,
+   "justification": "Relevé de la table 2032 (GIA56)"
+  },
+  {
+   "id": "gia56-baltique",
+   "role": "DGRIS",
+   "type": "libre",
+   "libelle": "DGRIS Baltique",
+   "cout_unitaire": 100,
+   "armee": "Interarmées",
+   "qte": 1,
+   "justification": "Relevé de la table 2032 (GIA56)"
+  },
+  {
+   "id": "gia56-jeunesse",
+   "role": "SGA",
+   "type": "libre",
+   "libelle": "Lien Armées – Jeunesse",
+   "cout_unitaire": 400,
+   "armee": "Interarmées",
+   "qte": 1,
+   "justification": "Relevé de la table 2032 (GIA56)"
+  },
+  {
+   "id": "gia56-renf-fs",
+   "role": "EMAT",
+   "type": "libre",
+   "libelle": "Renforcement forces spéciales (Renf FS)",
+   "cout_unitaire": 200,
+   "armee": "Terre",
+   "qte": 1,
+   "justification": "Relevé de la table 2032 (GIA56)"
+  },
+  {
+   "id": "gia56-a400m",
+   "role": "EMAAE",
+   "type": "libre",
+   "libelle": "A400M supplémentaire (avec DORESE)",
+   "cout_unitaire": 100,
+   "armee": "Air et Espace",
+   "qte": 1,
+   "justification": "Relevé de la table 2032 (GIA56)"
+  },
+  {
+   "id": "gia56-bart",
+   "role": "EMAT",
+   "type": "libre",
+   "libelle": "BART (brigade d'artillerie)",
+   "cout_unitaire": 600,
+   "armee": "Terre",
+   "qte": 1,
+   "justification": "Relevé de la table 2032 (GIA56)",
+   "dorese": {
+    "ao": 1,
+    "mco": 1,
+    "rh": 1
+   }
+  },
+  {
+   "id": "gia56-bgen",
+   "role": "EMAT",
+   "type": "libre",
+   "libelle": "BGEN (brigade du génie)",
+   "cout_unitaire": 600,
+   "armee": "Terre",
+   "qte": 1,
+   "justification": "Relevé de la table 2032 (GIA56)",
+   "dorese": {
+    "ao": 1,
+    "mco": 1,
+    "rh": 1
+   }
+  },
+  {
+   "id": "gia56-infra-marine",
+   "role": "EMM",
+   "type": "libre",
+   "libelle": "Infrastructures Marine (2 pions bleus)",
+   "cout_unitaire": 200,
+   "armee": "Marine",
+   "qte": 1,
+   "justification": "Relevé de la table 2032 (GIA56)"
+  }
+ ],
+ "statut": "retenu",
+ "conquetes": [
+  {
+   "id": "guerre",
+   "nom": "C'est la guerre",
+   "montant": 8600,
+   "annees": []
+  },
+  {
+   "id": "paix",
+   "nom": "C'est pas la guerre",
+   "montant": 3100,
+   "annees": []
+  }
+ ]
+}

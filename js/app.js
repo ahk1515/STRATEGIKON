@@ -1714,6 +1714,60 @@
       el("button", { type: "button", classe: "btn-contour", texte: "CSV (tableur)", onclick: function () { telecharger(nomFichier(type, "csv"), "﻿" + M.echangeEnCsv(exporter(type)), "text/csv;charset=utf-8"); } })
     ]);
   }
+  // Modèle 2032 préparé hors de l'outil pour CETTE partie (ex. relevé de table) : on l'écrit au modèle 2032.
+  var MODELE_PARTIE = null;
+  function memeNom(a, b) { return String(a || "").trim().toLowerCase() === String(b || "").trim().toLowerCase(); }
+  function blocModelePartie() {
+    var bloc = el("section", { classe: "bloc-conception", id: "bloc-modele-partie" }, [el("h3", { texte: "Charger un modèle 2032 préparé pour cette partie" }),
+      el("p", { classe: "aide", texte: "Pour un fichier « modèle 2032 » préparé pour une partie précise (par exemple le relevé d'une table). Ses lignes sont posées au modèle 2032, retenues, et rien de ce que les joueurs ont déjà posé n'est retiré. Le fichier n'est accepté que dans la partie dont il porte le nom." })]);
+    var fichier = el("input", { type: "file", accept: ".json,application/json", "aria-label": "Modèle 2032 de la partie (JSON)", id: "fichier-modele-partie" });
+    var err = el("p", { classe: "erreur" });
+    var apercu = el("div");
+    bloc.appendChild(el("label", { classe: "champ" }, ["Fichier JSON", fichier]));
+    bloc.appendChild(err); bloc.appendChild(apercu);
+    fichier.addEventListener("change", function () {
+      var f = fichier.files && fichier.files[0];
+      err.textContent = ""; apercu.innerHTML = ""; MODELE_PARTIE = null;
+      if (!f) return;
+      f.text().then(function (t) {
+        var m = M.lireModelePartie(t, PIONS);
+        if (!memeNom(m.partie, etat.partie.nom)) throw new Error("Ce modèle est prévu pour la partie « " + m.partie + " », pas pour « " + etat.partie.nom + " ». Rien n'a été chargé.");
+        MODELE_PARTIE = m;
+        afficherApercu(apercu, m);
+      }).catch(function (e) { err.textContent = e.message; });
+    });
+    return bloc;
+  }
+  function afficherApercu(boite, m) {
+    var p = JSON.parse(JSON.stringify(params()));
+    M.appliquerModeleParams(p, m);
+    var ids = {}; m.lignes.forEach(function (l) { ids[l.id] = true; });
+    var deja = etat.lignes.filter(function (l) { return ids[l.id]; }).length;
+    var autres = etat.lignes.filter(function (l) { return !ids[l.id]; });
+    var fin = M.ANNEES[M.ANNEES.length - 1];
+    var avant = M.synthese(PIONS, M.lignesApresArbitrage(M.lignesEnTrajectoire(etat.lignes, params()), params()), params())[fin].total;
+    var apres = M.synthese(PIONS, M.lignesApresArbitrage(M.lignesEnTrajectoire(autres.concat(m.lignes), p), p), p)[fin].total;
+    var parRole = {};
+    m.lignes.forEach(function (l) { parRole[l.role] = (parRole[l.role] || 0) + 1; });
+    boite.appendChild(el("p", { classe: "aide", texte: m.lignes.length + " ligne(s) pour " + m.partie + " : " + Object.keys(parRole).map(function (r) { return r + " " + parRole[r]; }).join(", ") + "." }));
+    boite.appendChild(el("p", { classe: "aide", texte: "Table " + fin + " : " + n1(avant) + " Md€ aujourd'hui, " + n1(apres) + " Md€ après chargement" + (m.total_attendu ? " (relevé de la table : " + n1(m.total_attendu) + " Md€)." : ".") }));
+    if (deja) boite.appendChild(el("p", { classe: "aide", texte: "Ce modèle a déjà été chargé (" + deja + " ligne(s) présentes) : recharger remet ces lignes telles que dans le fichier." }));
+    if (m.conquetes.length && !(params().conquetes || []).length) boite.appendChild(el("p", { classe: "aide", texte: "Plateaux hors table à conquérir : " + m.conquetes.map(function (c) { return c.nom + " (" + n1(c.montant) + " Md€)"; }).join(", ") + "." }));
+    var btn = el("button", { type: "button", classe: "btn-laiton", id: "charger-modele-partie", texte: (deja ? "Recharger" : "Charger") + " dans " + etat.partie.nom });
+    btn.addEventListener("click", function () { btn.disabled = true; chargerModelePartie(m, btn); });
+    boite.appendChild(btn);
+  }
+  function chargerModelePartie(m, btn) {
+    var nom = etat.partie.nom, mdp = etat.mdp, k = 0;
+    var suite = Promise.resolve();
+    m.lignes.forEach(function (l) {
+      suite = suite.then(function () { return S.ecrireLigne(nom, mdp, l); }).then(function () { k++; btn.textContent = "Chargement " + k + " / " + m.lignes.length; });
+    });
+    return suite.then(function () { return modifierParams(function (pp) { M.appliquerModeleParams(pp, m); }); })
+      .then(function () { return recharger(true); })
+      .then(function () { MODELE_PARTIE = null; toast(m.lignes.length + " lignes du modèle 2032 chargées dans " + nom); rendreVolet(); })
+      .catch(function (e) { btn.disabled = false; btn.textContent = "Réessayer"; toast("Chargement interrompu (" + k + " / " + m.lignes.length + ") : " + e.message); });
+  }
   function voletEchanges(v) {
     var p = params();
     v.appendChild(el("h2", { classe: "volet-titre", texte: "Échanges et comparaison" }));
@@ -1726,6 +1780,7 @@
     v.appendChild(el("section", { classe: "bloc-conception" }, [el("h3", { texte: "2 · Trajectoire des joueurs" }),
       el("p", { classe: "aide", texte: "Les années 2027 à 2032 telles que les joueurs les ont construites : " + places + " ligne(s) du modèle placée(s) sur la trajectoire, plus les autres demandes, année par année." }),
       boutonsExport("trajectoire")]));
+    v.appendChild(blocModelePartie());
     var ref = chargerReference();
     var fichier = el("input", { type: "file", accept: ".json,application/json", "aria-label": "Trajectoire de référence (JSON)" });
     var err = el("p", { classe: "erreur" });

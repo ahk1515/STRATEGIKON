@@ -7163,14 +7163,15 @@ window.STRAT_CONTRAINTES_ROLES = [
     energie: { nom: "Choc énergétique", montant: 2800 },
     otan_russie: { nom: "Guerre OTAN-Russie", montant: 4900 }
   };
-  // Plateaux hors table à conquérir (relevé de la table 2032) : budget en plus, année par année.
-  var CONQUETES_DEFAUT = [
+  // Plateaux hors table à conquérir : propres à chaque partie (params.conquetes), aucun par défaut.
+  // Relevé de la table 2032 de la maquette du 25/11, proposé à l'animateur comme point de départ.
+  var CONQUETES_RELEVE_2032 = [
     { id: "guerre", nom: "C'est la guerre", montant: 8600 },
     { id: "paix", nom: "C'est pas la guerre", montant: 3100 }
   ];
   function conquetesDe(params) {
     var c = (params || {}).conquetes;
-    return (c && c.length ? c : CONQUETES_DEFAUT).map(function (x) { return { id: x.id, nom: x.nom, montant: Number(x.montant) || 0, annees: (x.annees || []).map(Number) }; });
+    return (c || []).map(function (x) { return { id: x.id, nom: x.nom, montant: Number(x.montant) || 0, annees: (x.annees || []).map(Number) }; });
   }
   function conquisDe(params, annee) {
     return conquetesDe(params).reduce(function (t, x) { return t + (x.annees.indexOf(annee) !== -1 ? x.montant : 0); }, 0);
@@ -8362,6 +8363,50 @@ window.STRAT_CONTRAINTES_ROLES = [
       alertes_globales: al.filter(function (x) { return !x.ligne; })
     };
   }
+  // Modèle 2032 préparé pour une partie précise (format « strategikon-modele-partie ») :
+  // renvoie les lignes prêtes à écrire (au modèle 2032) et ce qu'il faut ajouter aux paramètres.
+  var FORMAT_MODELE_PARTIE = "strategikon-modele-partie";
+  function lireModelePartie(texte, pions) {
+    var o = typeof texte === "string" ? JSON.parse(texte) : texte;
+    if (!o || o.format !== FORMAT_MODELE_PARTIE || !Array.isArray(o.lignes)) throw new Error("Ce fichier n'est pas un modèle 2032 de partie STRATEGIKON.");
+    var idx = indexPions(pions || []);
+    var fin = ANNEES[ANNEES.length - 1];
+    var roles = ROLES.map(function (r) { return r.code; });
+    var arbitrages = {}, validations = {};
+    var lignes = o.lignes.map(function (x, k) {
+      if (!x.id || !x.role || !x.type) throw new Error("Ligne " + (k + 1) + " incomplète.");
+      if (roles.indexOf(x.role) === -1) throw new Error("Ligne " + x.id + " : rôle inconnu (" + x.role + ").");
+      if (x.type !== "libre" && !idx[x.pion]) throw new Error("Ligne " + x.id + " : pion inconnu (" + x.pion + ").");
+      var l = { id: x.id, role: x.role, type: x.type, cible: true, qte: {}, justification: x.justification || "", cree_le: "2026-11-25T00:00:" + String(k).padStart(2, "0") + ".000Z", modele_partie: o.partie || null };
+      ANNEES.forEach(function (a) { l.qte[a] = 0; });
+      l.qte[fin] = Math.max(1, Number(x.qte) || 1);
+      if (x.type === "libre") {
+        l.modele = null; l.source = null;
+        l.libelle = x.libelle || "";
+        l.armee = x.armee || "Interarmées";
+        l.cout_unitaire = arrondiCase(Number(x.cout_unitaire) || 0);
+        l.dorese = { ao: (x.dorese || {}).ao || 0, mco: (x.dorese || {}).mco || 0, rh: (x.dorese || {}).rh || 0 };
+        validations[x.id] = true;
+      } else {
+        l.pion = x.pion;
+        if (x.type === "ajout") l.niveau = Number(x.niveau) === 50 ? 50 : 100;
+        l.armee = x.armee || idx[x.pion].armee;
+      }
+      arbitrages[x.id] = { statut: x.statut || o.statut || "retenu", decalage: 0 };
+      return l;
+    });
+    return { partie: o.partie || "", lignes: lignes, arbitrages: arbitrages, validations: validations,
+      conquetes: Array.isArray(o.conquetes) ? o.conquetes : [], total_attendu: o.total_attendu_2032 || null };
+  }
+  // Charge le modèle dans les paramètres d'une partie (sans rien retirer de ce qui y est déjà).
+  function appliquerModeleParams(params, modele) {
+    params.arbitrages = params.arbitrages || {};
+    params.validations = params.validations || {};
+    Object.keys(modele.arbitrages).forEach(function (id) { params.arbitrages[id] = modele.arbitrages[id]; });
+    Object.keys(modele.validations).forEach(function (id) { params.validations[id] = modele.validations[id]; });
+    if (modele.conquetes.length && !(params.conquetes || []).length) params.conquetes = JSON.parse(JSON.stringify(modele.conquetes));
+    return params;
+  }
   function lireEchange(texte) {
     var o = typeof texte === "string" ? JSON.parse(texte) : texte;
     if (!o || o.format !== FORMAT_ECHANGE || !Array.isArray(o.lignes)) throw new Error("Ce fichier n'est pas un export STRATEGIKON.");
@@ -8487,11 +8532,14 @@ window.STRAT_CONTRAINTES_ROLES = [
     FORMAT_ECHANGE: FORMAT_ECHANGE,
     exporterPartie: exporterPartie,
     lireEchange: lireEchange,
+    FORMAT_MODELE_PARTIE: FORMAT_MODELE_PARTIE,
+    lireModelePartie: lireModelePartie,
+    appliquerModeleParams: appliquerModeleParams,
     comparerTrajectoires: comparerTrajectoires,
     echangeEnCsv: echangeEnCsv,
     miseEnService: miseEnService,
     SCENARIOS_INFLATION: SCENARIOS_INFLATION,
-    CONQUETES_DEFAUT: CONQUETES_DEFAUT,
+    CONQUETES_RELEVE_2032: CONQUETES_RELEVE_2032,
     conquetesDe: conquetesDe,
     conquisDe: conquisDe,
     carburantsDe: carburantsDe,
@@ -9959,6 +10007,24 @@ window.STRAT_CONTRAINTES_ROLES = [
     tb.addEventListener("input", majEffectifs);
     tb.addEventListener("change", majEffectifs);
     f.appendChild(tb);
+    // Plateaux à conquérir de cette partie : enregistrés tout de suite (ils changent les colonnes du tableau).
+    f.appendChild(el("h3", { texte: "Plateaux hors table à conquérir (cette partie)" }));
+    var boiteC = el("div", { classe: "enveloppes-reglage" });
+    conqs.forEach(function (c) {
+      var nomC = el("input", { value: c.nom, "aria-label": "Nom du plateau", maxlength: 40 });
+      var mtC = el("input", { type: "number", min: 0, step: 100, value: c.montant, "aria-label": "Budget du plateau en M€" });
+      function sauverC() { modifierParams(function (pp) { (pp.conquetes || []).forEach(function (x) { if (x.id === c.id) { x.nom = nomC.value.trim() || x.nom; x.montant = Math.max(0, Number(mtC.value) || 0); } }); }); }
+      nomC.addEventListener("change", sauverC); mtC.addEventListener("change", sauverC);
+      boiteC.appendChild(el("div", { classe: "env-ligne" }, [nomC, mtC, el("button", { type: "button", classe: "btn-lien", texte: "Retirer", onclick: function () { modifierParams(function (pp) { pp.conquetes = (pp.conquetes || []).filter(function (x) { return x.id !== c.id; }); }); } })]));
+    });
+    if (!conqs.length) boiteC.appendChild(el("p", { classe: "vide", texte: "Aucun plateau à conquérir dans cette partie." }));
+    boiteC.appendChild(el("button", { type: "button", classe: "btn-contour", texte: "Ajouter un plateau", onclick: function () {
+      modifierParams(function (pp) { pp.conquetes = pp.conquetes || []; pp.conquetes.push({ id: "cq-" + Date.now().toString(36), nom: "Nouveau plateau", montant: 1000, annees: [] }); });
+    } }));
+    if (!conqs.length) boiteC.appendChild(el("button", { type: "button", classe: "btn-lien", texte: "Reprendre le relevé de la table 2032 (C'est la guerre 8,6 Md€, C'est pas la guerre 3,1 Md€)", onclick: function () {
+      modifierParams(function (pp) { pp.conquetes = M.CONQUETES_RELEVE_2032.map(function (x) { return { id: x.id, nom: x.nom, montant: x.montant, annees: [] }; }); });
+    } }));
+    f.appendChild(boiteC);
     var presets = el("div", { classe: "presets" }, [el("small", { texte: "Inflation MEFR-03 dès" })]);
     var dPreset = el("select", { "aria-label": "Inflation à partir de" });
     M.ANNEES.forEach(function (a) { dPreset.appendChild(el("option", { value: a, texte: String(a) })); });
@@ -10446,6 +10512,60 @@ window.STRAT_CONTRAINTES_ROLES = [
       el("button", { type: "button", classe: "btn-contour", texte: "CSV (tableur)", onclick: function () { telecharger(nomFichier(type, "csv"), "﻿" + M.echangeEnCsv(exporter(type)), "text/csv;charset=utf-8"); } })
     ]);
   }
+  // Modèle 2032 préparé hors de l'outil pour CETTE partie (ex. relevé de table) : on l'écrit au modèle 2032.
+  var MODELE_PARTIE = null;
+  function memeNom(a, b) { return String(a || "").trim().toLowerCase() === String(b || "").trim().toLowerCase(); }
+  function blocModelePartie() {
+    var bloc = el("section", { classe: "bloc-conception", id: "bloc-modele-partie" }, [el("h3", { texte: "Charger un modèle 2032 préparé pour cette partie" }),
+      el("p", { classe: "aide", texte: "Pour un fichier « modèle 2032 » préparé pour une partie précise (par exemple le relevé d'une table). Ses lignes sont posées au modèle 2032, retenues, et rien de ce que les joueurs ont déjà posé n'est retiré. Le fichier n'est accepté que dans la partie dont il porte le nom." })]);
+    var fichier = el("input", { type: "file", accept: ".json,application/json", "aria-label": "Modèle 2032 de la partie (JSON)", id: "fichier-modele-partie" });
+    var err = el("p", { classe: "erreur" });
+    var apercu = el("div");
+    bloc.appendChild(el("label", { classe: "champ" }, ["Fichier JSON", fichier]));
+    bloc.appendChild(err); bloc.appendChild(apercu);
+    fichier.addEventListener("change", function () {
+      var f = fichier.files && fichier.files[0];
+      err.textContent = ""; apercu.innerHTML = ""; MODELE_PARTIE = null;
+      if (!f) return;
+      f.text().then(function (t) {
+        var m = M.lireModelePartie(t, PIONS);
+        if (!memeNom(m.partie, etat.partie.nom)) throw new Error("Ce modèle est prévu pour la partie « " + m.partie + " », pas pour « " + etat.partie.nom + " ». Rien n'a été chargé.");
+        MODELE_PARTIE = m;
+        afficherApercu(apercu, m);
+      }).catch(function (e) { err.textContent = e.message; });
+    });
+    return bloc;
+  }
+  function afficherApercu(boite, m) {
+    var p = JSON.parse(JSON.stringify(params()));
+    M.appliquerModeleParams(p, m);
+    var ids = {}; m.lignes.forEach(function (l) { ids[l.id] = true; });
+    var deja = etat.lignes.filter(function (l) { return ids[l.id]; }).length;
+    var autres = etat.lignes.filter(function (l) { return !ids[l.id]; });
+    var fin = M.ANNEES[M.ANNEES.length - 1];
+    var avant = M.synthese(PIONS, M.lignesApresArbitrage(M.lignesEnTrajectoire(etat.lignes, params()), params()), params())[fin].total;
+    var apres = M.synthese(PIONS, M.lignesApresArbitrage(M.lignesEnTrajectoire(autres.concat(m.lignes), p), p), p)[fin].total;
+    var parRole = {};
+    m.lignes.forEach(function (l) { parRole[l.role] = (parRole[l.role] || 0) + 1; });
+    boite.appendChild(el("p", { classe: "aide", texte: m.lignes.length + " ligne(s) pour " + m.partie + " : " + Object.keys(parRole).map(function (r) { return r + " " + parRole[r]; }).join(", ") + "." }));
+    boite.appendChild(el("p", { classe: "aide", texte: "Table " + fin + " : " + n1(avant) + " Md€ aujourd'hui, " + n1(apres) + " Md€ après chargement" + (m.total_attendu ? " (relevé de la table : " + n1(m.total_attendu) + " Md€)." : ".") }));
+    if (deja) boite.appendChild(el("p", { classe: "aide", texte: "Ce modèle a déjà été chargé (" + deja + " ligne(s) présentes) : recharger remet ces lignes telles que dans le fichier." }));
+    if (m.conquetes.length && !(params().conquetes || []).length) boite.appendChild(el("p", { classe: "aide", texte: "Plateaux hors table à conquérir : " + m.conquetes.map(function (c) { return c.nom + " (" + n1(c.montant) + " Md€)"; }).join(", ") + "." }));
+    var btn = el("button", { type: "button", classe: "btn-laiton", id: "charger-modele-partie", texte: (deja ? "Recharger" : "Charger") + " dans " + etat.partie.nom });
+    btn.addEventListener("click", function () { btn.disabled = true; chargerModelePartie(m, btn); });
+    boite.appendChild(btn);
+  }
+  function chargerModelePartie(m, btn) {
+    var nom = etat.partie.nom, mdp = etat.mdp, k = 0;
+    var suite = Promise.resolve();
+    m.lignes.forEach(function (l) {
+      suite = suite.then(function () { return S.ecrireLigne(nom, mdp, l); }).then(function () { k++; btn.textContent = "Chargement " + k + " / " + m.lignes.length; });
+    });
+    return suite.then(function () { return modifierParams(function (pp) { M.appliquerModeleParams(pp, m); }); })
+      .then(function () { return recharger(true); })
+      .then(function () { MODELE_PARTIE = null; toast(m.lignes.length + " lignes du modèle 2032 chargées dans " + nom); rendreVolet(); })
+      .catch(function (e) { btn.disabled = false; btn.textContent = "Réessayer"; toast("Chargement interrompu (" + k + " / " + m.lignes.length + ") : " + e.message); });
+  }
   function voletEchanges(v) {
     var p = params();
     v.appendChild(el("h2", { classe: "volet-titre", texte: "Échanges et comparaison" }));
@@ -10458,6 +10578,7 @@ window.STRAT_CONTRAINTES_ROLES = [
     v.appendChild(el("section", { classe: "bloc-conception" }, [el("h3", { texte: "2 · Trajectoire des joueurs" }),
       el("p", { classe: "aide", texte: "Les années 2027 à 2032 telles que les joueurs les ont construites : " + places + " ligne(s) du modèle placée(s) sur la trajectoire, plus les autres demandes, année par année." }),
       boutonsExport("trajectoire")]));
+    v.appendChild(blocModelePartie());
     var ref = chargerReference();
     var fichier = el("input", { type: "file", accept: ".json,application/json", "aria-label": "Trajectoire de référence (JSON)" });
     var err = el("p", { classe: "erreur" });

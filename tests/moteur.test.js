@@ -443,3 +443,17 @@ test("table en paquets : un bloc par entité, sans chevauchement, chaque pion da
   assert.ok(t.cellules.filter((x) => x.ligne === "d").every((x) => dans(x, "DGA")));
   assert.ok(t.cellules.filter((x) => x.ligne === "i").every((x) => dans(x, "International")));
 });
+
+test("modèle 2032 préparé pour GIA56 : 41 lignes retenues, table 2032 à 60 Md€, rien avant 2032", () => {
+  const m = M.lireModelePartie(fs.readFileSync(path.join(__dirname, "../docs/donnees/modele-2032-GIA56.json"), "utf8"), PIONS);
+  assert.strictEqual(m.partie, "GIA56");
+  assert.strictEqual(m.lignes.length, 41);
+  m.lignes.forEach((l) => { assert.ok(l.cible); assert.strictEqual(m.arbitrages[l.id].statut, "retenu"); });
+  const p = M.appliquerModeleParams(M.parametresParDefaut(), m);
+  const s = M.synthese(PIONS, M.lignesApresArbitrage(M.lignesEnTrajectoire(m.lignes, p), p), p);
+  assert.strictEqual(s[2032].total, 60000);
+  assert.strictEqual(s[2031].total, 39900);
+  assert.strictEqual(p.conquetes.length, 2);
+  assert.throws(() => M.lireModelePartie({ format: "autre", lignes: [] }, PIONS));
+  assert.throws(() => M.lireModelePartie({ format: M.FORMAT_MODELE_PARTIE, lignes: [{ id: "x", role: "EMAT", type: "ajout", pion: "P999" }] }, PIONS));
+});

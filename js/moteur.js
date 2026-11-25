@@ -1255,6 +1255,50 @@
       alertes_globales: al.filter(function (x) { return !x.ligne; })
     };
   }
+  // Modèle 2032 préparé pour une partie précise (format « strategikon-modele-partie ») :
+  // renvoie les lignes prêtes à écrire (au modèle 2032) et ce qu'il faut ajouter aux paramètres.
+  var FORMAT_MODELE_PARTIE = "strategikon-modele-partie";
+  function lireModelePartie(texte, pions) {
+    var o = typeof texte === "string" ? JSON.parse(texte) : texte;
+    if (!o || o.format !== FORMAT_MODELE_PARTIE || !Array.isArray(o.lignes)) throw new Error("Ce fichier n'est pas un modèle 2032 de partie STRATEGIKON.");
+    var idx = indexPions(pions || []);
+    var fin = ANNEES[ANNEES.length - 1];
+    var roles = ROLES.map(function (r) { return r.code; });
+    var arbitrages = {}, validations = {};
+    var lignes = o.lignes.map(function (x, k) {
+      if (!x.id || !x.role || !x.type) throw new Error("Ligne " + (k + 1) + " incomplète.");
+      if (roles.indexOf(x.role) === -1) throw new Error("Ligne " + x.id + " : rôle inconnu (" + x.role + ").");
+      if (x.type !== "libre" && !idx[x.pion]) throw new Error("Ligne " + x.id + " : pion inconnu (" + x.pion + ").");
+      var l = { id: x.id, role: x.role, type: x.type, cible: true, qte: {}, justification: x.justification || "", cree_le: "2026-11-25T00:00:" + String(k).padStart(2, "0") + ".000Z", modele_partie: o.partie || null };
+      ANNEES.forEach(function (a) { l.qte[a] = 0; });
+      l.qte[fin] = Math.max(1, Number(x.qte) || 1);
+      if (x.type === "libre") {
+        l.modele = null; l.source = null;
+        l.libelle = x.libelle || "";
+        l.armee = x.armee || "Interarmées";
+        l.cout_unitaire = arrondiCase(Number(x.cout_unitaire) || 0);
+        l.dorese = { ao: (x.dorese || {}).ao || 0, mco: (x.dorese || {}).mco || 0, rh: (x.dorese || {}).rh || 0 };
+        validations[x.id] = true;
+      } else {
+        l.pion = x.pion;
+        if (x.type === "ajout") l.niveau = Number(x.niveau) === 50 ? 50 : 100;
+        l.armee = x.armee || idx[x.pion].armee;
+      }
+      arbitrages[x.id] = { statut: x.statut || o.statut || "retenu", decalage: 0 };
+      return l;
+    });
+    return { partie: o.partie || "", lignes: lignes, arbitrages: arbitrages, validations: validations,
+      conquetes: Array.isArray(o.conquetes) ? o.conquetes : [], total_attendu: o.total_attendu_2032 || null };
+  }
+  // Charge le modèle dans les paramètres d'une partie (sans rien retirer de ce qui y est déjà).
+  function appliquerModeleParams(params, modele) {
+    params.arbitrages = params.arbitrages || {};
+    params.validations = params.validations || {};
+    Object.keys(modele.arbitrages).forEach(function (id) { params.arbitrages[id] = modele.arbitrages[id]; });
+    Object.keys(modele.validations).forEach(function (id) { params.validations[id] = modele.validations[id]; });
+    if (modele.conquetes.length && !(params.conquetes || []).length) params.conquetes = JSON.parse(JSON.stringify(modele.conquetes));
+    return params;
+  }
   function lireEchange(texte) {
     var o = typeof texte === "string" ? JSON.parse(texte) : texte;
     if (!o || o.format !== FORMAT_ECHANGE || !Array.isArray(o.lignes)) throw new Error("Ce fichier n'est pas un export STRATEGIKON.");
@@ -1380,6 +1424,9 @@
     FORMAT_ECHANGE: FORMAT_ECHANGE,
     exporterPartie: exporterPartie,
     lireEchange: lireEchange,
+    FORMAT_MODELE_PARTIE: FORMAT_MODELE_PARTIE,
+    lireModelePartie: lireModelePartie,
+    appliquerModeleParams: appliquerModeleParams,
     comparerTrajectoires: comparerTrajectoires,
     echangeEnCsv: echangeEnCsv,
     miseEnService: miseEnService,

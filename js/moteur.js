@@ -1119,6 +1119,47 @@
       return c;
     });
   }
+  // Reconstruit, en lecture seule, l'état d'une partie à partir d'un export (trajectoire de référence) :
+  // les lignes et les paramètres (plafonds, pions de scénario, années d'entrée, décisions, montages).
+  function partieDepuisEchange(ref, paramsBase) {
+    var p = JSON.parse(JSON.stringify(paramsBase || parametresParDefaut()));
+    var rp = ref.parametres || {};
+    ["table", "plafonds", "aleas", "enveloppes", "debuts"].forEach(function (k) { if (rp[k] !== undefined) p[k] = JSON.parse(JSON.stringify(rp[k])); });
+    p.debuts = p.debuts || {};
+    p.phase = "trajectoire";
+    p.arbitrages = {}; p.financements = {}; p.validations = {}; p.defections = {};
+    var lignes = (ref.lignes || []).map(function (x) {
+      var l = { id: x.id, role: x.role, type: x.type, qte: {}, justification: x.justification || "", cree_le: x.cree_le || "" };
+      if (x.cible) l.cible = true;
+      if (x.type === "libre") {
+        l.modele = x.modele || null; l.libelle = x.libelle || ""; l.armee = x.armee;
+        l.cout_unitaire = Number(x.cout_unitaire) || 0;
+        l.dorese = x.dorese_unitaire || { ao: 0, mco: 0, rh: 0 };
+        p.validations[x.id] = true;
+      } else {
+        l.pion = x.pion; l.armee = x.armee;
+        if (x.niveau) l.niveau = x.niveau;
+      }
+      if (x.tranches && x.tranches.length) l.tranches = x.tranches.slice();
+      if (x.enveloppe) l.enveloppe = x.enveloppe;
+      var an = x.annees || {};
+      ANNEES.forEach(function (a) { l.qte[a] = an[a] ? Number(an[a].quantite) || 0 : 0; });
+      if (l.cible) {
+        var q = 0;
+        ANNEES.forEach(function (a) { q = Math.max(q, l.qte[a]); });
+        ANNEES.forEach(function (a) { l.qte[a] = 0; });
+        l.qte[ANNEES[ANNEES.length - 1]] = q || 1;
+        if (p.debuts[x.id] === undefined && x.entree) p.debuts[x.id] = x.entree;
+      }
+      if (x.decision) p.arbitrages[x.id] = { statut: x.decision.statut || "attente", decalage: x.decision.decalage || 0 };
+      if (x.financement && x.financement.mode && x.financement.mode !== "national") {
+        var f = JSON.parse(JSON.stringify(x.financement)); f.valide = f.actif !== false || !!f.defection; p.financements[x.id] = f;
+        if (f.defection) p.defections[x.id] = true;
+      }
+      return l;
+    });
+    return { lignes: lignes, params: p };
+  }
   function lireEchange(texte) {
     var o = typeof texte === "string" ? JSON.parse(texte) : texte;
     if (!o || o.format !== FORMAT_ECHANGE || !Array.isArray(o.lignes)) throw new Error("Ce fichier n'est pas un export STRATEGIKON.");
@@ -1244,6 +1285,7 @@
     FORMAT_ECHANGE: FORMAT_ECHANGE,
     exporterPartie: exporterPartie,
     lireEchange: lireEchange,
+    partieDepuisEchange: partieDepuisEchange,
     formePour: formePour,
     pionsDeLaPartie: pionsDeLaPartie,
     FORMAT_MODELE_PARTIE: FORMAT_MODELE_PARTIE,

@@ -379,3 +379,16 @@ test("pions modifiés par l'animateur : nom, coût, forme et socle suivent, les 
   assert.deepStrictEqual(M.formePour(25, 5, 5), { l: 5, h: 5 });
   assert.deepStrictEqual(M.formePour(9, 3, 3), { l: 3, h: 3 });
 });
+
+test("référence reconstruite depuis un export : mêmes totaux année par année que le fichier", () => {
+  const p0 = M.parametresParDefaut();
+  const l = { id: "x1", role: "EMAT", type: "ajout", pion: "P19", niveau: 100, cible: true, qte: { 2027: 0, 2028: 0, 2029: 0, 2030: 0, 2031: 0, 2032: 2 } };
+  const lib = { id: "x2", role: "DGRIS", type: "libre", libelle: "Base", cout_unitaire: 300, armee: "Interarmées", qte: { 2027: 0, 2028: 1, 2029: 1, 2030: 1, 2031: 1, 2032: 1 }, dorese: { ao: 0, mco: 0, rh: 0 } };
+  p0.debuts = { x1: 2029 }; p0.arbitrages = { x1: { statut: "retenu", decalage: 0 }, x2: { statut: "retenu", decalage: 0 } }; p0.validations = { x2: true };
+  p0.plafonds = Object.assign({}, p0.plafonds, { 2032: 600 });
+  const ex = M.exporterPartie(PIONS, [l, lib], p0, [], "trajectoire", "T");
+  const r = M.partieDepuisEchange(JSON.parse(JSON.stringify(ex)), M.parametresParDefaut());
+  const s = M.synthese(PIONS, M.lignesApresArbitrage(M.lignesEnTrajectoire(r.lignes, r.params), r.params), r.params);
+  M.ANNEES.forEach((a) => { assert.strictEqual(s[a].total, ex.synthese[a].total); assert.strictEqual(s[a].plafond, ex.synthese[a].plafond); });
+  assert.strictEqual(r.params.debuts.x1, 2029);
+});

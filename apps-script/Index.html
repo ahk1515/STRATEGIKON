@@ -699,6 +699,16 @@ button.jeton-option { color: #222; }
 .zone-entite-titre span { background: var(--c); color: #fff; font-size: .68rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: .1rem .45rem; border-radius: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .chaud-raisons.force { border-left-color: var(--alerte); background: rgba(179, 38, 30, .08); }
 
+/* Nom des demandes en cases : étiquette posée sur la rangée de cases, les clics passent au travers. */
+.etiquette-ligne { position: relative; z-index: 3; pointer-events: none; align-self: start; margin: 2px 2px 0; padding: 0 3px;
+  background: color-mix(in srgb, var(--bande) 30%, #fff); color: #111; border-left: 3px solid var(--bande); border-radius: 2px; line-height: 1.25;
+  font: 700 .58rem/1.25 "Source Sans 3", system-ui, sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+  display: flex; gap: 3px; align-items: baseline; }
+.etiquette-ligne b { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.etiquette-ligne small { font-weight: 600; opacity: .75; flex: none; }
+.etiquette-courte small { display: none; }
+@media (max-width: 640px) { .etiquette-ligne { font-size: .5rem; } }
+
 </style>
 </head>
 <body>
@@ -7359,9 +7369,9 @@ window.STRAT_CONTRAINTES_ROLES = [
   // « Attente » : les pions ajoutés qui n'ont pas encore été arbitrés, posés côte à côte après le socle.
   var ORDRE_GROUPES = ["Fixes", "Interarmées", "Terre", "Marine", "Air et Espace", "Attente"];
   // Table « en paquets » : chaque entité forme un bloc compact, les blocs s'imbriquent sur la table.
-  var ORDRE_ZONES = ["Terre", "Marine", "Air et Espace", "Interarmées", "DGA", "International", "Soutien et cabinet", "Fixes"];
+  var ORDRE_ZONES = ["Terre", "Marine", "Air et Espace", "Interarmées", "DGA", "International", "SGA", "MEFR", "MINARM", "Fixes"];
   var ENTITE_DU_ROLE = { EMAT: "Terre", EMM: "Marine", EMAAE: "Air et Espace", DGA: "DGA", DGRIS: "International", MEAE: "International",
-    SGA: "Soutien et cabinet", MEFR: "Soutien et cabinet", MINARM: "Soutien et cabinet", COCA: "Interarmées", "SC-Plans": "Interarmées", CEMA: "Interarmées", Animateur: "Interarmées" };
+    SGA: "SGA", MEFR: "MEFR", MINARM: "MINARM", COCA: "Interarmées", "SC-Plans": "Interarmées", CEMA: "Interarmées", Animateur: "Interarmées" };
 
   function Plateau(lignesInit, largeur) {
     this.l = largeur || LARGEUR;
@@ -8104,6 +8114,50 @@ window.STRAT_CONTRAINTES_ROLES = [
       alertes_globales: al.filter(function (x) { return !x.ligne; })
     };
   }
+  // Modèle 2032 préparé pour une partie précise (format « strategikon-modele-partie ») :
+  // renvoie les lignes prêtes à écrire (au modèle 2032) et ce qu'il faut ajouter aux paramètres.
+  var FORMAT_MODELE_PARTIE = "strategikon-modele-partie";
+  function lireModelePartie(texte, pions) {
+    var o = typeof texte === "string" ? JSON.parse(texte) : texte;
+    if (!o || o.format !== FORMAT_MODELE_PARTIE || !Array.isArray(o.lignes)) throw new Error("Ce fichier n'est pas un modèle 2032 de partie STRATEGIKON.");
+    var idx = indexPions(pions || []);
+    var fin = ANNEES[ANNEES.length - 1];
+    var roles = ROLES.map(function (r) { return r.code; });
+    var arbitrages = {}, validations = {};
+    var lignes = o.lignes.map(function (x, k) {
+      if (!x.id || !x.role || !x.type) throw new Error("Ligne " + (k + 1) + " incomplète.");
+      if (roles.indexOf(x.role) === -1) throw new Error("Ligne " + x.id + " : rôle inconnu (" + x.role + ").");
+      if (x.type !== "libre" && !idx[x.pion]) throw new Error("Ligne " + x.id + " : pion inconnu (" + x.pion + ").");
+      var l = { id: x.id, role: x.role, type: x.type, cible: true, qte: {}, justification: x.justification || "", cree_le: "2026-11-25T00:00:" + String(k).padStart(2, "0") + ".000Z", modele_partie: o.partie || null };
+      ANNEES.forEach(function (a) { l.qte[a] = 0; });
+      l.qte[fin] = Math.max(1, Number(x.qte) || 1);
+      if (x.type === "libre") {
+        l.modele = null; l.source = null;
+        l.libelle = x.libelle || "";
+        l.armee = x.armee || "Interarmées";
+        l.cout_unitaire = arrondiCase(Number(x.cout_unitaire) || 0);
+        l.dorese = { ao: (x.dorese || {}).ao || 0, mco: (x.dorese || {}).mco || 0, rh: (x.dorese || {}).rh || 0 };
+        validations[x.id] = true;
+      } else {
+        l.pion = x.pion;
+        if (x.type === "ajout") l.niveau = Number(x.niveau) === 50 ? 50 : 100;
+        l.armee = x.armee || idx[x.pion].armee;
+      }
+      arbitrages[x.id] = { statut: x.statut || o.statut || "retenu", decalage: 0 };
+      return l;
+    });
+    return { partie: o.partie || "", lignes: lignes, arbitrages: arbitrages, validations: validations,
+      conquetes: Array.isArray(o.conquetes) ? o.conquetes : [], total_attendu: o.total_attendu_2032 || null };
+  }
+  // Charge le modèle dans les paramètres d'une partie (sans rien retirer de ce qui y est déjà).
+  function appliquerModeleParams(params, modele) {
+    params.arbitrages = params.arbitrages || {};
+    params.validations = params.validations || {};
+    Object.keys(modele.arbitrages).forEach(function (id) { params.arbitrages[id] = modele.arbitrages[id]; });
+    Object.keys(modele.validations).forEach(function (id) { params.validations[id] = modele.validations[id]; });
+    if (modele.conquetes.length && !(params.conquetes || []).length) params.conquetes = JSON.parse(JSON.stringify(modele.conquetes));
+    return params;
+  }
   function lireEchange(texte) {
     var o = typeof texte === "string" ? JSON.parse(texte) : texte;
     if (!o || o.format !== FORMAT_ECHANGE || !Array.isArray(o.lignes)) throw new Error("Ce fichier n'est pas un export STRATEGIKON.");
@@ -8229,6 +8283,9 @@ window.STRAT_CONTRAINTES_ROLES = [
     FORMAT_ECHANGE: FORMAT_ECHANGE,
     exporterPartie: exporterPartie,
     lireEchange: lireEchange,
+    FORMAT_MODELE_PARTIE: FORMAT_MODELE_PARTIE,
+    lireModelePartie: lireModelePartie,
+    appliquerModeleParams: appliquerModeleParams,
     comparerTrajectoires: comparerTrajectoires,
     echangeEnCsv: echangeEnCsv,
     miseEnService: miseEnService
@@ -8519,7 +8576,7 @@ window.STRAT_CONTRAINTES_ROLES = [
     if (m >= 1000) return signe + (m / 1000).toLocaleString("fr-FR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " Md€";
     return signe + m.toLocaleString("fr-FR") + " M€";
   }
-  function couleurZone(z) { return { "DGA": "#6d52a8", "International": "#2a7f8f", "Soutien et cabinet": "#7a6a4f", "Fixes": "var(--gris)" }[z] || couleur(z); }
+  function couleurZone(z) { return { "DGA": "#6d52a8", "International": "#2a7f8f", "SGA": "#7a6a4f", "MEFR": "#2f6b4f", "MINARM": "#8a2d3b", "Fixes": "var(--gris)" }[z] || couleur(z); }
   function couleur(a) { return { "Terre": "var(--terre)", "Marine": "var(--marine)", "Air et Espace": "var(--air)", "Interarmées": "var(--inter)" }[a] || "var(--inter)"; }
   function nouvelId() { return window.crypto && crypto.randomUUID ? crypto.randomUUID() : "l-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
   function role(code) { return M.ROLES.filter(function (r) { return r.code === code; })[0] || M.ROLES[0]; }
@@ -8847,6 +8904,9 @@ window.STRAT_CONTRAINTES_ROLES = [
       ? M.placerAnnee(PIONS, lignes.filter(function (l) { return CHAUDS[l.id]; }), p, etat.annee, function () { return false; }, { apresArbitrage: etat.vue === "arbitrage" })
       : M.placerAnnee(PIONS, lignes, p, etat.annee, null, { apresArbitrage: etat.vue === "arbitrage", zones: true });
     var paquets = t.zones && t.zones.length > 0;
+    // En paquets, les demandes d'un acteur hors armées prennent la couleur de son paquet.
+    var ACTEURS = { DGA: 1, International: 1, SGA: 1, MEFR: 1, MINARM: 1 };
+    function teinte(x) { return paquets && ACTEURS[x.groupe] ? couleurZone(x.groupe) : couleur(x.armee); }
     if (filtre) {
       var bas = 0;
       t.pieces.forEach(function (x) { bas = Math.max(bas, x.r + x.h); });
@@ -8882,7 +8942,7 @@ window.STRAT_CONTRAINTES_ROLES = [
     }
     // Table en paquets : un cadre et un titre par entité.
     (t.zones || []).forEach(function (z) {
-      var mien = z.nom === ({ EMAT: "Terre", EMM: "Marine", EMAAE: "Air et Espace", DGA: "DGA", DGRIS: "International", MEAE: "International", SGA: "Soutien et cabinet", MEFR: "Soutien et cabinet", MINARM: "Soutien et cabinet" }[etat.role]);
+      var mien = z.nom === ({ EMAT: "Terre", EMM: "Marine", EMAAE: "Air et Espace", DGA: "DGA", DGRIS: "International", MEAE: "International", SGA: "SGA", MEFR: "MEFR", MINARM: "MINARM" }[etat.role]);
       pl.appendChild(el("div", { classe: "zone-entite" + (mien ? " zone-mienne" : ""), style: "grid-row:" + (z.r + 1) + " / " + (z.r + z.h + 1) + ";grid-column:" + (z.c + 1) + " / " + (z.c + z.w + 1) + ";--c:" + couleurZone(z.nom) }));
       pl.appendChild(el("div", { classe: "zone-entite-titre", style: "grid-row:" + (z.r + 1) + ";grid-column:" + (z.c + 1) + " / " + (z.c + z.w + 1) + ";--c:" + couleurZone(z.nom) }, [el("span", { texte: z.nom + " · " + md(z.cases * M.CASE) })]));
     });
@@ -8915,7 +8975,7 @@ window.STRAT_CONTRAINTES_ROLES = [
     var F = window.STRAT_FIGURATIFS;
     function court(nom) { return nom.replace(/^Capacité /, "").replace(/^Brigade /, "Bde ").replace(/^\+ Capacité /, "+ "); }
     t.pieces.forEach(function (x) {
-      var bande = x.groupe === "Fixes" ? "var(--gris-carte)" : x.nature === "violet" ? "var(--violet)" : x.nature === "orange" ? "var(--orange-carte)" : couleur(x.armee);
+      var bande = x.groupe === "Fixes" ? "var(--gris-carte)" : x.nature === "violet" ? "var(--violet)" : x.nature === "orange" ? "var(--orange-carte)" : teinte(x);
       var cl = ["pion", "pion-clic", "fig"];
       var aire = x.w * x.h, petit = Math.min(x.w, x.h) === 1 && Math.max(x.w, x.h) <= 3;
       cl.push(x.w >= x.h ? "fig-h" : "fig-v");
@@ -8986,9 +9046,27 @@ window.STRAT_CONTRAINTES_ROLES = [
       var nom = masque(x) ? (x.nature === "dorese" ? "DORESE" : "Demande " + x.armee) : x.libelle;
       var ic = x.nature === "dorese" ? F.svg(F.DORESE[x.type]) : F.svg(masque(x) ? "document" : (F.pictoDe(x.libelle) || "document"));
       var titre = nom + (x.role ? " · " + x.role : "") + (x.ligne && CHAUDS[x.ligne] ? " · à arbitrer : " + CHAUDS[x.ligne].join(", ") : "") + (x.allie ? " · part alliée (ne compte pas pour la France)" : "") + (x.enveloppe ? " · cliquez pour voir l'enveloppe" : "");
-      pl.appendChild(el("button", { type: "button", classe: cl.join(" "), title: titre, style: "grid-row:" + (x.r + 1) + ";grid-column:" + (x.c + 1) + ";--bande:" + couleur(x.armee),
+      pl.appendChild(el("button", { type: "button", classe: cl.join(" "), title: titre, style: "grid-row:" + (x.r + 1) + ";grid-column:" + (x.c + 1) + ";--bande:" + teinte(x),
         onclick: x.enveloppe ? function () { etat.volet = "enveloppes"; rendre(true); } : x.ligne && x.nature !== "dorese" ? choisir(x) : x.ligne ? choisir({ ligne: x.ligne, pion: cible.pion }) : choisir(cible) },
         [ic, drap ? el("span", { classe: "drapeau drapeau-pion" }) : null, alerteCase]));
+    });
+    // Nom des demandes en cases (options, pions sur mesure) : une étiquette sur la plus longue
+    // rangée de cases contiguës de la ligne, pour qu'on lise ce qui est posé.
+    var parLigne = {};
+    t.cellules.forEach(function (x) { if (x.ligne && x.nature === "libre") (parLigne[x.ligne] = parLigne[x.ligne] || []).push(x); });
+    Object.keys(parLigne).forEach(function (id) {
+      var cs = parLigne[id], meilleur = null;
+      cs.forEach(function (x) {
+        var long = 1;
+        while (cs.some(function (y) { return y.r === x.r && y.c === x.c + long; })) long++;
+        var debut = !cs.some(function (y) { return y.r === x.r && y.c === x.c - 1; });
+        if (debut && (!meilleur || long > meilleur.w)) meilleur = { r: x.r, c: x.c, w: long };
+      });
+      if (!meilleur) return;
+      var x0 = cs[0];
+      pl.appendChild(el("span", { classe: "etiquette-ligne" + (meilleur.w < 3 ? " etiquette-courte" : ""), "aria-hidden": "true",
+        style: "grid-row:" + (meilleur.r + 1) + ";grid-column:" + (meilleur.c + 1) + " / span " + meilleur.w + ";--bande:" + teinte(x0) },
+        [el("b", { texte: court(x0.libelle) }), x0.role ? el("small", { texte: x0.role }) : null]));
     });
     etat.neuf = null;
 
@@ -9918,6 +9996,60 @@ window.STRAT_CONTRAINTES_ROLES = [
       el("button", { type: "button", classe: "btn-contour", texte: "CSV (tableur)", onclick: function () { telecharger(nomFichier(type, "csv"), "﻿" + M.echangeEnCsv(exporter(type)), "text/csv;charset=utf-8"); } })
     ]);
   }
+  // Modèle 2032 préparé hors de l'outil pour CETTE partie (ex. relevé de table) : on l'écrit au modèle 2032.
+  var MODELE_PARTIE = null;
+  function memeNom(a, b) { return String(a || "").trim().toLowerCase() === String(b || "").trim().toLowerCase(); }
+  function blocModelePartie() {
+    var bloc = el("section", { classe: "bloc-conception", id: "bloc-modele-partie" }, [el("h3", { texte: "Charger un modèle 2032 préparé pour cette partie" }),
+      el("p", { classe: "aide", texte: "Pour un fichier « modèle 2032 » préparé pour une partie précise (par exemple le relevé d'une table). Ses lignes sont posées au modèle 2032, retenues, et rien de ce que les joueurs ont déjà posé n'est retiré. Le fichier n'est accepté que dans la partie dont il porte le nom." })]);
+    var fichier = el("input", { type: "file", accept: ".json,application/json", "aria-label": "Modèle 2032 de la partie (JSON)", id: "fichier-modele-partie" });
+    var err = el("p", { classe: "erreur" });
+    var apercu = el("div");
+    bloc.appendChild(el("label", { classe: "champ" }, ["Fichier JSON", fichier]));
+    bloc.appendChild(err); bloc.appendChild(apercu);
+    fichier.addEventListener("change", function () {
+      var f = fichier.files && fichier.files[0];
+      err.textContent = ""; apercu.innerHTML = ""; MODELE_PARTIE = null;
+      if (!f) return;
+      f.text().then(function (t) {
+        var m = M.lireModelePartie(t, PIONS);
+        if (!memeNom(m.partie, etat.partie.nom)) throw new Error("Ce modèle est prévu pour la partie « " + m.partie + " », pas pour « " + etat.partie.nom + " ». Rien n'a été chargé.");
+        MODELE_PARTIE = m;
+        afficherApercu(apercu, m);
+      }).catch(function (e) { err.textContent = e.message; });
+    });
+    return bloc;
+  }
+  function afficherApercu(boite, m) {
+    var p = JSON.parse(JSON.stringify(params()));
+    M.appliquerModeleParams(p, m);
+    var ids = {}; m.lignes.forEach(function (l) { ids[l.id] = true; });
+    var deja = etat.lignes.filter(function (l) { return ids[l.id]; }).length;
+    var autres = etat.lignes.filter(function (l) { return !ids[l.id]; });
+    var fin = M.ANNEES[M.ANNEES.length - 1];
+    var avant = M.synthese(PIONS, M.lignesApresArbitrage(M.lignesEnTrajectoire(etat.lignes, params()), params()), params())[fin].total;
+    var apres = M.synthese(PIONS, M.lignesApresArbitrage(M.lignesEnTrajectoire(autres.concat(m.lignes), p), p), p)[fin].total;
+    var parRole = {};
+    m.lignes.forEach(function (l) { parRole[l.role] = (parRole[l.role] || 0) + 1; });
+    boite.appendChild(el("p", { classe: "aide", texte: m.lignes.length + " ligne(s) pour " + m.partie + " : " + Object.keys(parRole).map(function (r) { return r + " " + parRole[r]; }).join(", ") + "." }));
+    boite.appendChild(el("p", { classe: "aide", texte: "Table " + fin + " : " + n1(avant) + " Md€ aujourd'hui, " + n1(apres) + " Md€ après chargement" + (m.total_attendu ? " (relevé de la table : " + n1(m.total_attendu) + " Md€)." : ".") }));
+    if (deja) boite.appendChild(el("p", { classe: "aide", texte: "Ce modèle a déjà été chargé (" + deja + " ligne(s) présentes) : recharger remet ces lignes telles que dans le fichier." }));
+    if (m.conquetes.length && !(params().conquetes || []).length) boite.appendChild(el("p", { classe: "aide", texte: "Plateaux hors table à conquérir : " + m.conquetes.map(function (c) { return c.nom + " (" + n1(c.montant) + " Md€)"; }).join(", ") + "." }));
+    var btn = el("button", { type: "button", classe: "btn-laiton", id: "charger-modele-partie", texte: (deja ? "Recharger" : "Charger") + " dans " + etat.partie.nom });
+    btn.addEventListener("click", function () { btn.disabled = true; chargerModelePartie(m, btn); });
+    boite.appendChild(btn);
+  }
+  function chargerModelePartie(m, btn) {
+    var nom = etat.partie.nom, mdp = etat.mdp, k = 0;
+    var suite = Promise.resolve();
+    m.lignes.forEach(function (l) {
+      suite = suite.then(function () { return S.ecrireLigne(nom, mdp, l); }).then(function () { k++; btn.textContent = "Chargement " + k + " / " + m.lignes.length; });
+    });
+    return suite.then(function () { return modifierParams(function (pp) { M.appliquerModeleParams(pp, m); }); })
+      .then(function () { return recharger(true); })
+      .then(function () { MODELE_PARTIE = null; toast(m.lignes.length + " lignes du modèle 2032 chargées dans " + nom); rendreVolet(); })
+      .catch(function (e) { btn.disabled = false; btn.textContent = "Réessayer"; toast("Chargement interrompu (" + k + " / " + m.lignes.length + ") : " + e.message); });
+  }
   function voletEchanges(v) {
     var p = params();
     v.appendChild(el("h2", { classe: "volet-titre", texte: "Échanges et comparaison" }));
@@ -9930,6 +10062,7 @@ window.STRAT_CONTRAINTES_ROLES = [
     v.appendChild(el("section", { classe: "bloc-conception" }, [el("h3", { texte: "2 · Trajectoire des joueurs" }),
       el("p", { classe: "aide", texte: "Les années 2027 à 2032 telles que les joueurs les ont construites : " + places + " ligne(s) du modèle placée(s) sur la trajectoire, plus les autres demandes, année par année." }),
       boutonsExport("trajectoire")]));
+    v.appendChild(blocModelePartie());
     var ref = chargerReference();
     var fichier = el("input", { type: "file", accept: ".json,application/json", "aria-label": "Trajectoire de référence (JSON)" });
     var err = el("p", { classe: "erreur" });

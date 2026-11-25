@@ -470,6 +470,8 @@ Objectif : récupérer le modèle 2032 arbitré, construire hors de l'outil une 
 
 Les fichiers sont nommés `strategikon-<partie>-<type>-<date>-<heure>.json|csv`.
 
+**Charger un modèle 2032 préparé pour cette partie** (entre les sections 2 et 3) : pour un fichier préparé hors de l'outil pour **une partie précise**, par exemple le relevé photo d'une table (format `strategikon-modele-partie`, version 1, champ `partie` = nom exact de la partie). Le fichier est **refusé** dans une autre partie. Après sélection, un aperçu donne le nombre de lignes par rôle, la table 2032 avant et après, le total du relevé et les plateaux à conquérir. **Charger dans <partie>** écrit les lignes au modèle 2032 (une par une, compteur visible), les marque *retenues* par le CEMA, valide les pions sur mesure et reprend les plateaux à conquérir si la partie n'en a pas. Rien de ce que les joueurs ont posé n'est retiré. Recharger le même fichier remet ses lignes telles que dans le fichier (mêmes identifiants). Exemple fourni : `docs/donnees/modele-2032-GIA56.json` (41 lignes, table 2032 à 60,0 Md€ pour un relevé à 59,9 Md€ : l'écart de 0,1 Md€ vient d'une DORESE Marine manquante sur la table photographiée).
+
 ---
 
 ## 19. Déroulé type d'une séance

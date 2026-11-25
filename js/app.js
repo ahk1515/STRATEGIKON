@@ -1719,7 +1719,7 @@
       eb.appendChild(el("tr", null, [el("td", { texte: a === M.APRES_LPM ? "après 2032" : String(a) }), el("td", { texte: j.join(" · ") || "—" }), el("td", { texte: f.join(" · ") || "—" })]));
     });
     ent.appendChild(eb);
-    return el("div", null, [t, el("h4", { texte: "Ce qui entre chaque année" }), ent]);
+    return el("div", null, [el("div", { classe: "cmp-defile" }, [t]), el("h4", { texte: "Ce qui entre chaque année" }), el("div", { classe: "cmp-defile" }, [ent])]);
   }
   function ouvrirComparaison(cmp, ref, roleVu) {
     var ancien = $("comparaison"); if (ancien) ancien.remove();

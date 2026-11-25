@@ -1299,6 +1299,39 @@
     if (modele.conquetes.length && !(params.conquetes || []).length) params.conquetes = JSON.parse(JSON.stringify(modele.conquetes));
     return params;
   }
+  // Pions modifiés par l'animateur pour une partie : nom et coût (sans DORESE), dans params.pionsModifies.
+  // La forme sur la table suit le nouveau nombre de cases en gardant l'allure du pion d'origine.
+  function formePour(cases, l0, h0) {
+    if (cases <= 0) return { l: 1, h: 1 };
+    var cible = (l0 || 1) / (h0 || 1), best = null;
+    for (var w = 1; w <= Math.min(cases, 10); w++) {
+      if (cases % w) continue;
+      var h = cases / w, ecart = Math.abs(Math.log((w / h) / cible));
+      if (!best || ecart < best.e) best = { l: w, h: h, e: ecart };
+    }
+    if (!best || best.h > 10) { var lw = Math.min(10, Math.max(1, l0 || 1)); return { l: lw, h: Math.ceil(cases / lw) }; }
+    return { l: best.l, h: best.h };
+  }
+  function pionsDeLaPartie(pions, params) {
+    var mod = (params && params.pionsModifies) || {};
+    if (!Object.keys(mod).length) return pions;
+    return pions.map(function (p) {
+      var m = mod[p.id];
+      if (!m) return p;
+      var c = JSON.parse(JSON.stringify(p));
+      c.nom_origine = p.nom;
+      if (m.nom && String(m.nom).trim()) c.nom = String(m.nom).trim();
+      if (m.cout !== undefined && m.cout !== null && m.cout !== "") {
+        var cout = Math.max(CASE, arrondiCase(Number(m.cout) || 0));
+        c.cout50 = cout;
+        c.cout100 = cout + nbDorese(p) * CASE;
+        if (cout !== p.cout50) { var fo = formePour(cout / CASE, p.l, p.h); c.l = fo.l; c.h = fo.h; }
+        c.cout_origine = p.cout50;
+      }
+      c.modifie = true;
+      return c;
+    });
+  }
   function lireEchange(texte) {
     var o = typeof texte === "string" ? JSON.parse(texte) : texte;
     if (!o || o.format !== FORMAT_ECHANGE || !Array.isArray(o.lignes)) throw new Error("Ce fichier n'est pas un export STRATEGIKON.");
@@ -1424,6 +1457,8 @@
     FORMAT_ECHANGE: FORMAT_ECHANGE,
     exporterPartie: exporterPartie,
     lireEchange: lireEchange,
+    formePour: formePour,
+    pionsDeLaPartie: pionsDeLaPartie,
     FORMAT_MODELE_PARTIE: FORMAT_MODELE_PARTIE,
     lireModelePartie: lireModelePartie,
     appliquerModeleParams: appliquerModeleParams,

@@ -457,3 +457,20 @@ test("modèle 2032 préparé pour GIA56 : 41 lignes retenues, table 2032 à 60 M
   assert.throws(() => M.lireModelePartie({ format: "autre", lignes: [] }, PIONS));
   assert.throws(() => M.lireModelePartie({ format: M.FORMAT_MODELE_PARTIE, lignes: [{ id: "x", role: "EMAT", type: "ajout", pion: "P999" }] }, PIONS));
 });
+
+test("pions modifiés par l'animateur : nom, coût, forme et socle suivent, les autres parties non", () => {
+  const p = M.parametresParDefaut();
+  p.pionsModifies = { P12: { nom: "Division de réserve – 2,5 Md€" }, P19: { cout: 600 } };
+  const PP = M.pionsDeLaPartie(PIONS, p);
+  const I = M.indexPions(PP);
+  assert.strictEqual(I.P12.nom, "Division de réserve – 2,5 Md€");
+  assert.strictEqual(I.P12.cout50, 2500);
+  assert.strictEqual(I.P19.cout50, 600);
+  assert.strictEqual(I.P19.cout100, 700);
+  assert.strictEqual(I.P19.l * I.P19.h, 6);
+  assert.strictEqual(M.synthese(PP, [], p)[2027].totalSocle, 39900 + 300);
+  assert.strictEqual(M.pionsDeLaPartie(PIONS, M.parametresParDefaut()), PIONS);
+  assert.strictEqual(IDX.P19.cout50, 300);
+  assert.deepStrictEqual(M.formePour(25, 5, 5), { l: 5, h: 5 });
+  assert.deepStrictEqual(M.formePour(9, 3, 3), { l: 3, h: 3 });
+});

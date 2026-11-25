@@ -5,7 +5,8 @@
 
   var M = window.STRAT_MOTEUR;
   var S = window.STRAT_STOCKAGE;
-  var PIONS = window.STRAT_PIONS || [];
+  var PIONS_BASE = window.STRAT_PIONS || [];
+  var PIONS = PIONS_BASE;
   var CATALOGUE = window.STRAT_CATALOGUE_ROLES || [];
   var REGLES = window.STRAT_CONTRAINTES_ROLES || [];
   var IDX = M.indexPions(PIONS);
@@ -58,6 +59,13 @@
   // Table commune : chacun voit toutes les demandes brutes, avec leur porteur.
   function visible(l) { return true; }
   function params() { return (etat.partie && etat.partie.params && etat.partie.params.plafonds) ? etat.partie.params : M.parametresParDefaut(); }
+  // Pions de la partie : ceux de la base, avec les noms et coûts modifiés par l'animateur.
+  var SIG_PIONS = "";
+  function majPions() {
+    var sig = JSON.stringify(params().pionsModifies || {});
+    if (sig === SIG_PIONS) return;
+    SIG_PIONS = sig; PIONS = M.pionsDeLaPartie(PIONS_BASE, params()); IDX = M.indexPions(PIONS);
+  }
   function phase() { return etat.phase || (params().phase === "trajectoire" ? "trajectoire" : "cible"); }
   function enCible() { return phase() === "cible"; }
   // Lignes telles qu'elles pèsent dans la phase : au modèle 2032, les lignes cibles ne sont qu'en 2032 ;
@@ -322,6 +330,7 @@
   }
 
   function rendre(complet) {
+    majPions();
     if (enCible()) etat.annee = FIN;
     calculerAlertes();
     rendreParcours();
@@ -483,7 +492,7 @@
       var cache = masque(x);
       var nom = cache ? "Demande " + x.armee : x.libelle;
       var pion = x.pion ? IDX[x.pion] : null;
-      var picto = cache ? null : F.svg(F.pictoDe(x.libelle) || "puce");
+      var picto = cache ? null : F.svg(F.pictoDe(x.libelle) || (pion && pion.nom_origine && F.pictoDe(pion.nom_origine)) || "puce");
       var enfants = [el("span", { classe: "fig-bande" }, [el("span", { classe: "fig-titre", texte: court(nom) }), x.role && !x.socle ? el("span", { classe: "porteur", texte: x.role }) : null])];
       if (picto) enfants.push(el("span", { classe: "fig-picto" }, [picto]));
       var notes = [];
@@ -1176,6 +1185,46 @@
     document.body.appendChild(a); a.click(); a.remove();
   }
 
+  // Animateur : renommer un pion de la table ou changer son coût, pour cette partie seulement.
+  function blocPionsPartie() {
+    var mod = params().pionsModifies || {};
+    var n = Object.keys(mod).length;
+    var d = el("details", { classe: "pions-partie", id: "pions-partie" });
+    if (etat.pionsOuverts) d.open = true;
+    d.addEventListener("toggle", function () { etat.pionsOuverts = d.open; });
+    d.appendChild(el("summary", { texte: "Pions de la table pour cette partie" + (n ? " (" + n + " modifié" + (n > 1 ? "s" : "") + ")" : "") }));
+    d.appendChild(el("p", { classe: "aide", texte: "Changez le nom ou le coût d'un pion (en M€, sans ses DORESE, par pas de 100). Il change pour tous les joueurs de cette partie, toutes années, et sa forme sur la table suit le nombre de cases. Les autres parties ne sont pas touchées. Enregistré dès que vous quittez le champ." }));
+    var filtre = el("input", { type: "search", placeholder: "Chercher un pion", "aria-label": "Chercher un pion" });
+    d.appendChild(filtre);
+    var liste = el("div", { classe: "pions-liste" });
+    d.appendChild(liste);
+    function sauver(id, champ, valeur) {
+      modifierParams(function (pp) {
+        pp.pionsModifies = pp.pionsModifies || {};
+        var m = pp.pionsModifies[id] || {};
+        if (valeur === null) delete m[champ]; else m[champ] = valeur;
+        if (Object.keys(m).length) pp.pionsModifies[id] = m; else delete pp.pionsModifies[id];
+      }).then(function () { toast("Pion enregistré pour cette partie"); });
+    }
+    PIONS_BASE.forEach(function (b) {
+      var p = IDX[b.id] || b, m = mod[b.id] || {};
+      var nom = el("input", { type: "text", value: p.nom, "aria-label": "Nom de " + b.nom, "data-pion-nom": b.id });
+      var cout = el("input", { type: "number", min: 100, step: 100, value: p.cout50, "aria-label": "Coût de " + b.nom + " en M€", "data-pion-cout": b.id });
+      nom.addEventListener("change", function () { var v = nom.value.trim(); sauver(b.id, "nom", v && v !== b.nom ? v : null); });
+      cout.addEventListener("change", function () { var v = Math.max(100, Math.round((Number(cout.value) || 0) / 100) * 100); sauver(b.id, "cout", v !== b.cout50 ? v : null); });
+      var info = (m.nom || m.cout !== undefined) ? "d'origine : " + b.nom + " · " + md(b.cout50) : (M.nbDorese(b) ? "+ " + M.nbDorese(b) + " DORESE" : "");
+      var ligne = el("div", { classe: "pion-reglage" + (p.modifie ? " pion-modifie" : ""), "data-recherche": (b.nom + " " + p.nom + " " + b.armee).toLowerCase() }, [
+        el("span", { classe: "pion-reglage-arm", texte: b.armee }), nom, cout,
+        el("small", { texte: info }),
+        p.modifie ? el("button", { type: "button", classe: "btn-lien", texte: "Rétablir", onclick: function () { modifierParams(function (pp) { if (pp.pionsModifies) delete pp.pionsModifies[b.id]; }); } }) : el("span")]);
+      liste.appendChild(ligne);
+    });
+    filtre.addEventListener("input", function () {
+      var q = filtre.value.trim().toLowerCase();
+      Array.prototype.forEach.call(liste.children, function (x) { x.style.display = !q || x.getAttribute("data-recherche").indexOf(q) !== -1 ? "" : "none"; });
+    });
+    return d;
+  }
   function voletReglages(v) {
     var p = params();
     v.appendChild(el("h2", { classe: "volet-titre", texte: "Réglages de la partie" }));
@@ -1257,6 +1306,7 @@
     delai.value = String(M.delaiRetrait(p));
     f.appendChild(el("label", { classe: "champ" }, ["Retrait d'une capacité (SCP-05) : payée encore", delai]));
 
+    if (etat.role === "Animateur") f.appendChild(blocPionsPartie());
     f.appendChild(el("h3", { texte: "Étape de la partie" }));
     var ph = el("select", { id: "reg-phase", "aria-label": "Étape de la partie" });
     [["cible", "1 · Modèle 2032"], ["trajectoire", "2 · Trajectoire 2027-2032"]].forEach(function (x) { ph.appendChild(el("option", { value: x[0], texte: x[1] })); });

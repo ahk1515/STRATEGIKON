@@ -2,6 +2,8 @@
 
 Outil web du serious game STRATEGIKON (École de guerre). Chaque pôle compose sa demande année par année ; l'outil calcule les cases occupées et les DORESE, et confronte la somme des demandes au plafond de chaque année.
 
+**Mode d'emploi complet : [docs/GUIDE-UTILISATION.md](docs/GUIDE-UTILISATION.md)** (joueurs, animateur, et IA assistante).
+
 Mise en ligne : [INSTALLATION-SUPABASE.md](INSTALLATION-SUPABASE.md) (Supabase et GitHub Pages, recommandé) ou [INSTALLATION.md](INSTALLATION.md) (Google Sheets, en secours).
 
 ## Règles modélisées
@@ -37,10 +39,20 @@ Mise en ligne : [INSTALLATION-SUPABASE.md](INSTALLATION-SUPABASE.md) (Supabase e
 
 Après une modification : `python3 scripts/csv_vers_js.py` (si le CSV a changé), `python3 scripts/assembler.py`, puis `node --test tests/*.test.js`.
 
-## Visibilité par rôle
+## Table commune
 
-Chaque rôle ne voit que son catalogue et ses lignes. Le CEMA, le SC-Plans et l'animateur voient tout. Les totaux par armée et la table restent visibles de tous ; sur la table, les demandes des autres rôles apparaissent sans leur intitulé.
+Tout le monde voit toutes les demandes, avec leur porteur. Trois gestes : proposer (chaque pôle), commenter et qualifier (avis, avis industriel DGA, soutenabilité MEFR et SGA, priorités proposées, montages de financement, contrainte politique du MINARM), arbitrer (CEMA). Les points chauds s'allument ; le filtre « Où faut-il arbitrer ? » ne garde qu'eux. Les pions sont regroupés en paquets par entité.
 
 ## Arbitrage
 
 Le CEMA et l'animateur décident ligne par ligne : retenu, différé d'une à trois années, ou renoncé. Les décisions et les validations des pions sur mesure sont rangées dans les paramètres de la partie.
+
+## Documentation et données de conception
+
+| Dossier | Contenu |
+|---|---|
+| `docs/GUIDE-UTILISATION.md` | Guide d'utilisation exhaustif, à donner à une IA assistante des joueurs |
+| `docs/conception/` | Acteurs et interfaces (document de conception validé) |
+| `docs/catalogue-roles/` | Catalogue des options et règles des fiches de rôle (CSV, JSON, XLSX), synthèses, scripts sources |
+| `docs/donnees/` | Base des pions (XLSX, JSON 2027) |
+| `supabase/reinitialiser.sql` | Sauvegarde puis effacement de toutes les parties |

@@ -1,6 +1,6 @@
 # STRATEGIKON : guide d'utilisation complet
 
-Version du 25 novembre 2026, à jour de la « table commune » publiée ce jour.
+Version du 25 novembre 2026, à jour de la table commune et des règles des fiches (Red team, contrats opérationnels, cycle de vie, munitions, inflation).
 
 Ce guide décrit tout l'outil numérique du serious game STRATEGIKON (LPM 2027-2032, École de guerre) : chaque écran, chaque bouton, chaque rôle, chaque règle de calcul. Il est écrit pour deux lecteurs à la fois :
 
@@ -142,6 +142,7 @@ Sous la carte d'accueil, une note indique le mode :
 | Pastille « ! » | Alerte d'une règle des fiches (non bloquante). |
 | Halo « point chaud » | À arbitrer. |
 | Marque défection | L'allié a fait défection : à réarbitrer. |
+| Pastille « D+ » et bordure noire | Capacité durcie (DORESE au-delà de 100 %). |
 | Pion pointillé « sur mesure » | Hors catalogue, à valider par l'animateur. |
 
 ### 4.4 Le panneau de droite (onglets)
@@ -155,6 +156,7 @@ Sous la carte d'accueil, une note indique le mode :
 | **Enveloppes** | rôles qui ont une enveloppe ; CEMA, SC-Plans, Animateur | État des enveloppes internes (section 11). |
 | **Trajectoire** | tous, à l'étape 2 seulement | Étalement des lignes du modèle 2032 (section 15). |
 | **Arbitrage** | CEMA, SC-Plans, Animateur | Lignes par statut, marges après arbitrage (section 9). |
+| **Red team** | tous (saisie : COCA, Animateur) | Scénarios de crise, rapport d'alerte, aléa Baltique (section 24). |
 | **Bilan** | tous | Tableau de bord 2027-2032 (section 16). |
 | **Réglages** | Animateur, SC-Plans, CEMA | Plafonds, pions de scénario, étape, enveloppes (section 17). |
 | **Échanges** | Animateur seul | Exports, référence, comparaison (section 18). |
@@ -260,11 +262,13 @@ Tout le monde voit **toute la table**, avec le porteur de chaque demande. Il y a
 
 ### 7.2 Agir sur un pion du socle
 Cliquez sur un pion du socle (capacité de votre périmètre). La fiche montre : coût, place, DORESE posées, état dans l'année. Actions possibles, sur la portée choisie :
+- La fiche affiche l'**opérationnalité** de l'année : 100 % (face verte) avec toutes ses DORESE ; face rouge de 90 % à 50 % s'il en manque ; 50 % sans DORESE additionnelle ; plus de 100 % si elle est durcie (SCP-02).
 - **Renforcer à 100 %** : ajoute les DORESE manquantes au contact (coût affiché).
 - **Annuler le renforcement**.
 - **Repasser à 50 %** : rend les DORESE de la capacité, qui devient dégradée (économie affichée).
 - **Revenir à 100 %** : annule le repassage.
-- **Dissoudre** : retire le pion de la table (économie = son coût sur la table).
+- **Dissoudre** : décision prise en COCEM (le CEMA arbitre la ligne). Le pion reste payé **2 ans** après la décision (3 ans si l'animateur l'a réglé), puis quitte la table : l'économie ne compte qu'à partir de N+2 ou N+3 (SCP-05). Au modèle 2032, la décision est datée de 2027.
+- **Durcir (sur-dotation)** : sur une capacité à 100 %, boutons **+1 AO**, **+1 MCO**, **+1 RH** pour ajouter des DORESE au-delà du besoin (haute intensité, SCP-03). Chaque DORESE coûte 100 M€/an à l'armée. La ligne « Durcissement » se règle ensuite dans sa fiche (− / + par type).
 - **Ajouter un exemplaire** : un exemplaire de plus, à 100 % s'il a des DORESE.
 Un pion d'un autre pôle affiche « Ce pion relève d'un autre pôle ». Les dépenses fixes ne se négocient pas ; les pions de scénario se règlent dans *Réglages*.
 
@@ -407,8 +411,18 @@ Les 78 règles des fiches de rôle sont toutes consultables (onglet *Ma demande*
 | SCP-04 | Nouvelle capacité : 3 ans d'activation ; opérationnelle trop tard pour la LPM. | à savoir |
 | SCP-05 | Dissolution comptée avant 2029 : retirer une capacité prend 2 à 3 ans. | alerte |
 | SGA-01 | Masse salariale : plus de 4 DORESE RH supplémentaires d'une année à l'autre, toutes armées confondues. | alerte |
+| SCP-02 | Capacité posée ou repassée à 50 % : opérationnalité dégradée. | à savoir |
+| SCP-03 | Capacité durcie : DORESE au-delà de 100 %, en dépense de l'armée. | à savoir |
+| SCP-05 | Retrait : date de la décision et année où l'économie compte. | à savoir |
+| CEMA-02 | Dissolution ou repassage à 50 % d'un pion qui porte un contrat opérationnel. | alerte |
+| DGA-09 | Capacité de frappe demandée (Rafale, frégate, char, artillerie, SEAD, MGCS…) sans aucune ligne de munitions. | alerte |
+| DGA-10 | Année sans pion Munitions du socle ni ligne de munitions : stocks OTAN de 30 jours non financés. | alerte |
+| EMAAE-01 | Aucune décision sur les C-130H en fin de vie (option « Retrait ou remplacement des C-130H »). | alerte |
+| EMM-03 | Aucune ligne de remplacement des FDA Forbin, ou aucune ligne MAWS pour succéder aux Atlantique 2. | alerte |
+| COCA-03 | Aléa Baltique déclenché par l'animateur. | alerte |
+| MEFR-03 | Scénario d'inflation déclenché par l'animateur. | alerte |
 
-Où les voir : pastille « ! » sur le pion, bloc *Alertes des fiches de rôle* dans la fiche, *Ma demande*, *Bilan* > tableau de bord, badges dans *Arbitrage*. Une alerte se « lève » en corrigeant la demande, ou s'assume : le CEMA peut retenir malgré elle (comptée « passée en force malgré une alerte »). Les règles non vérifiées par l'outil sont à faire respecter par l'animateur.
+Où les voir : pastille « ! » sur le pion, bloc *Alertes des fiches de rôle* dans la fiche, *Ma demande*, *Bilan* > tableau de bord, badges dans *Arbitrage*. Une alerte se « lève » en corrigeant la demande, ou s'assume : le CEMA peut retenir malgré elle (comptée « passée en force malgré une alerte »). Les règles non vérifiées par l'outil sont à faire respecter par l'animateur. Les alertes générales (fin de vie, stocks, aléas, masse salariale) ne sont rattachées à aucun pion : elles apparaissent dans *Bilan* > tableau de bord.
 
 ---
 
@@ -420,6 +434,7 @@ Une demande non renoncée devient **point chaud** dès qu'une de ces raisons app
 - **priorité contestée** (une proposition différente de la priorité retenue) ;
 - **défection d'un allié** ;
 - **contrainte politique demandée** et non encore acquise ;
+- **urgence COCA** ou **alarme exécutif** posée par le COCA ;
 - **alerte de fiche** (niveau alerte) ;
 - **sous la ligne de flottaison** de l'année affichée.
 
@@ -440,6 +455,8 @@ Les raisons s'affichent dans l'infobulle du pion, en tête du bloc *Avis*, et en
 
 ## 16. Bilan (onglet *Bilan*)
 
+- **Contrats opérationnels en 2032** (CEMA-02) : les 10 contrats 2027 (Air : 45 chasseurs, 6 MRTT, 15 avions de transport, 8 systèmes MALE ; Mer : 1 groupe aéronaval, 2 SNA et 3 frégates en permanence, 6 ATL2/MAWS ; Terre : 1 brigade Guépard, 120 chars, 1 capacité d'intervention rapide), chacun **Tenu**, **Partiel** ou **Non tenu**. L'outil propose une note à partir des pions qui portent le contrat, après les décisions du CEMA (100 % = tenu, face rouge = partiel, retiré = non tenu) ; le CEMA ou l'animateur peut la corriger dans la liste déroulante.
+- **Scénarios de crise** : couverture évaluée par le COCA (section 24), et rappel de l'inflation si elle est déclenchée.
 - **Tableau 2027-2032** (en Md€) : socle, demandes, plafond, marge après arbitrage.
 - **Demandes par armée** sur 6 ans.
 - **Souveraineté** (section 12.3).
@@ -453,6 +470,10 @@ Les raisons s'affichent dans l'infobulle du pion, en tête du bloc *Avis*, et en
 
 - **Plafond annuel** en cases de 100 M€, pour chaque année.
 - **Pions de scénario posés** : SMV et munitions, case par année.
+- **Aléas tirés des fiches** :
+  - **Inflation (MEFR-03)** : stabilisation européenne −850 M€/an, conflit régional prolongé −1,5 Md€/an, choc énergétique −2,8 Md€/an, guerre OTAN-Russie −4,9 Md€/an, à partir de l'année choisie. Le montant est retiré du plafond de chaque année concernée (jauges, table, flottaison, étalement).
+  - **Aléa Baltique (COCA-03)** : les Européens limitent leur participation ; l'onglet *Red team* chiffre le besoin supplémentaire.
+  - **Retrait d'une capacité (SCP-05)** : payée encore 2 ou 3 ans après la décision.
 - **Étape de la partie** : celle qu'affiche l'outil à l'entrée des joueurs (*1 · Modèle 2032* ou *2 · Trajectoire 2027-2032*).
 - **Enveloppes internes des pôles** : pôle, nom, montant annuel ; *Ajouter une enveloppe*, *Retirer*.
 - **Enregistrer** : s'applique à tous les joueurs dans les secondes qui suivent.
@@ -553,3 +574,12 @@ Les fichiers sont nommés `strategikon-<partie>-<type>-<date>-<heure>.json|csv`.
 - Deux joueurs qui modifient la même demande au même instant : la dernière écriture l'emporte.
 - La trajectoire de référence n'est pas partagée : elle reste dans le navigateur de l'animateur.
 - Seules 13 règles des fiches sont vérifiées automatiquement ; les autres relèvent de l'animateur.
+
+## 24. COCA / Red team (onglet *Red team*)
+
+- **Scénarios de crise (COCA-02)** : le COCA (ou l'animateur) ajoute chaque scénario, l'évalue **Satisfaisant**, **Partiel** ou **Insuffisant**, décrit l'écart capacitaire et choisit une recommandation (**Renforcement**, **Alerte**, **Renoncement assumé**). La couverture (satisfaisant = 1, partiel = ½) s'affiche en tête et dans le *Bilan*. Les autres rôles lisent la grille.
+- **Rapport d'alerte (COCA-01)** : sur la fiche de n'importe quelle demande, bloc *Rapport COCA / Red team*, le COCA pose un ou plusieurs statuts : **Urgence COCA**, **Tuile requalifiée**, **Renoncement assumé**, **Alarme exécutif**, avec un motif. L'urgence et l'alarme font de la ligne un point chaud. Le **CEMA** peut *Lever le rapport COCA*. L'onglet liste toutes les demandes marquées.
+- **Aléa Baltique (COCA-03)** : quand l'animateur le déclenche, l'onglet affiche le besoin supplémentaire : 30 % du coût 2032 des capacités qui portent les contrats opérationnels. C'est un ordre de grandeur à confronter au modèle : rien n'est ajouté d'office à la table.
+- **Défection d'un allié (DGRIS-03)** : voir section 12.2.
+
+Ce qui n'est pas dans l'outil, faute d'être écrit dans les fiches : des cartes d'aléas tirées au hasard, une perte automatique de 50 % en fin de vie, une mécanique d'achats récurrents. Les 22 exigences présidentielles ne sont pas listées dans les fiches : elles restent à suivre par l'animateur.

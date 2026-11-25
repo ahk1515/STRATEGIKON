@@ -15,6 +15,8 @@
   var ROLES_CONTRAINTE = ["MINARM", "Animateur"];           // cochent la contrainte politique
   var ROLES_FINANCEMENT = ["DGRIS", "DGA", "MEFR", "Animateur"]; // proposent un montage de financement
   var ROLES_ETALEMENT = ["CEMA", "SC-Plans", "Animateur"];   // placent les lignes sur la trajectoire
+  var ROLES_COCA = ["COCA", "Animateur"];                    // rapport d'alerte et grille des scénarios (COCA-01, COCA-02)
+  var ROLES_CONTRATS = ["CEMA", "Animateur"];                // notent les contrats opérationnels (CEMA-02)
   var FIN = M.ANNEES[M.ANNEES.length - 1];
   var CLE_SESSION = "strategikon.table";
 
@@ -103,6 +105,7 @@
     if (l.type === "dorese") return "Renforcement à 100 %";
     if (l.type === "retrait") return "Dissolution";
     if (l.type === "degrade") return "Repassage à 50 %";
+    if (l.type === "durci") return "Durcissement (sur-dotation)";
     return l.modele ? "Option de la fiche " + ((optionDe(l.modele) || {}).role || "") : "Pion sur mesure";
   }
   function anneesDe(l) {
@@ -223,7 +226,7 @@
   function memeGeste(l, g) {
     if (l.role !== etat.role || l.type !== g.type || !!l.cible !== enCible()) return false;
     if (g.type === "ajout") return l.pion === g.pion && Number(l.niveau) === Number(g.niveau);
-    if (g.type === "dorese" || g.type === "retrait" || g.type === "degrade") return l.pion === g.pion;
+    if (g.type === "dorese" || g.type === "retrait" || g.type === "degrade" || g.type === "durci") return l.pion === g.pion;
     if (g.type === "libre") return !!g.modele && l.modele === g.modele;
     return false;
   }
@@ -273,6 +276,19 @@
     if (!M.ANNEES.some(function (a) { return M.quantite(l, a) > 0; })) { supprimer(l); etat.selection = null; etat.volet = "poser"; }
     else enregistrer(l);
     rendre(true);
+  }
+
+  // Durcissement (SCP-03) : ajoute ou retire une DORESE de sur-dotation à une capacité du socle.
+  function durcir(p, k, delta) {
+    var l = etat.lignes.filter(function (x) { return memeGeste(x, { type: "durci", pion: p.id }); })[0];
+    if (!l) l = poser({ type: "durci", pion: p.id });
+    l.dorese_sup = M.doreseSup(l);
+    l.dorese_sup[k] = Math.max(0, l.dorese_sup[k] + delta);
+    var n = l.dorese_sup.ao + l.dorese_sup.mco + l.dorese_sup.rh;
+    if (!n) { supprimer(l); etat.selection = { pion: p.id }; etat.volet = "selection"; rendre(true); return; }
+    enregistrer(l);
+    rendre(true);
+    toast("Durcissement : " + n + " DORESE au-delà de 100 %");
   }
 
   // ---------- Rendu ----------
@@ -463,6 +479,7 @@
       if (x.ligne && sousLigne[x.ligne]) cl.push("pion-sous");
       if (x.ligne && CHAUDS[x.ligne]) cl.push("pion-chaud");
       if (mq && mq.defection) cl.push("pion-defection");
+      if (x.durci) { cl.push("pion-durci"); }
       var cache = masque(x);
       var nom = cache ? "Demande " + x.armee : x.libelle;
       var pion = x.pion ? IDX[x.pion] : null;
@@ -478,6 +495,7 @@
         notes.push(sv.libelle);
       }
       if (mq && mq.defection) notes.push("défection de l'allié");
+      if (x.durci) { notes.push("durcie (DORESE au-delà de 100 %)"); enfants.push(el("span", { classe: "marque-durci", title: "Capacité durcie" }, ["D+"])); }
       if (x.ligne && sousLigne[x.ligne]) notes.push("sous la ligne de flottaison");
       if (x.ligne && CHAUDS[x.ligne]) notes.push("à arbitrer : " + CHAUDS[x.ligne].join(", "));
       var ma = x.ligne && !cache ? marqueAlerte(alertesDe(x.ligne)) : null;
@@ -580,6 +598,7 @@
     if (enveloppesVisibles().length) o.push(["enveloppes", "Enveloppes"]);
     if (!enCible()) o.push(["trajectoire", "Trajectoire"]);
     if (arbitre() || vueComplete()) o.push(["arbitrage", "Arbitrage"]);
+    o.push(["redteam", "Red team"]);
     o.push(["bilan", "Bilan"]);
     if (ROLES_REGLAGES.indexOf(etat.role) !== -1) o.push(["reglages", "Réglages"]);
     if (etat.role === "Animateur") o.push(["echanges", "Échanges"]);
@@ -596,7 +615,7 @@
     var v = $("volet");
     vider(v);
     ({ poser: voletPoser, selection: voletSelection, demande: voletDemande, flottaison: voletFlottaison, enveloppes: voletEnveloppes, trajectoire: voletTrajectoire,
-      arbitrage: voletArbitrage, bilan: voletBilan, reglages: voletReglages, echanges: voletEchanges }[etat.volet] || voletPoser)(v);
+      arbitrage: voletArbitrage, redteam: voletRedTeam, bilan: voletBilan, reglages: voletReglages, echanges: voletEchanges }[etat.volet] || voletPoser)(v);
   }
 
   function choixPortee() {
@@ -737,6 +756,10 @@
     if (p.type === "capacite") lignesEtat.push(["DORESE posées", M.nbDepart(p) + " / " + M.nbDorese(p) + (M.nbDorese(p) ? " (" + dep.ao + " AO, " + dep.mco + " MCO, " + dep.rh + " RH)" : "")]);
     var lActive = function (type) { var l = etat.lignes.filter(function (x) { return x.type === type && x.pion === p.id && M.quantite(effective(x), etat.annee); })[0]; return l; };
     if (p.type === "capacite") lignesEtat.push(["État en " + etat.annee, lActive("degrade") ? "à 50 %, DORESE rendues (" + lActive("degrade").role + ")" : lActive("dorese") ? "à 100 %, renforcée (" + lActive("dorese").role + ")" : plein ? "à 100 %" : "dégradée"]);
+    if (p.type === "capacite") {
+      var ops = M.etatCapacite(p, lignesJeu(), params(), etat.annee);
+      lignesEtat.push(["Opérationnalité", ops.retire ? "retirée" : ops.taux + " % · face " + ops.face + (ops.durci ? " (+" + ops.durci + " DORESE)" : "")]);
+    }
     v.appendChild(el("dl", { classe: "etat-pion" }, lignesEtat.reduce(function (acc, x) { return acc.concat([el("dt", { texte: x[0] }), el("dd", { texte: x[1] })]); }, [])));
     if (p.remarque) v.appendChild(el("p", { classe: "aide", texte: p.remarque }));
 
@@ -775,9 +798,19 @@
         el("em", { texte: "+" + md(M.nbManquantes(p) * M.CASE) + " par an" })
       ]));
     }
+    var durc = etat.lignes.filter(function (x) { return memeGeste(x, { type: "durci", pion: p.id }); })[0];
+    if (p.type === "capacite" && M.nbDorese(p) && !degrCetteAnnee && (plein || (renf && M.quantite(effective(renf), etat.annee)))) {
+      var boutonsD = el("span", { classe: "durcir-types" });
+      [["ao", "AO"], ["mco", "MCO"], ["rh", "RH"]].forEach(function (k) {
+        boutonsD.appendChild(el("button", { type: "button", classe: "btn-mini", texte: "+1 " + k[1], onclick: function (ev) { ev.stopPropagation(); durcir(p, k[0], 1); } }));
+      });
+      actions.appendChild(el("div", { classe: "action" }, [el("b", { texte: "Durcir (sur-dotation)" }),
+        el("span", { texte: "DORESE au-delà de 100 % pour la haute intensité, à la demande de l'armée (SCP-03). " + textePortee().replace(/^./, function (c) { return c.toUpperCase(); }) + "." }),
+        el("em", { texte: "+" + md(M.CASE) + " par DORESE et par an" }), boutonsD]));
+    }
     actions.appendChild(el("button", { type: "button", classe: "action action-retrait", onclick: function () { poser({ type: "retrait", pion: p.id }); } }, [
       el("b", { texte: "Dissoudre" }),
-      el("span", { texte: "Retire le pion de la table " + textePortee() }),
+      el("span", { texte: "Décidé en COCEM : le pion reste payé " + M.delaiRetrait(params()) + " ans après la décision, puis quitte la table (SCP-05)." }),
       el("em", { texte: "−" + md(M.coutSocle(p)) + " par an" })
     ]));
     actions.appendChild(el("button", { type: "button", classe: "action", onclick: function () { poser({ type: "ajout", pion: p.id, niveau: M.nbDorese(p) ? 100 : 50 }); } }, [
@@ -786,7 +819,7 @@
       el("em", { texte: "+" + md(M.nbDorese(p) ? p.cout100 : p.cout50) + " par an" })
     ]));
     v.appendChild(actions);
-    [renf, diss, degr].forEach(function (l) { if (l) v.appendChild(el("p", { classe: "aide" }, ["Déjà dans votre demande : " + natureLigne(l).toLowerCase() + " (" + anneesDe(l) + "). ", el("button", { classe: "btn-lien", type: "button", texte: "Ouvrir", onclick: function () { etat.selection = { ligne: l.id, pion: l.pion }; rendreVolet(); } })])); });
+    [renf, diss, degr, durc].forEach(function (l) { if (l) v.appendChild(el("p", { classe: "aide" }, ["Déjà dans votre demande : " + natureLigne(l).toLowerCase() + " (" + anneesDe(l) + "). ", el("button", { classe: "btn-lien", type: "button", texte: "Ouvrir", onclick: function () { etat.selection = { ligne: l.id, pion: l.pion }; rendreVolet(); } })])); });
   }
 
   // Une demande (ligne) : la régler ou l'enlever.
@@ -826,8 +859,18 @@
       v.appendChild(el("section", { classe: "bloc-conception" }, [el("h3", { texte: "Décision du CEMA" }), blocArbitrage(l)]));
       decisionPosee = true;
     }
-    [arbitre() ? null : blocAvis(l), blocPriorite(l), blocContrainte(l.id, l.role), blocFinancement(l), blocEnveloppe(l), blocTrajectoire(l)].forEach(function (b) { if (b) v.appendChild(b); });
+    [arbitre() ? null : blocAvis(l), blocCoca(l), blocPriorite(l), blocContrainte(l.id, l.role), blocFinancement(l), blocEnveloppe(l), blocTrajectoire(l)].forEach(function (b) { if (b) v.appendChild(b); });
 
+    if (mien && l.type === "durci" && p) {
+      var su = M.doreseSup(l);
+      var gD = el("div", { classe: "durcir-reglage" });
+      [["ao", "AO"], ["mco", "MCO"], ["rh", "RH"]].forEach(function (k) {
+        gD.appendChild(el("span", { classe: "durcir-type" }, [el("b", { texte: k[1] + " " + su[k[0]] }),
+          el("button", { type: "button", classe: "btn-mini btn-mini-non", texte: "−", onclick: function () { durcir(p, k[0], -1); } }),
+          el("button", { type: "button", classe: "btn-mini", texte: "+", onclick: function () { durcir(p, k[0], 1); } })]));
+      });
+      v.appendChild(el("div", { classe: "champ" }, [el("span", { texte: "DORESE de sur-dotation (au-delà de 100 %)" }), gD]));
+    }
     if (mien) {
       if (l.type === "ajout" && p && p.type === "capacite" && M.nbDorese(p)) {
         var seg = el("div", { classe: "segment", role: "group", "aria-label": "Niveau" });
@@ -967,6 +1010,10 @@
     var syn = M.synthese(PIONS, lignesJeu(), p);
     var arb = M.synthese(PIONS, M.lignesApresArbitrage(lignesJeu(), p), p);
     v.appendChild(el("h2", { classe: "volet-titre", texte: "Bilan 2027-2032" }));
+    v.appendChild(blocContrats());
+    var cv = M.couvertureScenarios(p);
+    if (cv) v.appendChild(el("p", { classe: "aide" }, [el("b", { texte: "Scénarios de crise (COCA) : " }), cv.taux + " % de couverture · " + cv.satisfaisant + " satisfaisant(s), " + cv.partiel + " partiel(s), " + cv.insuffisant + " insuffisant(s)."]));
+    if (p.inflation && M.SCENARIOS_INFLATION[p.inflation.scenario]) v.appendChild(el("p", { classe: "aide" }, [el("b", { texte: "Inflation : " }), M.SCENARIOS_INFLATION[p.inflation.scenario].nom + ", −" + md(M.SCENARIOS_INFLATION[p.inflation.scenario].montant) + " par an dès " + (p.inflation.debut || M.ANNEES[0]) + " (plafonds réduits)."]));
     var t = el("table", { classe: "mini-tableau" });
     t.appendChild(el("thead", null, [el("tr", null, [el("th", { texte: "Md€" }), el("th", { classe: "num", texte: "Socle" }), el("th", { classe: "num", texte: "Demandes" }), el("th", { classe: "num", texte: "Plafond" }), el("th", { classe: "num", texte: "Marge après arb." })])]));
     var tb = el("tbody");
@@ -1012,6 +1059,86 @@
     if (vis.length) v.appendChild(el("details", { classe: "details-regles" }, [el("summary", { texte: "Voir les alertes" }), listeAlertes(vis, true)]));
     v.appendChild(el("button", { classe: "btn-contour", type: "button", texte: "Télécharger les lignes (CSV)", onclick: telechargerCsv }));
   }
+  // Contrats opérationnels 2027 (CEMA-02) : évaluation indicative en 2032 après arbitrage, notée par le CEMA.
+  function blocContrats() {
+    var p = params(), ks = M.evaluerContrats(PIONS, lignesJeu(), p);
+    var peut = ROLES_CONTRATS.indexOf(etat.role) !== -1;
+    var n = { tenu: 0, partiel: 0, non_tenu: 0 };
+    ks.forEach(function (k) { n[k.etat]++; });
+    var b = el("section", { classe: "bloc-conception bloc-contrats" });
+    b.appendChild(el("h3", { texte: "Contrats opérationnels en 2032" }));
+    b.appendChild(el("p", { classe: "total-demande" }, [el("b", { texte: n.tenu + " / " + ks.length }), " tenus · " + n.partiel + " partiel(s) · " + n.non_tenu + " non tenu(s)"]));
+    var ul = el("ul", { classe: "contrats" });
+    ks.forEach(function (k) {
+      var droite;
+      if (peut) {
+        droite = el("select", { "aria-label": "Note " + k.nom });
+        droite.appendChild(el("option", { value: "", texte: "Auto : " + M.ETATS_CONTRAT[k.auto] }));
+        Object.keys(M.ETATS_CONTRAT).forEach(function (e) { droite.appendChild(el("option", { value: e, texte: M.ETATS_CONTRAT[e] })); });
+        droite.value = k.note || "";
+        droite.addEventListener("change", function () { var val = droite.value; modifierParams(function (pp) { pp.contrats = pp.contrats || {}; if (val) pp.contrats[k.id] = val; else delete pp.contrats[k.id]; }); });
+      } else droite = el("span", { classe: "badge contrat-" + k.etat, texte: M.ETATS_CONTRAT[k.etat] });
+      ul.appendChild(el("li", { classe: "contrat contrat-li-" + k.etat }, [el("span", null, [el("b", { texte: k.milieu + " · " + k.nom }), el("small", { texte: k.detail + (k.note ? " · noté par le CEMA (auto : " + M.ETATS_CONTRAT[k.auto].toLowerCase() + ")" : "") })]), droite]));
+    });
+    b.appendChild(ul);
+    b.appendChild(el("p", { classe: "aide", texte: "Évaluation indicative à partir des pions qui portent chaque contrat (100 % = tenu, face rouge = partiel, retiré = non tenu)." + (peut ? " Le CEMA corrige la note si besoin." : "") }));
+    return b;
+  }
+
+  // Onglet Red team (COCA-01 à COCA-03) : grille des scénarios de crise, rapport d'alerte, aléa Baltique.
+  function voletRedTeam(v) {
+    var p = params(), peut = ROLES_COCA.indexOf(etat.role) !== -1;
+    v.appendChild(el("h2", { classe: "volet-titre", texte: "COCA / Red team" }));
+    v.appendChild(el("p", { classe: "aide", texte: "Le COCA (ou la Red team) évalue chaque scénario de crise et peut poser sur une demande : urgence, tuile requalifiée, renoncement assumé, alarme à l'exécutif. Le CEMA lève ces statuts." }));
+    var cv = M.couvertureScenarios(p);
+    v.appendChild(el("h3", { texte: "Scénarios de crise" + (cv ? " · couverture " + cv.taux + " %" : "") }));
+    var scs = (p.scenarios || []).map(function (x) { return Object.assign({}, x); });
+    var ul = el("ul", { classe: "scenarios" });
+    scs.forEach(function (x, i) {
+      if (peut) {
+        var nom = el("input", { value: x.nom || "", "aria-label": "Scénario", maxlength: 80 });
+        var note = el("select", { "aria-label": "Évaluation" }); note.appendChild(el("option", { value: "", texte: "À évaluer" }));
+        Object.keys(M.NOTES_SCENARIO).forEach(function (k) { note.appendChild(el("option", { value: k, texte: M.NOTES_SCENARIO[k] })); }); note.value = x.note || "";
+        var ecart = el("input", { value: x.ecart || "", placeholder: "Écart capacitaire", "aria-label": "Écart capacitaire", maxlength: 200 });
+        var reco = el("select", { "aria-label": "Recommandation" }); reco.appendChild(el("option", { value: "", texte: "Recommandation…" }));
+        Object.keys(M.RECOMMANDATIONS).forEach(function (k) { reco.appendChild(el("option", { value: k, texte: M.RECOMMANDATIONS[k] })); }); reco.value = x.recommandation || "";
+        function sauver() { modifierParams(function (pp) { pp.scenarios = pp.scenarios || []; var y = pp.scenarios.filter(function (z) { return z.id === x.id; })[0]; if (!y) return; y.nom = nom.value.trim(); y.note = note.value || null; y.ecart = ecart.value.trim(); y.recommandation = reco.value || null; }); }
+        [nom, note, ecart, reco].forEach(function (c) { c.addEventListener("change", sauver); });
+        ul.appendChild(el("li", { classe: "scenario scenario-" + (x.note || "vide") }, [el("div", { classe: "scenario-ligne" }, [nom, note]), el("div", { classe: "scenario-ligne" }, [ecart, reco]),
+          el("button", { type: "button", classe: "btn-lien", texte: "Retirer", onclick: function () { modifierParams(function (pp) { pp.scenarios = (pp.scenarios || []).filter(function (z) { return z.id !== x.id; }); }); } })]));
+      } else {
+        ul.appendChild(el("li", { classe: "scenario scenario-" + (x.note || "vide") }, [el("b", { texte: x.nom || "Scénario" }),
+          el("span", { classe: "badge", texte: x.note ? M.NOTES_SCENARIO[x.note] : "À évaluer" }),
+          el("small", { texte: [x.ecart, x.recommandation ? M.RECOMMANDATIONS[x.recommandation] : ""].filter(Boolean).join(" · ") })]));
+      }
+    });
+    if (!scs.length) ul.appendChild(el("li", { classe: "vide", texte: "Aucun scénario évalué pour l'instant." }));
+    v.appendChild(ul);
+    if (peut) v.appendChild(el("button", { type: "button", classe: "btn-contour", texte: "Ajouter un scénario", onclick: function () {
+      modifierParams(function (pp) { pp.scenarios = pp.scenarios || []; pp.scenarios.push({ id: "sc-" + Date.now().toString(36), nom: pp.scenarios.length ? "Nouveau scénario" : "Haute intensité Baltique", note: null, ecart: "", recommandation: null }); });
+    } }));
+    if (p.aleaBaltique) {
+      var bb = M.besoinBaltique(PIONS, lignesJeu(), p, FIN);
+      v.appendChild(el("section", { classe: "bloc-conception bloc-alea" }, [el("h3", { texte: "Aléa Baltique (COCA-03)" }),
+        el("p", { texte: "Les partenaires européens limitent leur participation : la France doit fournir jusqu'à 30 % de capacités en plus." }),
+        el("p", { classe: "total-demande" }, [el("b", { texte: "+" + md(bb.supplement) }), " par an, soit 30 % des " + md(bb.base) + " que coûtent en 2032 les capacités des contrats opérationnels."]),
+        el("p", { classe: "aide", texte: "Ordre de grandeur à confronter au modèle retenu : rien n'est ajouté d'office à la table." })]));
+    }
+    var marquees = etat.lignes.filter(function (l) { return M.cocaDe(l, p); });
+    v.appendChild(el("h3", { texte: "Rapport d'alerte sur les demandes (" + marquees.length + ")" }));
+    if (!marquees.length) v.appendChild(el("p", { classe: "vide", texte: peut ? "Ouvrez une demande sur la table pour y poser un statut COCA." : "Aucun statut COCA posé." }));
+    else {
+      var ul2 = el("ul", { classe: "liste-demande" });
+      marquees.forEach(function (l) {
+        var c = M.cocaDe(l, p);
+        ul2.appendChild(el("li", null, [el("button", { type: "button", style: "--c:" + couleur(M.armeeDeLigne(l, IDX)), onclick: function () { etat.selection = { ligne: l.id, pion: l.pion || null }; etat.volet = "selection"; rendre(true); } }, [
+          el("span", null, [el("b", { texte: libelleLigne(l) }), el("small", { texte: l.role + " · " + Object.keys(M.STATUTS_COCA).filter(function (k) { return c[k]; }).map(function (k) { return M.STATUTS_COCA[k]; }).join(", ") + (c.texte ? " · " + c.texte : "") })]),
+          el("span", { classe: "num" }, [badgeDecision(l)])])]));
+      });
+      v.appendChild(ul2);
+    }
+  }
+
   function telechargerCsv() {
     var p = params();
     var ent = ["Pôle", "Action", "Objet", "Armée"].concat(M.ANNEES.map(String)).concat(["Total (M€)", "Décision", "Justification"]);
@@ -1043,6 +1170,22 @@
         return el("label", null, [cb, " " + a]);
       }))]));
     });
+    f.appendChild(el("h3", { texte: "Aléas tirés des fiches" }));
+    var inf = el("select", { id: "reg-inflation", "aria-label": "Scénario d'inflation" });
+    inf.appendChild(el("option", { value: "", texte: "Pas d'inflation" }));
+    Object.keys(M.SCENARIOS_INFLATION).forEach(function (k) { var x = M.SCENARIOS_INFLATION[k]; inf.appendChild(el("option", { value: k, texte: x.nom + " · −" + md(x.montant) + "/an" })); });
+    inf.value = (p.inflation && p.inflation.scenario) || "";
+    var infDeb = el("select", { id: "reg-inflation-debut", "aria-label": "À partir de" });
+    M.ANNEES.forEach(function (a) { infDeb.appendChild(el("option", { value: a, texte: "dès " + a })); });
+    infDeb.value = String((p.inflation && p.inflation.debut) || M.ANNEES[0]);
+    f.appendChild(el("div", { classe: "champ" }, [el("span", { texte: "Inflation (MEFR-03) : retirée du plafond de chaque année concernée" }), el("div", { classe: "env-ligne" }, [inf, infDeb])]));
+    var balt = el("input", { type: "checkbox", id: "reg-baltique" }); balt.checked = !!p.aleaBaltique;
+    f.appendChild(el("label", { for: "reg-baltique", classe: "case-cocher" }, [balt, " Aléa Baltique (COCA-03) : les Européens limitent leur participation, +30 % de besoin"]));
+    var delai = el("select", { id: "reg-delai-retrait", "aria-label": "Délai de retrait" });
+    [[2, "2 ans"], [3, "3 ans"]].forEach(function (x) { delai.appendChild(el("option", { value: x[0], texte: x[1] })); });
+    delai.value = String(M.delaiRetrait(p));
+    f.appendChild(el("label", { classe: "champ" }, ["Retrait d'une capacité (SCP-05) : payée encore", delai]));
+
     f.appendChild(el("h3", { texte: "Étape de la partie" }));
     var ph = el("select", { id: "reg-phase", "aria-label": "Étape de la partie" });
     [["cible", "1 · Modèle 2032"], ["trajectoire", "2 · Trajectoire 2027-2032"]].forEach(function (x) { ph.appendChild(el("option", { value: x[0], texte: x[1] })); });
@@ -1080,11 +1223,13 @@
       var phaseChoisie = ph.value;
       var envOk = envs.filter(function (e) { return e.nom && e.nom.trim(); }).map(function (e) { return { id: e.id, role: e.role, nom: e.nom.trim(), montant: Math.max(0, Number(e.montant) || 0), pion: e.pion || null }; });
       M.ANNEES.forEach(function (a) { plaf[a] = Math.max(0, Number($("plafond-" + a).value) || 0); });
-      f.querySelectorAll("input[type=checkbox]").forEach(function (cb) {
+      f.querySelectorAll("input[type=checkbox][data-pion]").forEach(function (cb) {
         var id = cb.getAttribute("data-pion"); aleas[id] = aleas[id] || [];
         if (cb.checked) aleas[id].push(Number(cb.getAttribute("data-annee")));
       });
-      modifierParams(function (pp) { pp.plafonds = plaf; pp.aleas = aleas; pp.phase = phaseChoisie; pp.enveloppes = envOk; }).then(function () { toast("Réglages enregistrés"); });
+      var inflation = inf.value ? { scenario: inf.value, debut: Number(infDeb.value) } : null;
+      var aleaB = balt.checked, delaiR = Number(delai.value);
+      modifierParams(function (pp) { pp.plafonds = plaf; pp.aleas = aleas; pp.phase = phaseChoisie; pp.enveloppes = envOk; pp.inflation = inflation; pp.aleaBaltique = aleaB; pp.delaiRetrait = delaiR; }).then(function () { toast("Réglages enregistrés"); });
     });
     v.appendChild(f);
   }
@@ -1191,6 +1336,31 @@
       texte.addEventListener("change", function () { if (actuel.valeur) enregistrerAvis(actuel.valeur); });
       b.appendChild(el("div", { classe: "champ" }, [el("span", { texte: (k === "avis" ? "Mon avis" : n.nom) + " (" + etat.role + ")" }), seg, texte]));
     });
+    return b;
+  }
+
+  // Rapport d'alerte COCA / Red team (COCA-01) : statuts posés par le COCA, levés par le CEMA.
+  function blocCoca(l) {
+    var p = params(), c = M.cocaDe(l, p) || {};
+    var poses = Object.keys(M.STATUTS_COCA).filter(function (k) { return c[k]; });
+    var peut = ROLES_COCA.indexOf(etat.role) !== -1, leve = etat.role === "CEMA";
+    if (!poses.length && !peut) return null;
+    var b = el("section", { classe: "bloc-conception bloc-coca" });
+    b.appendChild(el("h3", { texte: "Rapport COCA / Red team" }));
+    if (poses.length) b.appendChild(el("div", { classe: "badges" }, poses.map(function (k) { return el("span", { classe: "badge badge-coca", texte: M.STATUTS_COCA[k] }); })));
+    if (c.texte) b.appendChild(el("blockquote", { classe: "citation", texte: c.texte + (c.par ? " (" + c.par + ")" : "") }));
+    function ecrire(fn) { return modifierParams(function (pp) { pp.coca = pp.coca || {}; var x = Object.assign({}, pp.coca[l.id] || {}); fn(x); x.par = etat.role; var reste = Object.keys(M.STATUTS_COCA).some(function (k) { return x[k]; }) || x.texte; if (reste) pp.coca[l.id] = x; else delete pp.coca[l.id]; }); }
+    if (peut) {
+      var g = el("div", { classe: "segment segment-avis", role: "group", "aria-label": "Statuts COCA" });
+      Object.keys(M.STATUTS_COCA).forEach(function (k) {
+        g.appendChild(el("button", { type: "button", "aria-pressed": c[k] ? "true" : "false", texte: M.STATUTS_COCA[k], onclick: function () { ecrire(function (x) { x[k] = !x[k]; }); } }));
+      });
+      var t = el("input", { placeholder: "Motif du rapport, en une phrase", value: c.texte || "", "aria-label": "Motif COCA", maxlength: 240 });
+      t.addEventListener("change", function () { ecrire(function (x) { x.texte = t.value.trim(); }); });
+      b.appendChild(g); b.appendChild(t);
+    } else if (leve && poses.length) {
+      b.appendChild(el("button", { type: "button", classe: "btn-contour", texte: "Lever le rapport COCA", onclick: function () { modifierParams(function (pp) { if (pp.coca) delete pp.coca[l.id]; }); } }));
+    }
     return b;
   }
 

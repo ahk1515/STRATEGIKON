@@ -241,7 +241,9 @@ test("étalement automatique : par priorité, à la première année qui tient ;
 global.window.STRAT_CATALOGUE_ROLES = undefined;
 eval(fs.readFileSync(path.join(__dirname, "../data/catalogue_roles.js"), "utf8"));
 const CAT = global.window.STRAT_CATALOGUE_ROLES;
-const regles = (lignes, p) => M.alertes(PIONS, lignes, p || pp(), CAT).map((a) => a.regle + ":" + a.niveau);
+// Alertes rattachées à une ligne ; les alertes générales (fin de vie, stocks…) sont testées à part.
+const regles = (lignes, p) => M.alertes(PIONS, lignes, p || pp(), CAT).filter((a) => a.ligne).map((a) => a.regle + ":" + a.niveau);
+const generales = (lignes, p) => M.alertes(PIONS, lignes, p || pp(), CAT).filter((a) => !a.ligne).map((a) => a.regle);
 
 test("alertes : délai de mise en service, après la LPM ou en cours de LPM", () => {
   const aed = { id: "a", role: "DGA", type: "libre", modele: "DGA-AED-10", cout_unitaire: 300, qte: ANS(1) };
@@ -261,16 +263,94 @@ test("alertes : partenaires, défection, dissolution trop rapide, masse salarial
   montage.financements.b.valide = true;
   assert.deepStrictEqual(regles([bfa], pp(montage)), []);
   assert.ok(regles([bfa], pp(Object.assign({ defections: { b: true } }, montage))).includes("DGRIS-03:alerte"));
-  assert.deepStrictEqual(regles([{ id: "r", role: "EMAT", type: "retrait", pion: "P19", qte: { 2027: 1 } }]), ["SCP-05:alerte"]);
+  assert.deepStrictEqual(regles([{ id: "r", role: "EMAT", type: "retrait", pion: "P19", qte: { 2027: 1 } }]), ["SCP-05:info"]);
   // 2 Serval à 100 % la même année : 2 DORESE RH chacun ? on vérifie le seuil de 4 par an.
   const rh = (id) => ({ id, role: "EMAT", type: "libre", cout_unitaire: 100, dorese: { ao: 0, mco: 0, rh: 3 }, qte: { 2030: 1 } });
-  assert.ok(regles([rh("x"), rh("y")]).includes("SGA-01:alerte"));
-  assert.ok(!regles([rh("x")]).includes("SGA-01:alerte"));
+  assert.ok(generales([rh("x"), rh("y")]).includes("SGA-01"));
+  assert.ok(!generales([rh("x")]).includes("SGA-01"));
 });
 
 test("alertes : une ligne renoncée n'alerte plus", () => {
   const aed = { id: "a", role: "DGA", type: "libre", modele: "DGA-AED-10", cout_unitaire: 300, qte: ANS(1) };
   assert.deepStrictEqual(regles([aed], pp({ arbitrages: { a: { statut: "renonce" } } })), []);
+});
+
+test("retrait : payé 2 ans après la décision (3 si réglé), économie ensuite", () => {
+  const r = { id: "r", role: "EMAT", type: "retrait", pion: "P19", qte: ANS(1) };
+  const e = M.ligneEffective(r, pp());
+  assert.deepStrictEqual(M.ANNEES.map((a) => e.qte[a]), [0, 0, 1, 1, 1, 1]);
+  const e3 = M.ligneEffective(r, pp({ delaiRetrait: 3 }));
+  assert.deepStrictEqual(M.ANNEES.map((a) => e3.qte[a]), [0, 0, 0, 1, 1, 1]);
+  // Au modèle 2032 non placé : décision en 2027, économie en 2032.
+  const c = M.ligneEffective({ id: "c", role: "EMAT", type: "retrait", pion: "P19", cible: true, qte: { 2032: 1 } }, pp());
+  assert.strictEqual(c.qte[2032], 1);
+  assert.deepStrictEqual(regles([r]), ["SCP-05:info"]);
+});
+
+test("durcissement : DORESE au-delà de 100 %, posées au contact, taux > 100 %", () => {
+  const d = { id: "d", role: "EMAT", type: "durci", pion: "P24", dorese_sup: { ao: 1, mco: 1, rh: 0 }, qte: ANS(1) };
+  assert.strictEqual(M.coutLigne(d, IDX).annees[2030].cout, 200);
+  const t = M.placerAnnee(PIONS, [d], pp(), 2030);
+  assert.strictEqual(t.cellules.filter((x) => x.ligne === "d").length, 2);
+  assert.ok(t.pieces.some((x) => x.pion === "P24" && x.durci === "d"));
+  const et = M.etatCapacite(IDX.P24, [d], pp(), 2030);
+  assert.strictEqual(et.face, "durcie");
+  assert.ok(et.taux > 100);
+  assert.deepStrictEqual(regles([d]), ["SCP-03:info"]);
+});
+
+test("opérationnalité : 100 %, face rouge de 90 % à 50 %, retirée", () => {
+  assert.strictEqual(M.etatCapacite(IDX.P33, [], pp(), 2030).taux, 100);
+  assert.strictEqual(M.etatCapacite(IDX.P27, [], pp(), 2030).taux, 77); // A400M : 2 DORESE sur 3
+  const g = { id: "g", role: "EMAAE", type: "degrade", pion: "P33", qte: ANS(1) };
+  assert.strictEqual(M.etatCapacite(IDX.P33, [g], pp(), 2030).taux, 50);
+  assert.deepStrictEqual(regles([g]), ["SCP-02:info", "CEMA-02:alerte"]);
+});
+
+test("inflation : le plafond effectif baisse dès l'année choisie", () => {
+  const p = pp({ inflation: { scenario: "energie", debut: 2029 } });
+  assert.strictEqual(M.plafondMontant(p, 2028), 58000);
+  assert.strictEqual(M.plafondMontant(p, 2029), 57000 - 2800);
+  assert.strictEqual(M.synthese(PIONS, [], p)[2030].plafond, 59000 - 2800);
+  assert.ok(generales([], p).includes("MEFR-03"));
+});
+
+test("contrats opérationnels : tenus d'office, non tenu après une dissolution retenue", () => {
+  const base = M.evaluerContrats(PIONS, [], pp());
+  assert.strictEqual(base.length, 10);
+  assert.ok(base.filter((k) => k.id !== "air-transport").every((k) => k.etat === "tenu"));
+  const r = { id: "r", role: "EMAAE", type: "retrait", pion: "P30", qte: ANS(1) };
+  const k = M.evaluerContrats(PIONS, [r], pp({ arbitrages: { r: { statut: "retenu" } } })).find((x) => x.id === "air-male");
+  assert.strictEqual(k.auto, "non_tenu");
+  const note = M.evaluerContrats(PIONS, [r], pp({ arbitrages: { r: { statut: "retenu" } }, contrats: { "air-male": "partiel" } })).find((x) => x.id === "air-male");
+  assert.strictEqual(note.etat, "partiel");
+  // Transport : A400M à 77 % au départ, donc partiel.
+  assert.strictEqual(base.find((x) => x.id === "air-transport").auto, "partiel");
+});
+
+test("fin de vie, stocks et munitions : alertes générales et plan de munitions", () => {
+  const g0 = generales([]);
+  assert.ok(g0.includes("EMAAE-01") && g0.includes("EMM-03") && !g0.includes("DGA-10"));
+  const fda = { id: "f", role: "EMM", type: "libre", modele: "EMM-FDA", cout_unitaire: 300, qte: ANS(1) };
+  const maws = { id: "m", role: "EMM", type: "libre", modele: "EMM-MAWS", cout_unitaire: 300, qte: ANS(1) };
+  assert.ok(!generales([fda, maws]).includes("EMM-03"));
+  assert.ok(generales([], pp({ aleas: { P12: M.ANNEES, P13: [2027] } })).includes("DGA-10"));
+  const rafale = { id: "r", role: "EMAAE", type: "ajout", pion: "P33", niveau: 100, qte: ANS(1) };
+  assert.ok(regles([rafale]).includes("DGA-09:alerte"));
+  const mun = { id: "u", role: "DGA", type: "libre", modele: "DGA-MUN-ACHAT", cout_unitaire: 100, qte: ANS(1) };
+  assert.ok(!regles([rafale, mun]).includes("DGA-09:alerte"));
+});
+
+test("Red team : urgence COCA en point chaud, couverture des scénarios, besoin Baltique", () => {
+  const l = { id: "a", role: "EMAT", type: "ajout", pion: "P24", niveau: 100, qte: ANS(1) };
+  const ch = M.pointsChauds(PIONS, [l], pp({ coca: { a: { urgence: true } } }), CAT, 2030);
+  assert.ok(ch.a.includes("urgence COCA"));
+  assert.strictEqual(M.couvertureScenarios(pp()), null);
+  const cv = M.couvertureScenarios(pp({ scenarios: [{ nom: "Baltique", note: "partiel" }, { nom: "Sahel", note: "satisfaisant" }] }));
+  assert.strictEqual(cv.taux, 75);
+  const b = M.besoinBaltique(PIONS, [], pp(), 2032);
+  assert.ok(b.supplement > 0 && b.supplement <= b.base * 0.3 + 100);
+  assert.ok(generales([], pp({ aleaBaltique: true })).includes("COCA-03"));
 });
 
 // ---------- Échanges : export, import, comparaison ----------

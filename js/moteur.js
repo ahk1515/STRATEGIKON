@@ -30,6 +30,7 @@
     ajout: "Ajouter un pion",
     retrait: "Retirer un pion du socle",
     degrade: "Repasser une capacité à 50 % (retirer ses DORESE)",
+    durci: "Durcir une capacité (DORESE au-delà de 100 %)",
     libre: "Option du catalogue ou pion sur mesure"
   };
 
@@ -46,6 +47,23 @@
   var ENVELOPPES_DEFAUT = [{ id: "rd-dga", role: "DGA", nom: "R&D", montant: 900, pion: "P10" }];
   // Contraintes politiques posées d'office (clé : id de ligne, ou « pion:<id> » pour un pion du socle).
   var CONTRAINTES_DEFAUT = { "pion:P12": { etat: "acquise", par: "MINARM" } };
+
+  // Scénarios d'inflation du MEFR (MEFR-03) : perte de pouvoir d'achat en M€ par an, déclenchée par l'animateur.
+  var SCENARIOS_INFLATION = {
+    stabilisation: { nom: "Stabilisation européenne", montant: 850 },
+    conflit: { nom: "Conflit régional prolongé", montant: 1500 },
+    energie: { nom: "Choc énergétique", montant: 2800 },
+    otan_russie: { nom: "Guerre OTAN-Russie", montant: 4900 }
+  };
+  function inflationDe(params, annee) {
+    var i = (params || {}).inflation;
+    if (!i || !SCENARIOS_INFLATION[i.scenario]) return 0;
+    return annee >= (Number(i.debut) || ANNEES[0]) ? SCENARIOS_INFLATION[i.scenario].montant : 0;
+  }
+  // Plafond effectif d'une année, en M€ : plafond fixé moins l'inflation.
+  function plafondMontant(params, annee) {
+    return (Number(((params || {}).plafonds || {})[annee]) || 0) * CASE - inflationDe(params, annee);
+  }
 
   function indexPions(pions) {
     var idx = {};
@@ -104,6 +122,10 @@
         if (!pion) return vide;
         var dd = doreseDepart(pion);
         return { cout: -nbDepart(pion) * CASE, dorese: { ao: -dd.ao, mco: -dd.mco, rh: -dd.rh } };
+      case "durci":
+        if (!pion) return vide;
+        var sup = doreseSup(ligne);
+        return { cout: (sup.ao + sup.mco + sup.rh) * CASE, dorese: sup };
       case "retrait":
         if (!pion) return vide;
         return { cout: -coutSocle(pion), dorese: { ao: 0, mco: 0, rh: 0 } };
@@ -122,11 +144,16 @@
   }
 
   function copie(d) { return { ao: d.ao, mco: d.mco, rh: d.rh }; }
+  // DORESE de sur-dotation d'une ligne « durci » (SCP-03).
+  function doreseSup(ligne) {
+    var d = (ligne && ligne.dorese_sup) || {};
+    return { ao: Math.max(0, Number(d.ao) || 0), mco: Math.max(0, Number(d.mco) || 0), rh: Math.max(0, Number(d.rh) || 0) };
+  }
 
   function quantite(ligne, annee) {
     var q = Number((ligne.qte || {})[annee]) || 0;
     // Un pion du socle n'existe qu'en un exemplaire : on plafonne à 1.
-    if (ligne.type === "dorese" || ligne.type === "retrait" || ligne.type === "degrade") q = Math.max(0, Math.min(1, q));
+    if (ligne.type === "dorese" || ligne.type === "retrait" || ligne.type === "degrade" || ligne.type === "durci") q = Math.max(0, Math.min(1, q));
     return Math.max(0, q);
   }
 
@@ -206,7 +233,7 @@
       });
       var totalSocle = somme(socle);
       var totalDemandes = somme(demandes);
-      var plafond = (Number((params.plafonds || {})[a]) || 0) * CASE;
+      var plafond = plafondMontant(params, a);
       var total = totalSocle + totalDemandes;
       res[a] = {
         annee: a,
@@ -267,7 +294,7 @@
     });
     lignes.forEach(function (l) {
       var q = quantite(l, annee);
-      if (!q || l.type === "dorese" || l.type === "retrait" || l.type === "degrade") return;
+      if (!q || l.type === "dorese" || l.type === "retrait" || l.type === "degrade" || l.type === "durci") return;
       var arm = armeeDeLigne(l, idx);
       if (l.type === "ajout") {
         var p = idx[l.pion];
@@ -359,12 +386,13 @@
     var tableCases = Number(params.table) || 600;
     var plateau = new Plateau(Math.ceil(tableCases / LARGEUR));
     var pieces = [];
-    var retires = {}, passes100 = {}, degrades = {};
+    var retires = {}, passes100 = {}, degrades = {}, durcis = {};
     lignes.forEach(function (l) {
       if (!quantite(l, annee)) return;
       if (l.type === "retrait") retires[l.pion] = true;
       if (l.type === "dorese") passes100[l.pion] = l;
       if (l.type === "degrade") degrades[l.pion] = l;
+      if (l.type === "durci") durcis[l.pion] = l;
     });
 
     // Constitution des groupes.
@@ -380,14 +408,22 @@
       var dg = degrades[p.id] && !passes100[p.id] ? degrades[p.id] : null;
       var types = (dg ? [] : typesDorese(doreseDepart(p))).concat(l100 ? typesDorese(doreseManquantes(p)) : []);
       var plein = types.length >= nbDorese(p);
+      // Sources des DORESE ajoutées (renforcement puis durcissement), dans l'ordre des types.
+      var sources = (l100 ? typesDorese(doreseManquantes(p)) : []).map(function () { return { ligne: l100.id, role: l100.role, statut: statutDe(l100) }; });
+      var ld = durcis[p.id] && !dg ? durcis[p.id] : null;
+      if (ld) {
+        var tsup = typesDorese(doreseSup(ld));
+        types = types.concat(tsup);
+        tsup.forEach(function () { sources.push({ ligne: ld.id, role: ld.role, statut: statutDe(ld) }); });
+      }
       groupe(g).rigides.push({ pion: p, w: p.l || 1, h: p.h || 1, armee: g === "Fixes" ? p.armee : g, nature: p.type,
         libelle: p.nom, niveau: plein ? 100 : 50, dorese: types.length, types: types, socle: true,
         nDepart: dg ? 0 : nbDepart(p), ligneDorese: l100 ? l100.id : null, roleDorese: l100 ? l100.role : null, degrade: dg ? dg.id : null,
-        statutDorese: l100 ? statutDe(l100) : null, contrainte: contrainteAcquise("pion:" + p.id, params) });
+        statutDorese: l100 ? statutDe(l100) : null, contrainte: contrainteAcquise("pion:" + p.id, params), sources: sources, durci: ld ? ld.id : null });
     });
     lignes.forEach(function (l) {
       var q = quantite(l, annee);
-      if (!q || l.type === "dorese" || l.type === "retrait" || l.type === "degrade") return;
+      if (!q || l.type === "dorese" || l.type === "retrait" || l.type === "degrade" || l.type === "durci") return;
       if (enveloppeDe(l, params)) return; // dans l'enveloppe de son pôle : seul l'excédent est posé
       var arm = armeeDeLigne(l, idx);
       var st = statutDe(l);
@@ -443,20 +479,21 @@
         plateau.marquer(pos.r, pos.c, pos.w, pos.h, id);
         pieces.push({ r: pos.r, c: pos.c, w: pos.w, h: pos.h, armee: it.armee, nature: it.nature, libelle: it.libelle,
           pion: it.pion ? it.pion.id : null, ligne: it.ligne || null, socle: !!it.socle, ligneDorese: it.ligneDorese || null, degrade: it.degrade || null,
-          niveau: it.nature === "capacite" ? it.niveau : null, role: it.role || null, groupe: nomG, cases: pos.w * pos.h, statut: it.statut || null,
+          niveau: it.nature === "capacite" ? it.niveau : null, role: it.role || null, groupe: nomG, cases: pos.w * pos.h, statut: it.statut || null, durci: it.durci || null,
           marques: it.marques || (it.contrainte ? { contrainte: true, part: 1 } : null) });
         // DORESE au contact : cases libres voisines de la capacité (ou de ses DORESE déjà posées).
         var types = it.types || typesDorese(it.detailDorese || {});
         var amas = [{ r: pos.r, c: pos.c, w: pos.w, h: pos.h }];
         types.slice(0, it.dorese).forEach(function (t, n) {
           var ajoutee = it.socle && n >= (it.nDepart || 0);
+          var src = ajoutee && it.sources ? it.sources[n - (it.nDepart || 0)] : null;
           var cand = voisinLibre(plateau, amas, rMin);
           if (!cand) { var p2 = plateau.chercher(1, 1, r0); cand = { r: p2.r, c: p2.c, loin: true }; }
           plateau.marquer(cand.r, cand.c, 1, 1, "d" + id);
           amas.push({ r: cand.r, c: cand.c, w: 1, h: 1 });
           cellules.push({ r: cand.r, c: cand.c, armee: it.armee, nature: "dorese", type: t, libelle: "DORESE " + t.toUpperCase() + " · " + it.libelle,
-            role: ajoutee ? it.roleDorese : (it.role || null), loin: !!cand.loin, parent: id, ligne: ajoutee ? it.ligneDorese : (it.ligne || null),
-            groupe: nomG, statut: ajoutee ? (it.statutDorese || null) : (it.statut || null) });
+            role: src ? src.role : ajoutee ? it.roleDorese : (it.role || null), loin: !!cand.loin, parent: id, ligne: src ? src.ligne : ajoutee ? it.ligneDorese : (it.ligne || null),
+            groupe: nomG, statut: src ? (src.statut || null) : ajoutee ? (it.statutDorese || null) : (it.statut || null) });
         });
       });
       // Montants sécables : premier trou libre du groupe, puis cases voisines pour garder le bloc d'un seul tenant.
@@ -526,7 +563,7 @@
       largeur: LARGEUR,
       hauteur: Math.max(plateau.h, Math.ceil(tableCases / LARGEUR)),
       table: tableCases,
-      plafond: Number((params.plafonds || {})[annee]) || 0,
+      plafond: Math.floor(plafondMontant(params, annee) / CASE),
       // Cases payées par la France : la part alliée (hachurée) ne compte pas.
       occupees: plateau.occ.filter(function (x) { return x !== null; }).length
         - cellules.filter(function (x) { return x.allie; }).length
@@ -727,7 +764,7 @@
       while (k < items.length && items[k].rang <= rang) k++;
       items.splice(k, 0, it);
     });
-    var plafond = (Number((params.plafonds || {})[annee]) || 0) * CASE;
+    var plafond = plafondMontant(params, annee);
     var cumul = base;
     items.forEach(function (it) { cumul += it.cout; it.cumul = cumul; it.sous = cumul > plafond; });
     return { annee: annee, base: base, plafond: plafond, items: items, total: cumul, marge: plafond - cumul,
@@ -746,7 +783,26 @@
   function tranchesDe(ligne) {
     return (Array.isArray(ligne.tranches) ? ligne.tranches : []).map(Number).filter(function (x) { return x > 0; });
   }
+  // Retrait d'une capacité (SCP-05) : le pion reste payé 2 ans (3 si réglé ainsi) après la décision.
+  function delaiRetrait(params) { return Number((params || {}).delaiRetrait) === 3 ? 3 : 2; }
+  function anneeDecisionRetrait(ligne, params) {
+    if (ligne.cible) { var d = debutDe(ligne, params); return d === null ? ANNEES[0] : d; }
+    for (var k = 0; k < ANNEES.length; k++) if (Number((ligne.qte || {})[ANNEES[k]]) > 0) return ANNEES[k];
+    return null;
+  }
   function ligneEffective(ligne, params) {
+    var c = ligneEffectiveBrute(ligne, params);
+    if (ligne.type !== "retrait") return c;
+    var dec = anneeDecisionRetrait(ligne, params);
+    if (dec === null) return c;
+    var effet = dec + delaiRetrait(params);
+    if (!ANNEES.some(function (a) { return a < effet && Number((c.qte || {})[a]) > 0; })) return c;
+    var r = JSON.parse(JSON.stringify(c));
+    ANNEES.forEach(function (a) { if (a < effet) r.qte[a] = 0; });
+    r.retraitDecide = dec; r.retraitEffet = effet;
+    return r;
+  }
+  function ligneEffectiveBrute(ligne, params) {
     if (!ligne.cible) return ligne;
     var d = debutDe(ligne, params);
     var tr = tranchesDe(ligne);
@@ -837,9 +893,15 @@
     function ajouter(regle, l, niveau, message, annee) { res.push({ regle: regle, ligne: l ? l.id : null, role: l ? l.role : null, niveau: niveau, message: message, annee: annee || null }); }
     var eff = lignes.map(function (l) { return { brute: l, e: ligneEffective(l, params) }; })
       .filter(function (x) { return arbitrageDe(x.brute, params).statut !== "renonce"; });
+    var munitionsDemandees = eff.some(function (x) { return estMunitions(x.brute, idx) && premiereAnnee(x.e, idx) !== null; });
 
     eff.forEach(function (x) {
       var l = x.brute, e = x.e, o = opts[l.modele];
+      // Retrait : payé 2 ou 3 ans après la décision, prise en COCEM (SCP-05).
+      if (l.type === "retrait" && e.retraitDecide) {
+        var finLpm = ANNEES[ANNEES.length - 1];
+        ajouter("SCP-05", l, "info", "Retrait décidé en " + e.retraitDecide + " (COCEM) : la capacité reste payée jusqu'en " + (e.retraitEffet - 1) + ", l'économie ne compte " + (e.retraitEffet > finLpm ? "qu'après 2032." : "qu'à partir de " + e.retraitEffet + "."));
+      }
       var debut = premiereAnnee(e, idx);
       if (debut === null) return;
       var c = coutLigne(e, idx);
@@ -880,9 +942,19 @@
       if (l.type === "ajout" && !(l.cible && debutDe(l, params) === null) && debut + 3 > ANNEES[ANNEES.length - 1]) {
         ajouter("SCP-04", l, "info", "Nouvelle capacité posée en " + debut + " : 3 ans d'activation, opérationnelle en " + (debut + 3) + ".");
       }
-      // Dissolution : 2 à 3 ans pour retirer une capacité (SCP-05).
-      if (l.type === "retrait" && debut < ANNEE_DECISION + 2) {
-        ajouter("SCP-05", l, "alerte", "Dissolution comptée dès " + debut + " : retirer une capacité prend 2 à 3 ans, l'économie n'est pas réaliste avant " + (ANNEE_DECISION + 2) + ".");
+      // Opérationnalité (SCP-02) : capacité posée ou repassée sans toutes ses DORESE.
+      var pc = idx[l.pion];
+      if (pc && pc.type === "capacite" && nbDorese(pc) && ((l.type === "ajout" && Number(l.niveau) !== 100) || l.type === "degrade")) {
+        ajouter("SCP-02", l, "info", "Capacité dégradée : " + pc.nom.replace(/ \d$/, "") + " à 50 % d'opérationnalité, faute de ses DORESE.");
+      }
+      // Durcissement (SCP-03) : dépense supplémentaire de l'armée.
+      if (l.type === "durci") {
+        var su = doreseSup(l);
+        ajouter("SCP-03", l, "info", "Capacité durcie : " + (su.ao + su.mco + su.rh) + " DORESE au-delà de 100 % (haute intensité), comptées en dépense de l'armée.");
+      }
+      // Plan de munitions (DGA-09) : une capacité de frappe demandée sans ligne de munitions.
+      if (estFrappe(l, idx, opts) && !munitionsDemandees) {
+        ajouter("DGA-09", l, "alerte", "Capacité de frappe sans plan de munitions : aucune ligne de munitions n'est demandée (stocks, achats, dépôts). Risque de rupture capacitaire.");
       }
       // Défection d'un allié (DGRIS-03).
       if (defectionDe(l, params)) ajouter("DGRIS-03", l, "alerte", "Défection de l'allié : la part française remonte, la ligne est à réarbitrer.");
@@ -895,7 +967,123 @@
       if (rh - prec > 4) ajouter("SGA-01", null, "alerte", "Masse salariale : +" + (rh - prec) + " DORESE RH en " + a + " (au plus 4 de plus par an, toutes armées confondues).", a);
       prec = rh;
     });
+    // Stocks 30 jours (DGA-10) : une année sans le pion Munitions du socle ni ligne de munitions.
+    var sansStock = ANNEES.filter(function (a) {
+      var socle = pions.some(function (p) { return /^Munitions/i.test(p.nom) && p.type === "orange" && estDansSocle(p, a, params); });
+      return !socle && !eff.some(function (x) { return estMunitions(x.brute, idx) && coutLigne(x.e, idx).annees[a].cout > 0; });
+    });
+    if (sansStock.length) ajouter("DGA-10", null, "alerte", "Stocks OTAN de 30 jours non financés en " + sansStock.join(", ") + " : ni pion Munitions ni ligne de munitions. Repères : une division tire 500 à 600 obus de 155 mm par jour ; 50 Rafale armés demandent 200 à 250 MICA.");
+    // Fin de vie (EMAAE-01, EMM-03) : rupture si aucune décision n'est prise sur la période.
+    function decide(re) { return eff.some(function (x) { return re.test(x.brute.modele || "") && premiereAnnee(x.e, idx) !== null; }); }
+    if (!decide(/^EMAAE-C130H/)) ajouter("EMAAE-01", null, "alerte", "C-130H en fin de vie, coûteux à entretenir : aucune décision de retrait ou de remplacement (option « Retrait ou remplacement des C-130H »).");
+    if (!decide(/^EMM-FDA/)) ajouter("EMM-03", null, "alerte", "Frégates de défense aérienne Forbin à remplacer rapidement : aucune ligne de remplacement retenue sur la période.");
+    if (!decide(/^EMM-MAWS/)) ajouter("EMM-03", null, "alerte", "Atlantique 2 en fin de vie : aucune ligne MAWS (successeur) retenue sur la période.");
+    // Contrats opérationnels (CEMA-02) : une dissolution ou un repassage à 50 % fait passer un contrat sous le seuil.
+    eff.forEach(function (x) {
+      var l = x.brute;
+      if ((l.type !== "retrait" && l.type !== "degrade") || premiereAnnee(x.e, idx) === null) return;
+      CONTRATS.forEach(function (k) {
+        if (k.pions.indexOf(l.pion) !== -1) ajouter("CEMA-02", l, "alerte", "Contrat opérationnel menacé : " + k.nom + " (" + k.milieu + "). " + (l.type === "retrait" ? "Dissolution" : "Repassage à 50 %") + " de " + ((idx[l.pion] || {}).nom || l.pion) + ".");
+      });
+    });
+    // Alliés défaillants en Baltique (COCA-03) : aléa déclenché par l'animateur.
+    if (params.aleaBaltique) ajouter("COCA-03", null, "alerte", "Aléa Baltique : les partenaires européens limitent leur participation ; la France doit fournir jusqu'à 30 % de capacités en plus. Confrontez le modèle retenu (onglet Red team).");
+    // Inflation (MEFR-03).
+    if (params.inflation && SCENARIOS_INFLATION[params.inflation.scenario]) {
+      var sc = SCENARIOS_INFLATION[params.inflation.scenario];
+      ajouter("MEFR-03", null, "alerte", "Inflation, scénario « " + sc.nom + " » : −" + sc.montant + " M€ de pouvoir d'achat par an dès " + (Number(params.inflation.debut) || ANNEES[0]) + ", retirés du plafond.");
+    }
     return res;
+  }
+
+  // ---------- Munitions et capacités de frappe (DGA-09, DGA-10) ----------
+  var RE_MUNITIONS = /munition|obus|missile|stock|MICA|SCALP|d[ée]p[ôo]ts? de mun/i;
+  var RE_FRAPPE = /rafale|SEAD|fr[ée]gate|FDI|FREMM|MGCS|char\b|chars|leclerc|artillerie|CAESAR|LRU|frappe|hypers|chasse|porte-avions|PA-?NG|SNA\b/i;
+  function estMunitions(l, idx) {
+    if (/STOCK|MUN-|DEPOTS/.test(l.modele || "")) return true;
+    if (l.type !== "libre") return false;
+    return RE_MUNITIONS.test(l.libelle || "") && !/autonomes et essaims/i.test(l.libelle || "");
+  }
+  function estFrappe(l, idx, opts) {
+    if (l.type === "ajout" || l.type === "durci") { var p = idx[l.pion]; return !!(p && RE_FRAPPE.test(p.nom)); }
+    if (l.type === "libre") return RE_FRAPPE.test(l.libelle || "") && !estMunitions(l, idx);
+    return false;
+  }
+
+  // ---------- Cycle de vie : opérationnalité d'une capacité du socle (SCP-02, SCP-03, SCP-05) ----------
+  // Taux : 100 % avec toutes ses DORESE ; face rouge de 90 % à 50 % sinon ; 50 % sans DORESE additionnelle ;
+  // au-delà de 100 % si elle est durcie. 0 si elle est retirée.
+  function etatCapacite(pion, lignes, params, annee) {
+    params = params || parametresParDefaut();
+    var actif = function (type) { return lignes.filter(function (l) { var e = ligneEffective(l, params); return l.pion === pion.id && l.type === type && quantite(e, annee) > 0 && arbitrageDe(l, params).statut !== "renonce"; })[0] || null; };
+    if (actif("retrait")) return { taux: 0, posees: 0, total: nbDorese(pion), retire: true, durci: 0, face: "retirée" };
+    var total = nbDorese(pion);
+    var posees = actif("degrade") ? 0 : nbDepart(pion) + (actif("dorese") ? nbManquantes(pion) : 0);
+    var ld = actif("durci"), sup = ld ? doreseSup(ld) : { ao: 0, mco: 0, rh: 0 }, nsup = sup.ao + sup.mco + sup.rh;
+    var taux = !total ? 100 : posees >= total ? 100 : posees <= 0 ? 50 : Math.round(50 + 40 * posees / total);
+    if (taux === 100 && nsup && total) taux = 100 + Math.round(100 * nsup / total / 4);
+    return { taux: taux, posees: posees, total: total, retire: false, durci: nsup, face: taux >= 100 ? (nsup ? "durcie" : "verte") : "rouge" };
+  }
+
+  // ---------- Contrats opérationnels 2027 (CEMA-02) ----------
+  // Chaque contrat est rattaché aux pions du socle qui le portent ; « un » = un seul pion suffit.
+  var CONTRATS = [
+    { id: "air-chasse", milieu: "Air", nom: "45 chasseurs", pions: ["P33"] },
+    { id: "air-mrtt", milieu: "Air", nom: "6 MRTT", pions: ["P28"] },
+    { id: "air-transport", milieu: "Air", nom: "15 avions de transport", pions: ["P27", "P31"] },
+    { id: "air-male", milieu: "Air", nom: "8 systèmes MALE", pions: ["P30"] },
+    { id: "mer-gan", milieu: "Mer", nom: "1 groupe aéronaval", pions: ["P41", "P38"] },
+    { id: "mer-permanence", milieu: "Mer", nom: "2 SNA et 3 frégates en permanence à la mer", pions: ["P34", "P40", "P42"] },
+    { id: "mer-patmar", milieu: "Mer", nom: "6 ATL2 / MAWS", pions: ["P39"] },
+    { id: "terre-guepard", milieu: "Terre", nom: "1 brigade Guépard", pions: ["P20", "P21", "P22", "P23", "P24", "P25"], un: true },
+    { id: "terre-chars", milieu: "Terre", nom: "120 chars disponibles", pions: ["P20", "P21"] },
+    { id: "terre-rapide", milieu: "Terre", nom: "1 capacité d'intervention rapide permanente", pions: ["P14", "P26"], un: true }
+  ];
+  var ETATS_CONTRAT = { tenu: "Tenu", partiel: "Partiel", non_tenu: "Non tenu" };
+  // Évaluation en fin de LPM, après arbitrage ; params.contrats[id] = note posée par le CEMA ou l'animateur.
+  function evaluerContrats(pions, lignes, params, annee) {
+    params = params || parametresParDefaut();
+    annee = annee || ANNEES[ANNEES.length - 1];
+    var idx = indexPions(pions);
+    // Seules les décisions prises comptent : une demande en attente ne change pas encore le contrat.
+    var arb = lignesApresArbitrage(lignes.filter(function (l) { return arbitrageDe(l, params).statut === "retenu"; }), params);
+    return CONTRATS.map(function (k) {
+      var etats = k.pions.filter(function (id) { return idx[id]; }).map(function (id) { return { pion: idx[id], etat: etatCapacite(idx[id], arb, params, annee) }; });
+      var pleins = etats.filter(function (x) { return x.etat.taux >= 100; }).length, retires = etats.filter(function (x) { return x.etat.retire; }).length;
+      var auto = k.un ? (pleins ? "tenu" : retires === etats.length ? "non_tenu" : "partiel")
+        : (pleins === etats.length ? "tenu" : retires ? "non_tenu" : "partiel");
+      var note = ((params.contrats || {})[k.id]) || null;
+      return { id: k.id, milieu: k.milieu, nom: k.nom, auto: auto, note: note, etat: note || auto,
+        detail: etats.map(function (x) { return x.pion.nom + " " + (x.etat.retire ? "retirée" : x.etat.taux + " %"); }).join(" · ") };
+    });
+  }
+
+  // ---------- COCA / Red team (COCA-01, COCA-02, COCA-03) ----------
+  // params.coca[idLigne] = { urgence, assume, alarme, requalifie, texte, par } ; levée par le CEMA.
+  var STATUTS_COCA = { urgence: "Urgence COCA", requalifie: "Tuile requalifiée", assume: "Renoncement assumé", alarme: "Alarme exécutif" };
+  function cocaDe(ligne, params) { return (((params || {}).coca || {})[ligne.id]) || null; }
+  // params.scenarios = [{ id, nom, note: satisfaisant|partiel|insuffisant, ecart, recommandation }]
+  var NOTES_SCENARIO = { satisfaisant: "Satisfaisant", partiel: "Partiel", insuffisant: "Insuffisant" };
+  var RECOMMANDATIONS = { renforcement: "Renforcement", alerte: "Alerte", renoncement: "Renoncement assumé" };
+  function couvertureScenarios(params) {
+    var sc = ((params || {}).scenarios || []).filter(function (x) { return NOTES_SCENARIO[x.note]; });
+    if (!sc.length) return null;
+    var pts = sc.reduce(function (t, x) { return t + (x.note === "satisfaisant" ? 1 : x.note === "partiel" ? 0.5 : 0); }, 0);
+    return { taux: Math.round(100 * pts / sc.length), evalues: sc.length,
+      satisfaisant: sc.filter(function (x) { return x.note === "satisfaisant"; }).length,
+      partiel: sc.filter(function (x) { return x.note === "partiel"; }).length,
+      insuffisant: sc.filter(function (x) { return x.note === "insuffisant"; }).length };
+  }
+  // Aléa Baltique (COCA-03) : +30 % de besoin sur les capacités des contrats opérationnels, en M€ par an.
+  function besoinBaltique(pions, lignes, params, annee) {
+    var idx = indexPions(pions), vus = {}, cout = 0;
+    var arb = lignesApresArbitrage(lignes, params);
+    CONTRATS.forEach(function (k) { k.pions.forEach(function (id) {
+      if (vus[id] || !idx[id]) return; vus[id] = true;
+      var e = etatCapacite(idx[id], arb, params, annee);
+      if (!e.retire) cout += idx[id].cout50 + Math.min(e.posees, e.total) * CASE;
+    }); });
+    return { base: cout, supplement: Math.round(cout * 0.3 / CASE) * CASE };
   }
 
   // ---------- Avis des acteurs ----------
@@ -974,6 +1162,9 @@
       if (defectionDe(l, params)) ajouter(l.id, "défection d'un allié");
       var c = contrainteDe(l.id, params);
       if (c && c.etat === "demandee") ajouter(l.id, "contrainte politique demandée");
+      var cc = cocaDe(l, params);
+      if (cc && cc.urgence) ajouter(l.id, "urgence COCA");
+      if (cc && cc.alarme) ajouter(l.id, "alarme exécutif");
     });
     alertes(pions, lignes, params, catalogue).forEach(function (a) { if (a.ligne && a.niveau === "alerte") ajouter(a.ligne, "alerte de fiche " + a.regle); });
     var eff = lignesEnTrajectoire(lignes, params);
@@ -985,7 +1176,7 @@
   // Un même format pour le modèle 2032 arbitré et pour une trajectoire 2027-2032 : assez riche pour
   // reconstruire une trajectoire hors de l'outil, puis la réimporter et la comparer.
   var FORMAT_ECHANGE = "strategikon-echange";
-  var NATURES = { dorese: "renforcement à 100 %", ajout: "nouvel exemplaire", retrait: "dissolution", degrade: "repassage à 50 %", libre: "option ou pion sur mesure" };
+  var NATURES = { dorese: "renforcement à 100 %", ajout: "nouvel exemplaire", retrait: "dissolution", degrade: "repassage à 50 %", durci: "durcissement", libre: "option ou pion sur mesure" };
   function exporterPartie(pions, lignes, params, catalogue, type, nomPartie) {
     params = params || parametresParDefaut();
     var idx = indexPions(pions);
@@ -1169,7 +1360,23 @@
     lireEchange: lireEchange,
     comparerTrajectoires: comparerTrajectoires,
     echangeEnCsv: echangeEnCsv,
-    miseEnService: miseEnService
+    miseEnService: miseEnService,
+    SCENARIOS_INFLATION: SCENARIOS_INFLATION,
+    inflationDe: inflationDe,
+    plafondMontant: plafondMontant,
+    doreseSup: doreseSup,
+    delaiRetrait: delaiRetrait,
+    etatCapacite: etatCapacite,
+    CONTRATS: CONTRATS,
+    ETATS_CONTRAT: ETATS_CONTRAT,
+    evaluerContrats: evaluerContrats,
+    STATUTS_COCA: STATUTS_COCA,
+    cocaDe: cocaDe,
+    NOTES_SCENARIO: NOTES_SCENARIO,
+    RECOMMANDATIONS: RECOMMANDATIONS,
+    couvertureScenarios: couvertureScenarios,
+    besoinBaltique: besoinBaltique,
+    estMunitions: estMunitions
   };
 
   if (typeof module !== "undefined" && module.exports) module.exports = API;

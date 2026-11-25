@@ -459,6 +459,10 @@ Les raisons s'affichent dans l'infobulle du pion, en tête du bloc *Avis*, et en
 
 ---
 
+**Pions de la table pour cette partie** (Animateur, onglet *Réglages*, bloc repliable) : chaque pion de la base avec son nom et son coût (M€, sans ses DORESE, par pas de 100). Modifier un champ puis le quitter l'enregistre aussitôt pour **cette partie seulement**, toutes années et pour tous les joueurs : socle, coûts à 50 % et 100 % (le coût à 100 % = coût + DORESE), jauges, exports. La forme du pion sur la table suit le nouveau nombre de cases. Un pion modifié est surligné, avec son nom et son coût d'origine et un bouton *Rétablir*. Exemple : renommer « Service militaire volontaire (SMV) – 2,5 Md€ » en « Division de réserve – 2,5 Md€ ».
+
+---
+
 ## 18. Échanges et comparaison (Animateur, onglet *Échanges*)
 
 Objectif : récupérer le modèle 2032 arbitré, construire hors de l'outil une trajectoire de référence, puis la comparer à celle des joueurs.

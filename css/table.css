@@ -390,3 +390,14 @@ button.jeton-option { color: #222; }
 .etiquette-ligne small { font-weight: 600; opacity: .75; flex: none; }
 .etiquette-courte small { display: none; }
 @media (max-width: 640px) { .etiquette-ligne { font-size: .5rem; } }
+
+/* Réglages : pions de la table modifiés pour la partie (animateur) */
+.pions-partie { margin: .6rem 0 1rem; }
+.pions-partie > summary { cursor: pointer; font-weight: 600; padding: .3rem 0; }
+.pions-partie input[type=search] { width: 100%; margin: .3rem 0 .5rem; }
+.pions-liste { display: grid; gap: .3rem; max-height: 26rem; overflow-y: auto; }
+.pion-reglage { display: grid; grid-template-columns: 6.5rem minmax(0, 1fr) 5.5rem; gap: .2rem .4rem; align-items: center; font-size: .85rem; padding: .25rem .3rem; border-left: 3px solid transparent; }
+.pion-reglage input { min-width: 0; width: 100%; }
+.pion-reglage small, .pion-reglage .btn-lien { grid-column: 2 / 4; color: var(--texte-doux, #666); }
+.pion-reglage-arm { font-size: .75rem; color: var(--texte-doux, #666); }
+.pion-modifie { border-left-color: var(--laiton, #b08d3c); background: rgba(176, 141, 60, .08); }

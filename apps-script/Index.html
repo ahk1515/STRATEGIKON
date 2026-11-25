@@ -709,6 +709,17 @@ button.jeton-option { color: #222; }
 .etiquette-courte small { display: none; }
 @media (max-width: 640px) { .etiquette-ligne { font-size: .5rem; } }
 
+/* Réglages : pions de la table modifiés pour la partie (animateur) */
+.pions-partie { margin: .6rem 0 1rem; }
+.pions-partie > summary { cursor: pointer; font-weight: 600; padding: .3rem 0; }
+.pions-partie input[type=search] { width: 100%; margin: .3rem 0 .5rem; }
+.pions-liste { display: grid; gap: .3rem; max-height: 26rem; overflow-y: auto; }
+.pion-reglage { display: grid; grid-template-columns: 6.5rem minmax(0, 1fr) 5.5rem; gap: .2rem .4rem; align-items: center; font-size: .85rem; padding: .25rem .3rem; border-left: 3px solid transparent; }
+.pion-reglage input { min-width: 0; width: 100%; }
+.pion-reglage small, .pion-reglage .btn-lien { grid-column: 2 / 4; color: var(--texte-doux, #666); }
+.pion-reglage-arm { font-size: .75rem; color: var(--texte-doux, #666); }
+.pion-modifie { border-left-color: var(--laiton, #b08d3c); background: rgba(176, 141, 60, .08); }
+
 </style>
 </head>
 <body>
@@ -8158,6 +8169,39 @@ window.STRAT_CONTRAINTES_ROLES = [
     if (modele.conquetes.length && !(params.conquetes || []).length) params.conquetes = JSON.parse(JSON.stringify(modele.conquetes));
     return params;
   }
+  // Pions modifiés par l'animateur pour une partie : nom et coût (sans DORESE), dans params.pionsModifies.
+  // La forme sur la table suit le nouveau nombre de cases en gardant l'allure du pion d'origine.
+  function formePour(cases, l0, h0) {
+    if (cases <= 0) return { l: 1, h: 1 };
+    var cible = (l0 || 1) / (h0 || 1), best = null;
+    for (var w = 1; w <= Math.min(cases, 10); w++) {
+      if (cases % w) continue;
+      var h = cases / w, ecart = Math.abs(Math.log((w / h) / cible));
+      if (!best || ecart < best.e) best = { l: w, h: h, e: ecart };
+    }
+    if (!best || best.h > 10) { var lw = Math.min(10, Math.max(1, l0 || 1)); return { l: lw, h: Math.ceil(cases / lw) }; }
+    return { l: best.l, h: best.h };
+  }
+  function pionsDeLaPartie(pions, params) {
+    var mod = (params && params.pionsModifies) || {};
+    if (!Object.keys(mod).length) return pions;
+    return pions.map(function (p) {
+      var m = mod[p.id];
+      if (!m) return p;
+      var c = JSON.parse(JSON.stringify(p));
+      c.nom_origine = p.nom;
+      if (m.nom && String(m.nom).trim()) c.nom = String(m.nom).trim();
+      if (m.cout !== undefined && m.cout !== null && m.cout !== "") {
+        var cout = Math.max(CASE, arrondiCase(Number(m.cout) || 0));
+        c.cout50 = cout;
+        c.cout100 = cout + nbDorese(p) * CASE;
+        if (cout !== p.cout50) { var fo = formePour(cout / CASE, p.l, p.h); c.l = fo.l; c.h = fo.h; }
+        c.cout_origine = p.cout50;
+      }
+      c.modifie = true;
+      return c;
+    });
+  }
   function lireEchange(texte) {
     var o = typeof texte === "string" ? JSON.parse(texte) : texte;
     if (!o || o.format !== FORMAT_ECHANGE || !Array.isArray(o.lignes)) throw new Error("Ce fichier n'est pas un export STRATEGIKON.");
@@ -8283,6 +8327,8 @@ window.STRAT_CONTRAINTES_ROLES = [
     FORMAT_ECHANGE: FORMAT_ECHANGE,
     exporterPartie: exporterPartie,
     lireEchange: lireEchange,
+    formePour: formePour,
+    pionsDeLaPartie: pionsDeLaPartie,
     FORMAT_MODELE_PARTIE: FORMAT_MODELE_PARTIE,
     lireModelePartie: lireModelePartie,
     appliquerModeleParams: appliquerModeleParams,
@@ -8534,7 +8580,8 @@ window.STRAT_CONTRAINTES_ROLES = [
 
   var M = window.STRAT_MOTEUR;
   var S = window.STRAT_STOCKAGE;
-  var PIONS = window.STRAT_PIONS || [];
+  var PIONS_BASE = window.STRAT_PIONS || [];
+  var PIONS = PIONS_BASE;
   var CATALOGUE = window.STRAT_CATALOGUE_ROLES || [];
   var REGLES = window.STRAT_CONTRAINTES_ROLES || [];
   var IDX = M.indexPions(PIONS);
@@ -8585,6 +8632,13 @@ window.STRAT_CONTRAINTES_ROLES = [
   // Table commune : chacun voit toutes les demandes brutes, avec leur porteur.
   function visible(l) { return true; }
   function params() { return (etat.partie && etat.partie.params && etat.partie.params.plafonds) ? etat.partie.params : M.parametresParDefaut(); }
+  // Pions de la partie : ceux de la base, avec les noms et coûts modifiés par l'animateur.
+  var SIG_PIONS = "";
+  function majPions() {
+    var sig = JSON.stringify(params().pionsModifies || {});
+    if (sig === SIG_PIONS) return;
+    SIG_PIONS = sig; PIONS = M.pionsDeLaPartie(PIONS_BASE, params()); IDX = M.indexPions(PIONS);
+  }
   function phase() { return etat.phase || (params().phase === "trajectoire" ? "trajectoire" : "cible"); }
   function enCible() { return phase() === "cible"; }
   // Lignes telles qu'elles pèsent dans la phase : au modèle 2032, les lignes cibles ne sont qu'en 2032 ;
@@ -8835,6 +8889,7 @@ window.STRAT_CONTRAINTES_ROLES = [
   }
 
   function rendre(complet) {
+    majPions();
     if (enCible()) etat.annee = FIN;
     calculerAlertes();
     rendreParcours();
@@ -8995,7 +9050,7 @@ window.STRAT_CONTRAINTES_ROLES = [
       var cache = masque(x);
       var nom = cache ? "Demande " + x.armee : x.libelle;
       var pion = x.pion ? IDX[x.pion] : null;
-      var picto = cache ? null : F.svg(F.pictoDe(x.libelle) || "puce");
+      var picto = cache ? null : F.svg(F.pictoDe(x.libelle) || (pion && pion.nom_origine && F.pictoDe(pion.nom_origine)) || "puce");
       var enfants = [el("span", { classe: "fig-bande" }, [el("span", { classe: "fig-titre", texte: court(nom) }), x.role && !x.socle ? el("span", { classe: "porteur", texte: x.role }) : null])];
       if (picto) enfants.push(el("span", { classe: "fig-picto" }, [picto]));
       var notes = [];
@@ -9555,6 +9610,46 @@ window.STRAT_CONTRAINTES_ROLES = [
     document.body.appendChild(a); a.click(); a.remove();
   }
 
+  // Animateur : renommer un pion de la table ou changer son coût, pour cette partie seulement.
+  function blocPionsPartie() {
+    var mod = params().pionsModifies || {};
+    var n = Object.keys(mod).length;
+    var d = el("details", { classe: "pions-partie", id: "pions-partie" });
+    if (etat.pionsOuverts) d.open = true;
+    d.addEventListener("toggle", function () { etat.pionsOuverts = d.open; });
+    d.appendChild(el("summary", { texte: "Pions de la table pour cette partie" + (n ? " (" + n + " modifié" + (n > 1 ? "s" : "") + ")" : "") }));
+    d.appendChild(el("p", { classe: "aide", texte: "Changez le nom ou le coût d'un pion (en M€, sans ses DORESE, par pas de 100). Il change pour tous les joueurs de cette partie, toutes années, et sa forme sur la table suit le nombre de cases. Les autres parties ne sont pas touchées. Enregistré dès que vous quittez le champ." }));
+    var filtre = el("input", { type: "search", placeholder: "Chercher un pion", "aria-label": "Chercher un pion" });
+    d.appendChild(filtre);
+    var liste = el("div", { classe: "pions-liste" });
+    d.appendChild(liste);
+    function sauver(id, champ, valeur) {
+      modifierParams(function (pp) {
+        pp.pionsModifies = pp.pionsModifies || {};
+        var m = pp.pionsModifies[id] || {};
+        if (valeur === null) delete m[champ]; else m[champ] = valeur;
+        if (Object.keys(m).length) pp.pionsModifies[id] = m; else delete pp.pionsModifies[id];
+      }).then(function () { toast("Pion enregistré pour cette partie"); });
+    }
+    PIONS_BASE.forEach(function (b) {
+      var p = IDX[b.id] || b, m = mod[b.id] || {};
+      var nom = el("input", { type: "text", value: p.nom, "aria-label": "Nom de " + b.nom, "data-pion-nom": b.id });
+      var cout = el("input", { type: "number", min: 100, step: 100, value: p.cout50, "aria-label": "Coût de " + b.nom + " en M€", "data-pion-cout": b.id });
+      nom.addEventListener("change", function () { var v = nom.value.trim(); sauver(b.id, "nom", v && v !== b.nom ? v : null); });
+      cout.addEventListener("change", function () { var v = Math.max(100, Math.round((Number(cout.value) || 0) / 100) * 100); sauver(b.id, "cout", v !== b.cout50 ? v : null); });
+      var info = (m.nom || m.cout !== undefined) ? "d'origine : " + b.nom + " · " + md(b.cout50) : (M.nbDorese(b) ? "+ " + M.nbDorese(b) + " DORESE" : "");
+      var ligne = el("div", { classe: "pion-reglage" + (p.modifie ? " pion-modifie" : ""), "data-recherche": (b.nom + " " + p.nom + " " + b.armee).toLowerCase() }, [
+        el("span", { classe: "pion-reglage-arm", texte: b.armee }), nom, cout,
+        el("small", { texte: info }),
+        p.modifie ? el("button", { type: "button", classe: "btn-lien", texte: "Rétablir", onclick: function () { modifierParams(function (pp) { if (pp.pionsModifies) delete pp.pionsModifies[b.id]; }); } }) : el("span")]);
+      liste.appendChild(ligne);
+    });
+    filtre.addEventListener("input", function () {
+      var q = filtre.value.trim().toLowerCase();
+      Array.prototype.forEach.call(liste.children, function (x) { x.style.display = !q || x.getAttribute("data-recherche").indexOf(q) !== -1 ? "" : "none"; });
+    });
+    return d;
+  }
   function voletReglages(v) {
     var p = params();
     v.appendChild(el("h2", { classe: "volet-titre", texte: "Réglages de la partie" }));
@@ -9572,6 +9667,7 @@ window.STRAT_CONTRAINTES_ROLES = [
         return el("label", null, [cb, " " + a]);
       }))]));
     });
+    if (etat.role === "Animateur") f.appendChild(blocPionsPartie());
     f.appendChild(el("h3", { texte: "Étape de la partie" }));
     var ph = el("select", { id: "reg-phase", "aria-label": "Étape de la partie" });
     [["cible", "1 · Modèle 2032"], ["trajectoire", "2 · Trajectoire 2027-2032"]].forEach(function (x) { ph.appendChild(el("option", { value: x[0], texte: x[1] })); });

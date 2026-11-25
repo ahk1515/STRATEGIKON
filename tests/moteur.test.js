@@ -299,3 +299,52 @@ test("export du modèle 2032 puis de la trajectoire ; réimport et comparaison",
   assert.throws(() => M.lireEchange(mod), /modèle 2032/);
   assert.throws(() => M.lireEchange("{}"), /export STRATEGIKON/);
 });
+
+// ---------- Table commune : avis, points chauds, souveraineté ----------
+test("points chauds : avis divergents, avis défavorable, sous la ligne de flottaison", () => {
+  const L = [{ id: "a", role: "EMAT", type: "ajout", pion: "P24", niveau: 100, qte: { 2030: 1 } }];
+  const av = (role, nature, valeur) => ({ role, nature, valeur });
+  let p = pp({ avis: { a: { "DGA:industriel": av("DGA", "industriel", "favorable"), "MEFR:soutenabilite": av("MEFR", "soutenabilite", "insoutenable") } } });
+  assert.deepStrictEqual(M.pointsChauds(PIONS, L, p, CAT, 2030).a, ["avis divergents"]);
+  p = pp({ avis: { a: { "MEFR:avis": av("MEFR", "avis", "defavorable") } } });
+  assert.deepStrictEqual(M.pointsChauds(PIONS, L, p, CAT, 2030).a, ["avis défavorable (MEFR)"]);
+  assert.deepStrictEqual(M.pointsChauds(PIONS, L, pp(), CAT, 2030), {});
+  p = pp({ plafonds: ANS(399) });
+  assert.ok(M.pointsChauds(PIONS, L, p, CAT, 2030).a.includes("sous la ligne de flottaison"));
+});
+
+test("souveraineté : programme partagé UE ou hors UE, financement UE, indice par année", () => {
+  assert.strictEqual(M.zoneProbable("France, Allemagne, Espagne"), "ue");
+  assert.strictEqual(M.zoneProbable("Royaume-Uni"), "hors_ue");
+  assert.strictEqual(M.zoneProbable("Allemagne, États-Unis"), "mixte");
+  const L = [
+    { id: "m", role: "DGA", type: "libre", cout_unitaire: 400, qte: { 2030: 1 } },
+    { id: "h", role: "DGA", type: "libre", cout_unitaire: 200, qte: { 2030: 1 } },
+    { id: "n", role: "DGA", type: "libre", cout_unitaire: 400, qte: { 2030: 1 } }
+  ];
+  const p = pp({ financements: {
+    m: { mode: "mutualise", part: 50, partenaires: "Allemagne", valide: true },
+    h: { mode: "mutualise", part: 50, partenaires: "Royaume-Uni", valide: true } } });
+  assert.strictEqual(M.souveraineteDe(L[0], p).zone, "ue");
+  assert.strictEqual(M.souveraineteDe(L[2], p).niveau, "national");
+  const s = M.syntheseSouverainete(PIONS, L, p)[2030];
+  assert.deepStrictEqual([s.partage_ue, s.allie_ue, s.partage_hors_ue, s.allie_hors_ue, s.national, s.indice], [400, 200, 200, 100, 400, 40]);
+});
+
+test("table en paquets : un bloc par entité, sans chevauchement, chaque pion dans son bloc", () => {
+  const L = [
+    { id: "a", role: "EMAT", type: "ajout", pion: "P24", niveau: 100, qte: { 2030: 1 } },
+    { id: "d", role: "DGA", type: "libre", cout_unitaire: 500, qte: { 2030: 1 } },
+    { id: "i", role: "DGRIS", type: "libre", cout_unitaire: 300, qte: { 2030: 1 } }
+  ];
+  const t = M.placerAnnee(PIONS, L, pp(), 2030, null, { zones: true });
+  assert.deepStrictEqual(t.zones.map((z) => z.nom).sort(), ["Air et Espace", "DGA", "Fixes", "Interarmées", "International", "Marine", "Terre"].sort());
+  assert.strictEqual(t.occupees, 39900 / 100 + 6 + 5 + 3);
+  const vu = new Set();
+  t.pieces.forEach((x) => { for (let r = x.r; r < x.r + x.h; r++) for (let c = x.c; c < x.c + x.w; c++) { const k = r + ":" + c; assert.ok(!vu.has(k), "chevauchement " + k); vu.add(k); } });
+  t.cellules.forEach((x) => { const k = x.r + ":" + x.c; assert.ok(!vu.has(k), "chevauchement " + k); vu.add(k); });
+  const dans = (x, nom) => { const z = t.zones.find((y) => y.nom === nom); return x.r > z.r && x.r < z.r + z.h && x.c >= z.c && x.c < z.c + z.w; };
+  assert.ok(t.pieces.filter((x) => x.ligne === "a").every((x) => dans(x, "Terre")));
+  assert.ok(t.cellules.filter((x) => x.ligne === "d").every((x) => dans(x, "DGA")));
+  assert.ok(t.cellules.filter((x) => x.ligne === "i").every((x) => dans(x, "International")));
+});

@@ -347,3 +347,36 @@ button.jeton-option { color: #222; }
 .cmp-diff { background: rgba(232, 162, 0, .07); }
 .comparaison .mini-tableau { max-width: 30rem; }
 @media (max-width: 760px) { .cmp-ligne { grid-template-columns: 1fr; gap: .3rem; } }
+/* Table commune : porteur, points chauds, avis, souveraineté */
+.fig-bande { gap: 3px; }
+.porteur { flex: none; font: 700 .5rem/1 var(--f-texte); letter-spacing: .02em; background: rgba(255, 255, 255, .92); color: #1a1a1a; padding: 1px 3px; border-radius: 2px; }
+.fig-mini .porteur { display: none; }
+.pion-chaud { outline: 3px solid #e8a200 !important; outline-offset: 0; box-shadow: 0 0 0 5px rgba(232, 162, 0, .28), 0 1px 2px rgba(0, 0, 0, .35) !important; z-index: 2; }
+.puce-legende.pion-chaud { outline: 2px solid #e8a200 !important; box-shadow: none !important; }
+.badge-chaud { color: #8a5a00; background: rgba(232, 162, 0, .15); }
+.chaud-raisons { font-size: .82rem; background: rgba(232, 162, 0, .12); border-left: 3px solid #e8a200; padding: .3rem .5rem; margin: 0 0 .5rem; }
+.avis-liste { list-style: none; padding: 0; margin: 0 0 .5rem; display: grid; gap: .3rem; }
+.avis-liste li { display: grid; gap: .1rem; font-size: .84rem; border-left: 3px solid var(--trait); padding-left: .5rem; }
+.avis-tete { display: flex; gap: .5rem; align-items: baseline; }
+.avis-tete b { font-family: var(--f-titre); color: var(--laiton); min-width: 3.4rem; }
+.avis-texte { color: var(--sourdine); font-size: .78rem; }
+.avis-favorable, .avis-soutenable { border-left-color: var(--ok) !important; }
+.avis-reserve, .avis-fragile, .avis-report, .avis-mutualisation, .avis-alternative { border-left-color: #e8a200 !important; }
+.avis-defavorable, .avis-refus, .avis-insoutenable { border-left-color: var(--alerte) !important; }
+.segment-avis { flex-wrap: wrap; }
+.segment-avis button { font-size: .76rem; padding: .25rem .5rem; }
+.segment-avis button[data-avis="defavorable"][aria-pressed="true"], .segment-avis button[data-avis="refus"][aria-pressed="true"], .segment-avis button[data-avis="insoutenable"][aria-pressed="true"] { background: var(--alerte); }
+.segment-avis button[data-avis="favorable"][aria-pressed="true"], .segment-avis button[data-avis="soutenable"][aria-pressed="true"] { background: var(--ok); }
+.bloc-avis .champ input { margin-top: .3rem; font-size: .82rem; }
+.souverainete { font-size: .84rem; margin: .45rem 0; padding: .3rem .5rem; border-left: 3px solid var(--ok); background: var(--accent-doux); }
+.souv-partage { border-left-color: #1b2a6b; }
+.souv-hors_ue, .souv-mixte { border-left-color: var(--rouge); }
+.souv-finance_ue { border-left-color: #6d52a8; }
+.marque-horsue { color: var(--rouge); box-shadow: 0 0 0 1px var(--rouge); }
+.souv-bande span { background: var(--accent-doux); font-weight: 600; }
+/* Table en paquets : un bloc par entité */
+.zone-entite { position: relative; z-index: 0; pointer-events: none; background: color-mix(in srgb, var(--c) 7%, transparent); outline: 2px solid color-mix(in srgb, var(--c) 55%, transparent); outline-offset: 1px; }
+.zone-mienne { outline-width: 3px; outline-color: var(--c); }
+.zone-entite-titre { position: relative; z-index: 2; pointer-events: none; display: flex; align-items: center; padding-left: 3px; min-width: 0; }
+.zone-entite-titre span { background: var(--c); color: #fff; font-size: .68rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: .1rem .45rem; border-radius: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.chaud-raisons.force { border-left-color: var(--alerte); background: rgba(179, 38, 30, .08); }

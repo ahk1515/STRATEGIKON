@@ -20,7 +20,7 @@
 
   var etat = {
     partie: null, mdp: "", role: "", lignes: [], annee: M.ANNEES[0], vue: "demandes",
-    volet: "poser", filtre: "capacites", portee: "suite", recherche: "", selection: null, neuf: null, maTable: true,
+    volet: "poser", filtre: "capacites", portee: "suite", recherche: "", selection: null, neuf: null, filtreTable: "tout",
     phase: null // "cible" (modèle 2032) ou "trajectoire" (2027-2032)
   };
   var enAttente = {};
@@ -47,12 +47,14 @@
     if (m >= 1000) return signe + (m / 1000).toLocaleString("fr-FR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " Md€";
     return signe + m.toLocaleString("fr-FR") + " M€";
   }
+  function couleurZone(z) { return { "DGA": "#6d52a8", "International": "#2a7f8f", "Soutien et cabinet": "#7a6a4f", "Fixes": "var(--gris)" }[z] || couleur(z); }
   function couleur(a) { return { "Terre": "var(--terre)", "Marine": "var(--marine)", "Air et Espace": "var(--air)", "Interarmées": "var(--inter)" }[a] || "var(--inter)"; }
   function nouvelId() { return window.crypto && crypto.randomUUID ? crypto.randomUUID() : "l-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
   function role(code) { return M.ROLES.filter(function (r) { return r.code === code; })[0] || M.ROLES[0]; }
   function vueComplete() { return ROLES_VUE_COMPLETE.indexOf(etat.role) !== -1; }
   function arbitre() { return ROLES_ARBITRAGE.indexOf(etat.role) !== -1; }
-  function visible(l) { return vueComplete() || l.role === etat.role; }
+  // Table commune : chacun voit toutes les demandes brutes, avec leur porteur.
+  function visible(l) { return true; }
   function params() { return (etat.partie && etat.partie.params && etat.partie.params.plafonds) ? etat.partie.params : M.parametresParDefaut(); }
   function phase() { return etat.phase || (params().phase === "trajectoire" ? "trajectoire" : "cible"); }
   function enCible() { return phase() === "cible"; }
@@ -158,7 +160,7 @@
   function entrer(code) {
     etat.role = code;
     etat.selection = null;
-    etat.maTable = !vueComplete();
+    etat.filtreTable = "tout";
     etat.volet = "poser";
     etat.filtre = role(code).armee === "Interarmées" && CATALOGUE.some(function (o) { return o.role === code; }) ? "options" : "capacites";
     $("ecran-accueil").hidden = true;
@@ -276,8 +278,10 @@
   // ---------- Rendu ----------
   // Alertes des règles des fiches : recalculées à chaque rendu, jamais bloquantes.
   var ALERTES = [];
+  var CHAUDS = {};
   function calculerAlertes() {
     try { ALERTES = M.alertes(PIONS, etat.lignes, paramsPhase(), CATALOGUE); } catch (e) { ALERTES = []; }
+    try { CHAUDS = M.pointsChauds(PIONS, etat.lignes, paramsPhase(), CATALOGUE, etat.annee); } catch (e) { CHAUDS = {}; }
   }
   function alertesDe(id) { return ALERTES.filter(function (a) { return a.ligne === id; }); }
   function alertesVisibles() { return ALERTES.filter(function (a) { var l = ligneDe(a.ligne); return !a.ligne || (l && visible(l)); }); }
@@ -363,11 +367,14 @@
     var flot = M.flottaison(PIONS, lignes, p, etat.annee);
     var sousLigne = {};
     flot.sous.forEach(function (it) { if (it.ligne) sousLigne[it.ligne.id] = true; if (it.enveloppe) sousLigne["env:" + it.enveloppe.id] = true; });
-    // Filtre « Ma demande » : on ne pose que mes pions, regroupés sur une table compacte.
-    var filtre = etat.maTable;
-    var t = filtre
+    // Filtres : « Ma demande » (mes pions seuls) ; « Où faut-il arbitrer ? » (les points chauds seuls) ; tables compactes.
+    var filtre = etat.filtreTable !== "tout";
+    var t = etat.filtreTable === "mien"
       ? M.placerAnnee(PIONS, lignes.filter(function (l) { return l.role === etat.role; }), p, etat.annee, function (x) { return pionAMoi(x); }, { apresArbitrage: etat.vue === "arbitrage" })
-      : M.placerAnnee(PIONS, lignes, p, etat.annee, null, { apresArbitrage: etat.vue === "arbitrage" });
+      : etat.filtreTable === "chaud"
+      ? M.placerAnnee(PIONS, lignes.filter(function (l) { return CHAUDS[l.id]; }), p, etat.annee, function () { return false; }, { apresArbitrage: etat.vue === "arbitrage" })
+      : M.placerAnnee(PIONS, lignes, p, etat.annee, null, { apresArbitrage: etat.vue === "arbitrage", zones: true });
+    var paquets = t.zones && t.zones.length > 0;
     if (filtre) {
       var bas = 0;
       t.pieces.forEach(function (x) { bas = Math.max(bas, x.r + x.h); });
@@ -375,18 +382,22 @@
       t.hauteur = Math.max(4, bas + 2);
     }
     document.querySelectorAll(".bascule button[data-vue]").forEach(function (b) { b.setAttribute("aria-pressed", b.getAttribute("data-vue") === etat.vue ? "true" : "false"); });
-    document.querySelectorAll(".bascule button[data-filtre]").forEach(function (b) { b.setAttribute("aria-pressed", (b.getAttribute("data-filtre") === "mien") === etat.maTable ? "true" : "false"); });
+    document.querySelectorAll(".bascule button[data-filtre]").forEach(function (b) { b.setAttribute("aria-pressed", b.getAttribute("data-filtre") === etat.filtreTable ? "true" : "false"); });
+    var nChauds = Object.keys(CHAUDS).length;
+    var bChaud = document.querySelector('.bascule button[data-filtre="chaud"]');
+    if (bChaud) bChaud.textContent = "Où faut-il arbitrer ?" + (nChauds ? " (" + nChauds + ")" : "");
 
     var rel = $("table-releve");
     vider(rel);
-    [filtre ? ["Ma demande " + etat.annee, md(t.occupees * M.CASE) + " · " + t.occupees + " cases", ""] : ["Table " + etat.annee, t.occupees + " / " + t.plafond + " cases", ""], ["Montant total", md(syn.total), ""], ["Plafond", md(syn.plafond), ""],
+    [filtre ? [(etat.filtreTable === "chaud" ? "À arbitrer " : "Ma demande ") + etat.annee, md(t.occupees * M.CASE) + " · " + t.occupees + " cases", ""] : ["Table " + etat.annee, t.occupees + " / " + t.plafond + " cases", ""], ["Montant total", md(syn.total), ""], ["Plafond", md(syn.plafond), ""],
       [syn.marge >= 0 ? "Marge" : "Dépassement", md(Math.abs(syn.marge)), syn.marge >= 0 ? "pos" : "neg"]].forEach(function (x) {
       rel.appendChild(el("div", { classe: "releve" }, [el("small", { texte: x[0] }), el("b", { classe: x[2], texte: x[1] })]));
     });
     $("consigne").textContent = (enCible() ? "Étape 1 · modèle 2032. " : "Étape 2 · trajectoire " + etat.annee + ". ") + (arbitre()
-      ? "Les demandes à trancher sont regroupées en bas, dans le cadre « Demandes à arbitrer ». Cliquez sur l'une d'elles pour la retenir, la différer ou y renoncer."
-      : filtre ? "Vos pions seuls, regroupés. Cliquez sur un pion pour le modifier, sur une case vide pour en poser un nouveau. « Toute la table » les remet parmi les autres."
-      : "Les pions en place sont votre point de départ. Cliquez sur un pion pour le modifier, sur une case vide pour en poser un nouveau.")
+      ? "Table commune : toutes les demandes, avec leur porteur et les avis de chacun. Les points chauds s'allument ; « Où faut-il arbitrer ? » ne garde qu'eux. Cliquez sur un pion pour voir ses avis et trancher."
+      : etat.filtreTable === "chaud" ? "Seuls les points chauds : avis divergents, alertes des fiches, demandes sous la ligne de flottaison. Cliquez sur un pion pour donner votre avis."
+      : filtre ? "Vos pions seuls, regroupés. Cliquez sur un pion pour le modifier, sur une case vide pour en poser un nouveau."
+      : "Table commune : tout le monde voit toutes les demandes, avec leur porteur. Proposez un pion (case vide), ou cliquez sur un pion pour le modifier ou donner votre avis.")
       + (function () { var n = alertesVisibles().filter(function (a) { return a.niveau === "alerte"; }).length; return n ? " " + n + " alerte" + (n > 1 ? "s" : "") + " des fiches (pastille « ! »)." : ""; })()
       + (flot.sous.length ? " " + flot.sous.length + " demande" + (flot.sous.length > 1 ? "s passent" : " passe") + " sous la ligne de flottaison (barre rouge)." : "");
 
@@ -394,9 +405,15 @@
     vider(pl);
     pl.style.gridTemplateRows = "repeat(" + t.hauteur + ", var(--case))";
     for (var k = 0; k < t.hauteur * t.largeur; k++) {
-      pl.appendChild(el("div", { classe: "fond fond-clic" + (filtre ? "" : k >= t.table ? " fond-horstable" : k >= t.plafond ? " fond-hors" : ""), title: "Poser un nouveau pion en " + etat.annee, style: "grid-row:" + (Math.floor(k / t.largeur) + 1) + ";grid-column:" + (k % t.largeur + 1),
+      pl.appendChild(el("div", { classe: "fond fond-clic" + (filtre || paquets ? "" : k >= t.table ? " fond-horstable" : k >= t.plafond ? " fond-hors" : ""), title: "Poser un nouveau pion en " + etat.annee, style: "grid-row:" + (Math.floor(k / t.largeur) + 1) + ";grid-column:" + (k % t.largeur + 1),
         onclick: function () { etat.selection = null; etat.volet = "poser"; rendre(true); toast("Choisissez à droite le pion à poser en " + etat.annee); } }));
     }
+    // Table en paquets : un cadre et un titre par entité.
+    (t.zones || []).forEach(function (z) {
+      var mien = z.nom === ({ EMAT: "Terre", EMM: "Marine", EMAAE: "Air et Espace", DGA: "DGA", DGRIS: "International", MEAE: "International", SGA: "Soutien et cabinet", MEFR: "Soutien et cabinet", MINARM: "Soutien et cabinet" }[etat.role]);
+      pl.appendChild(el("div", { classe: "zone-entite" + (mien ? " zone-mienne" : ""), style: "grid-row:" + (z.r + 1) + " / " + (z.r + z.h + 1) + ";grid-column:" + (z.c + 1) + " / " + (z.c + z.w + 1) + ";--c:" + couleurZone(z.nom) }));
+      pl.appendChild(el("div", { classe: "zone-entite-titre", style: "grid-row:" + (z.r + 1) + ";grid-column:" + (z.c + 1) + " / " + (z.c + z.w + 1) + ";--c:" + couleurZone(z.nom) }, [el("span", { texte: z.nom + " · " + md(z.cases * M.CASE) })]));
+    });
     // Zone des demandes non encore arbitrées : un cadre et son titre.
     var enZone = t.pieces.filter(function (x) { return x.groupe === "Attente"; }).concat(t.cellules.filter(function (x) { return x.groupe === "Attente"; }));
     if (enZone.length) {
@@ -413,8 +430,8 @@
       pl.appendChild(el("div", { classe: "zone-attente", style: "grid-row:" + r1 + " / " + (r2 + 1) + ";grid-column:1 / -1" }));
       pl.appendChild(el("div", { classe: "zone-attente-titre", style: "grid-row:" + r1 + ";grid-column:1 / -1" }, [el("span", { texte: "Demandes à arbitrer · " + morceaux.join(" · ") })]));
     }
-    function depasse(r, c, w, h) { if (filtre) return false; for (var i = r; i < r + h; i++) for (var j = c; j < c + w; j++) if (i * t.largeur + j >= t.plafond) return true; return false; }
-    function masque(x) { return x.role && !vueComplete() && x.role !== etat.role; }
+    function depasse(r, c, w, h) { if (filtre || paquets) return false; for (var i = r; i < r + h; i++) for (var j = c; j < c + w; j++) if (i * t.largeur + j >= t.plafond) return true; return false; }
+    function masque(x) { return false; }
     function estompe(x) { return false; }
     function choisir(x) {
       return function () {
@@ -441,22 +458,25 @@
       if (estompe(x)) cl.push("pion-estompe");
       var mq = x.marques || null;
       if (x.ligne && sousLigne[x.ligne]) cl.push("pion-sous");
+      if (x.ligne && CHAUDS[x.ligne]) cl.push("pion-chaud");
       if (mq && mq.defection) cl.push("pion-defection");
       var cache = masque(x);
       var nom = cache ? "Demande " + x.armee : x.libelle;
       var pion = x.pion ? IDX[x.pion] : null;
       var picto = cache ? null : F.svg(F.pictoDe(x.libelle) || "puce");
-      var enfants = [el("span", { classe: "fig-bande" }, [el("span", { classe: "fig-titre", texte: court(nom) })])];
+      var enfants = [el("span", { classe: "fig-bande" }, [el("span", { classe: "fig-titre", texte: court(nom) }), x.role && !x.socle ? el("span", { classe: "porteur", texte: x.role }) : null])];
       if (picto) enfants.push(el("span", { classe: "fig-picto" }, [picto]));
       var notes = [];
       if (mq && mq.contrainte) { enfants.push(el("span", { classe: "drapeau drapeau-pion", title: "Contrainte politique : non arbitrable" })); notes.push("contrainte politique"); }
       if (mq && mq.part < 1) { enfants.push(el("span", { classe: "part-alliee", style: "width:" + Math.round(100 * (1 - mq.part)) + "%" })); }
       if (mq && mq.financement) {
-        enfants.push(el("span", { classe: "marque-fin" + (mq.financementActif ? "" : " marque-proposee"), title: M.MODES_FINANCEMENT[mq.financement] }, [mq.financement === "mutualise" ? F.svg("globe") : el("b", { texte: "UE" })]));
-        notes.push(mq.financement === "mutualise" ? "dépendant d'un allié" : M.MODES_FINANCEMENT[mq.financement].toLowerCase());
+        var sv = M.souveraineteDe(ligneDe(x.ligne) || { id: x.ligne }, p);
+        enfants.push(el("span", { classe: "marque-fin" + (mq.financementActif ? "" : " marque-proposee") + (sv.zone === "hors_ue" || sv.zone === "mixte" ? " marque-horsue" : ""), title: sv.libelle }, [mq.financement === "mutualise" ? F.svg("globe") : el("b", { texte: "UE" })]));
+        notes.push(sv.libelle);
       }
       if (mq && mq.defection) notes.push("défection de l'allié");
       if (x.ligne && sousLigne[x.ligne]) notes.push("sous la ligne de flottaison");
+      if (x.ligne && CHAUDS[x.ligne]) notes.push("à arbitrer : " + CHAUDS[x.ligne].join(", "));
       var ma = x.ligne && !cache ? marqueAlerte(alertesDe(x.ligne)) : null;
       if (ma) { enfants.push(ma); notes.push("alerte des fiches"); }
       if (pion && pion.type === "capacite" && M.nbDorese(pion) && !petit && aire >= 4) {
@@ -477,6 +497,7 @@
       if (x.statut) cl.push("pion-" + x.statut);
       if (x.horsCatalogue) cl.push("pion-mesure");
       if (x.allie) cl.push("jeton-allie");
+      if (x.ligne && CHAUDS[x.ligne] && x.nature !== "dorese") cl.push("pion-chaud");
       if ((x.ligne && sousLigne[x.ligne]) || (x.enveloppe && sousLigne["env:" + x.enveloppe])) cl.push("pion-sous");
       if (x.marques && x.marques.defection) cl.push("pion-defection");
       if (x.enveloppe) cl.push("jeton-enveloppe");
@@ -484,7 +505,7 @@
       if (drap) drapeauxPoses[x.ligne] = true;
       var alerteCase = null;
       if (x.ligne && x.nature !== "dorese" && !alertesPosees[x.ligne] && !masque(x)) { alerteCase = marqueAlerte(alertesDe(x.ligne)); if (alerteCase) alertesPosees[x.ligne] = true; }
-      if (x.r * t.largeur + x.c >= t.plafond) cl.push("pion-debord");
+      if (!paquets && x.r * t.largeur + x.c >= t.plafond) cl.push("pion-debord");
       if (x.role && x.role === etat.role) cl.push("pion-mien");
       var cible = x.nature === "dorese" && x.parent !== undefined ? t.pieces[x.parent] : x;
       if (x.ligne && x.ligne === etat.neuf) cl.push("pion-neuf");
@@ -492,7 +513,7 @@
       if (x.nature === "dorese" ? estompe(cible) && estompe(x) : estompe(x)) cl.push("pion-estompe");
       var nom = masque(x) ? (x.nature === "dorese" ? "DORESE" : "Demande " + x.armee) : x.libelle;
       var ic = x.nature === "dorese" ? F.svg(F.DORESE[x.type]) : F.svg(masque(x) ? "document" : (F.pictoDe(x.libelle) || "document"));
-      var titre = nom + (x.allie ? " · part alliée (ne compte pas pour la France)" : "") + (x.enveloppe ? " · cliquez pour voir l'enveloppe" : "");
+      var titre = nom + (x.role ? " · " + x.role : "") + (x.ligne && CHAUDS[x.ligne] ? " · à arbitrer : " + CHAUDS[x.ligne].join(", ") : "") + (x.allie ? " · part alliée (ne compte pas pour la France)" : "") + (x.enveloppe ? " · cliquez pour voir l'enveloppe" : "");
       pl.appendChild(el("button", { type: "button", classe: cl.join(" "), title: titre, style: "grid-row:" + (x.r + 1) + ";grid-column:" + (x.c + 1) + ";--bande:" + couleur(x.armee),
         onclick: x.enveloppe ? function () { etat.volet = "enveloppes"; rendre(true); } : x.ligne && x.nature !== "dorese" ? choisir(x) : x.ligne ? choisir({ ligne: x.ligne, pion: cible.pion }) : choisir(cible) },
         [ic, drap ? el("span", { classe: "drapeau drapeau-pion" }) : null, alerteCase]));
@@ -528,6 +549,7 @@
     lg.appendChild(puce("background:var(--carte)", "jeton-allie", "Part alliée, hors budget"));
     lg.appendChild(puce("background:var(--carte)", "pion-sous", "Sous la ligne de flottaison"));
     lg.appendChild(el("span", null, [el("span", { classe: "puce-legende puce-alerte", texte: "!" }), "Alerte des fiches (non bloquante)"]));
+    lg.appendChild(puce("background:var(--carte)", "pion-chaud", "Point chaud : à arbitrer"));
     lg.appendChild(el("span", { classe: "note-legende", texte: "Le socle 2027 est considéré comme arbitré." }));
   }
 
@@ -777,7 +799,13 @@
       el("dt", { texte: "Imputé à" }), el("dd", { texte: M.armeeDeLigne(l, IDX) })
     ]);
     v.appendChild(resume);
-    [blocPriorite(l), blocContrainte(l.id, l.role), blocFinancement(l), blocEnveloppe(l), blocTrajectoire(l)].forEach(function (b) { if (b) v.appendChild(b); });
+    var decisionPosee = false;
+    if (arbitre()) {
+      v.appendChild(blocAvis(l));
+      v.appendChild(el("section", { classe: "bloc-conception" }, [el("h3", { texte: "Décision du CEMA" }), blocArbitrage(l)]));
+      decisionPosee = true;
+    }
+    [arbitre() ? null : blocAvis(l), blocPriorite(l), blocContrainte(l.id, l.role), blocFinancement(l), blocEnveloppe(l), blocTrajectoire(l)].forEach(function (b) { if (b) v.appendChild(b); });
 
     if (mien) {
       if (l.type === "ajout" && p && p.type === "capacite" && M.nbDorese(p)) {
@@ -837,7 +865,7 @@
     } else if (l.justification) {
       v.appendChild(el("blockquote", { classe: "citation", texte: l.justification }));
     }
-    if (arbitre()) {
+    if (arbitre() && !decisionPosee) {
       v.appendChild(el("h3", { texte: "Décision du CEMA" }));
       v.appendChild(blocArbitrage(l));
     }
@@ -903,7 +931,9 @@
       groupes[k].forEach(function (l) {
         ul.appendChild(el("li", null, [el("button", { type: "button", style: "--c:" + couleur(M.armeeDeLigne(l, IDX)), onclick: function () { etat.selection = { ligne: l.id, pion: l.pion || null }; etat.volet = "selection"; var a1 = M.ANNEES.filter(function (a) { return M.quantite(l, a); })[0]; if (a1) etat.annee = a1; rendre(true); } }, [
           el("span", null, [el("b", { texte: libelleLigne(l) }), el("small", { texte: l.role + " · " + natureLigne(l) + " · " + anneesDe(l) })]),
-          el("span", { classe: "num" }, [md(chiffre(l).total), alertesDe(l.id).some(function (a) { return a.niveau === "alerte"; }) ? el("span", { classe: "badge badge-alerte", texte: "alerte" }) : null])
+          el("span", { classe: "num" }, [md(chiffre(l).total), alertesDe(l.id).some(function (a) { return a.niveau === "alerte"; }) ? el("span", { classe: "badge badge-alerte", texte: "alerte" }) : null,
+            CHAUDS[l.id] ? el("span", { classe: "badge badge-chaud", title: CHAUDS[l.id].join(" · "), texte: "à arbitrer" }) : null,
+            M.avisDe(l, p).length ? el("span", { classe: "badge badge-neutre", texte: M.avisDe(l, p).length + " avis" }) : null])
         ])]));
       });
       v.appendChild(ul);
@@ -932,12 +962,30 @@
       ul.appendChild(el("li", null, [el("span", { classe: "pastille", style: "background:" + couleur(arm) }), arm, el("b", { classe: "num", texte: md(s) })]));
     });
     v.appendChild(ul);
+    v.appendChild(el("h3", { texte: "Souveraineté" }));
+    var sou = M.syntheseSouverainete(PIONS, M.lignesApresArbitrage(lignesJeu(), p), p);
+    var tot = { envisage: 0, national: 0, partage_ue: 0, partage_hors_ue: 0, allie_ue: 0, allie_hors_ue: 0, finance_ue: 0, total: 0 };
+    M.ANNEES.forEach(function (a) { Object.keys(tot).forEach(function (k) { tot[k] += sou[a][k]; }); });
+    var ind = tot.total ? Math.round(100 * tot.national / tot.total) : 100;
+    v.appendChild(el("p", { classe: "total-demande" }, [el("b", { texte: ind + " %" }), " des demandes sur 2027-2032 restent sous décision nationale"]));
+    v.appendChild(el("dl", { classe: "etat-pion" }, [
+      el("dt", { texte: "Partagé avec l'UE" }), el("dd", { texte: md(tot.partage_ue) + " dont " + md(tot.allie_ue) + " payés par les alliés" }),
+      el("dt", { texte: "Partagé hors UE" }), el("dd", { texte: md(tot.partage_hors_ue) + " dont " + md(tot.allie_hors_ue) + " payés par les alliés" }),
+      el("dt", { texte: "Financé par l'UE" }), el("dd", { texte: md(tot.finance_ue) + " (subventions et prêts)" }),
+      el("dt", { texte: "National" }), el("dd", { texte: md(tot.national) + (tot.envisage ? ", dont " + md(tot.envisage) + " qu'un montage envisagé partagerait" : "") })
+    ]));
+    var bandeS = el("div", { classe: "traj-bande souv-bande" }, M.ANNEES.map(function (a) { return el("span", { title: a + " : " + sou[a].indice + " % national", texte: sou[a].indice + " %" }); }));
+    v.appendChild(el("div", { classe: "champ" }, [el("span", { texte: "Part nationale, année par année" }), el("div", { classe: "traj-bande traj-entete" }, M.ANNEES.map(function (a) { return el("span", { texte: String(a) }); })), bandeS]));
+    v.appendChild(el("h3", { texte: "Avis et points chauds" }));
+    var nAvis = etat.lignes.reduce(function (t, l) { return t + M.avisDe(l, p).length; }, 0);
+    v.appendChild(el("dl", { classe: "etat-pion" }, [el("dt", { texte: "Points chauds" }), el("dd", { texte: String(Object.keys(CHAUDS).length) }), el("dt", { texte: "Avis donnés" }), el("dd", { texte: String(nAvis) })]));
     v.appendChild(el("h3", { texte: "Règles des fiches : tableau de bord" }));
     var vis = alertesVisibles(), fortes = vis.filter(function (a) { return a.niveau === "alerte"; });
     var force = fortes.filter(function (a) { var l = ligneDe(a.ligne); return l && M.arbitrageDe(l, p).statut === "retenu"; });
+    var forceAvis = etat.lignes.filter(passageEnForce);
     v.appendChild(el("dl", { classe: "etat-pion" }, [
       el("dt", { texte: "Alertes actives" }), el("dd", { texte: String(fortes.length) }),
-      el("dt", { texte: "Passées en force" }), el("dd", { texte: force.length + " (retenues malgré l'alerte)" }),
+      el("dt", { texte: "Passées en force" }), el("dd", { texte: force.length + " malgré une alerte · " + forceAvis.length + " malgré un avis défavorable" }),
       el("dt", { texte: "À savoir" }), el("dd", { texte: String(vis.length - fortes.length) })
     ]));
     if (vis.length) v.appendChild(el("details", { classe: "details-regles" }, [el("summary", { texte: "Voir les alertes" }), listeAlertes(vis, true)]));
@@ -1079,6 +1127,52 @@
     return b;
   }
 
+  // Avis : chacun qualifie un pion ; le CEMA voit tous les avis empilés.
+  function naturesPourMoi() {
+    return Object.keys(M.NATURES_AVIS).filter(function (k) { var n = M.NATURES_AVIS[k]; return !n.roles || n.roles.indexOf(etat.role) !== -1; });
+  }
+  // Passage en force : ligne retenue par le CEMA malgré un avis défavorable, un refus industriel ou un avis d'insoutenabilité.
+  function passageEnForce(l) {
+    var p = params();
+    return M.arbitrageDe(l, p).statut === "retenu" && !M.arbitrageDe(l, p).contrainte && M.avisDe(l, p).some(function (x) { return /^(defavorable|refus|insoutenable)$/.test(x.valeur); });
+  }
+  function blocAvis(l) {
+    var p = params(), av = M.avisDe(l, p);
+    var b = el("section", { classe: "bloc-conception bloc-avis" });
+    b.appendChild(el("h3", { texte: "Avis des acteurs" + (av.length ? " (" + av.length + ")" : "") }));
+    if (CHAUDS[l.id]) b.appendChild(el("p", { classe: "chaud-raisons" }, [el("b", { texte: "À arbitrer : " }), CHAUDS[l.id].join(" · ")]));
+    if (passageEnForce(l)) b.appendChild(el("p", { classe: "chaud-raisons force" }, [el("b", { texte: "Passage en force : " }), "retenue par le CEMA malgré un avis défavorable. Tracé et visible du MINARM."]));
+    if (av.length) {
+      var ul = el("ul", { classe: "avis-liste" });
+      av.sort(function (a, c) { return (a.role < c.role ? -1 : 1); }).forEach(function (x) {
+        var n = M.NATURES_AVIS[x.nature];
+        ul.appendChild(el("li", { classe: "avis-" + x.valeur }, [el("span", { classe: "avis-tete" }, [el("b", { texte: x.role }), el("span", { texte: n.nom + " : " + n.valeurs[x.valeur] })]),
+          x.texte ? el("span", { classe: "avis-texte", texte: x.texte }) : null]));
+      });
+      b.appendChild(ul);
+    } else b.appendChild(el("p", { classe: "aide", texte: "Aucun avis pour l'instant." }));
+    if (arbitre() && etat.role === "CEMA") return b;
+    naturesPourMoi().forEach(function (k) {
+      var n = M.NATURES_AVIS[k], cle = etat.role + ":" + k;
+      var actuel = (((p.avis || {})[l.id]) || {})[cle] || {};
+      var seg = el("div", { classe: "segment segment-avis", role: "group", "aria-label": n.nom });
+      var texte = el("input", { placeholder: "Motif, en une phrase (facultatif)", value: actuel.texte || "", "aria-label": "Motif " + n.nom, maxlength: 200 });
+      function enregistrerAvis(valeur) {
+        modifierParams(function (pp) {
+          pp.avis = pp.avis || {}; pp.avis[l.id] = pp.avis[l.id] || {};
+          if (valeur) pp.avis[l.id][cle] = { role: etat.role, nature: k, valeur: valeur, texte: texte.value.trim(), le: new Date().toISOString() };
+          else delete pp.avis[l.id][cle];
+        }).then(function () { toast(valeur ? n.nom + " enregistré" : n.nom + " retiré"); });
+      }
+      Object.keys(n.valeurs).forEach(function (v) {
+        seg.appendChild(el("button", { type: "button", "data-avis": v, "aria-pressed": actuel.valeur === v ? "true" : "false", texte: n.valeurs[v], onclick: function () { enregistrerAvis(actuel.valeur === v ? null : v); } }));
+      });
+      texte.addEventListener("change", function () { if (actuel.valeur) enregistrerAvis(actuel.valeur); });
+      b.appendChild(el("div", { classe: "champ" }, [el("span", { texte: (k === "avis" ? "Mon avis" : n.nom) + " (" + etat.role + ")" }), seg, texte]));
+    });
+    return b;
+  }
+
   // cle : id de la ligne, ou « pion:<id> » pour un pion du socle. proprio : le pôle qui porte la demande.
   function blocContrainte(cle, proprio) {
     var p = params(), c = M.contrainteDe(cle, p);
@@ -1118,6 +1212,8 @@
       if (M.defectionDe(l, p)) badges.push(el("span", { classe: "badge badge-alerte", texte: "défection de l'allié : à réarbitrer" }));
     }
     b.appendChild(el("div", { classe: "badges" }, badges));
+    var sv = M.souveraineteDe(l, p);
+    b.appendChild(el("p", { classe: "souverainete souv-" + sv.niveau + (sv.zone ? " souv-" + sv.zone : "") }, [el("b", { texte: "Souveraineté · " }), sv.libelle + (sv.envisage ? " (montage envisagé, pas encore validé)" : "") + "."]));
     if (c.brut !== c.total || c.hors) b.appendChild(el("p", { classe: "aide", texte: "Pour la France : " + md(c.total) + " sur " + md(c.brut) + " (coût plein)" + (c.hors ? " · " + md(c.hors) + " reportés après 2032" : "") + "." }));
 
     var peutProposer = l.role === etat.role || ROLES_FINANCEMENT.indexOf(etat.role) !== -1;
@@ -1130,21 +1226,27 @@
       var partn = el("input", { placeholder: "Allemagne, Italie…", value: f.partenaires || "", "aria-label": "Partenaires" });
       var lignePart = el("label", { classe: "champ" }, [lPart, part]);
       var lignePartn = el("label", { classe: "champ" }, ["Partenaires", partn]);
+      var zone = el("select", { "aria-label": "Zone des partenaires" });
+      [["ue", "Partenaires de l'UE"], ["hors_ue", "Partenaires hors UE"], ["mixte", "UE et hors UE"]].forEach(function (z) { zone.appendChild(el("option", { value: z[0], texte: z[1] })); });
+      zone.value = f.zone || M.zoneProbable(f.partenaires) || "ue";
+      partn.addEventListener("input", function () { var z = M.zoneProbable(partn.value); if (z) zone.value = z; });
+      var ligneZone = el("label", { classe: "champ" }, ["Zone", zone]);
       function maj() {
         var m = mode.value;
         lignePart.hidden = m === "national";
         lignePartn.hidden = m !== "mutualise";
+        ligneZone.hidden = m !== "mutualise";
         lPart.textContent = m === "mutualise" ? "Part française, %" : m === "subvention" ? "Part subventionnée par l'UE, %" : "Part empruntée à l'UE, %";
       }
       mode.addEventListener("change", maj);
       maj();
-      var formF = el("div", { classe: "form-financement" }, [el("label", { classe: "champ" }, ["Mode", mode]), lignePart, lignePartn,
+      var formF = el("div", { classe: "form-financement" }, [el("label", { classe: "champ" }, ["Mode", mode]), lignePart, lignePartn, ligneZone,
         el("button", { type: "button", classe: "btn-contour", texte: mode.value === "national" && f.mode === "national" ? "Proposer ce montage" : "Proposer ce montage", onclick: function () {
           var m = mode.value;
           modifierParams(function (pp) {
             pp.financements = pp.financements || {};
             if (m === "national") delete pp.financements[l.id];
-            else pp.financements[l.id] = { mode: m, part: Math.max(0, Math.min(100, Number(part.value) || 0)), partenaires: partn.value.trim(), propose_par: etat.role, valide: etat.role === "Animateur" };
+            else pp.financements[l.id] = { mode: m, part: Math.max(0, Math.min(100, Number(part.value) || 0)), partenaires: partn.value.trim(), zone: m === "mutualise" ? zone.value : "ue", propose_par: etat.role, valide: etat.role === "Animateur" };
             if (pp.defections) delete pp.defections[l.id];
           }).then(function () { toast(m === "national" ? "Financement national" : "Montage proposé : l'animateur doit le valider"); });
         } })]);
@@ -1465,7 +1567,7 @@
     $("btn-quitter").addEventListener("click", quitter);
     $("btn-role").addEventListener("click", function () { montrerRoles(etat.partie, etat.mdp); });
     document.querySelectorAll(".bascule button[data-vue]").forEach(function (b) { b.addEventListener("click", function () { etat.vue = b.getAttribute("data-vue"); rendre(false); }); });
-    document.querySelectorAll(".bascule button[data-filtre]").forEach(function (b) { b.addEventListener("click", function () { etat.maTable = b.getAttribute("data-filtre") === "mien"; rendre(false); }); });
+    document.querySelectorAll(".bascule button[data-filtre]").forEach(function (b) { b.addEventListener("click", function () { etat.filtreTable = b.getAttribute("data-filtre"); rendre(false); }); });
     setInterval(function () { if (etat.partie && etat.role && !Object.keys(enAttente).length) recharger(false); }, S.mode === "partage" ? 6000 : 5000);
 
     etapeAccueil("rejoindre");

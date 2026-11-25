@@ -296,9 +296,13 @@
   var LARGEUR = 30;
   // « Attente » : les pions ajoutés qui n'ont pas encore été arbitrés, posés côte à côte après le socle.
   var ORDRE_GROUPES = ["Fixes", "Interarmées", "Terre", "Marine", "Air et Espace", "Attente"];
+  // Table « en paquets » : chaque entité forme un bloc compact, les blocs s'imbriquent sur la table.
+  var ORDRE_ZONES = ["Terre", "Marine", "Air et Espace", "Interarmées", "DGA", "International", "Soutien et cabinet", "Fixes"];
+  var ENTITE_DU_ROLE = { EMAT: "Terre", EMM: "Marine", EMAAE: "Air et Espace", DGA: "DGA", DGRIS: "International", MEAE: "International",
+    SGA: "Soutien et cabinet", MEFR: "Soutien et cabinet", MINARM: "Soutien et cabinet", COCA: "Interarmées", "SC-Plans": "Interarmées", CEMA: "Interarmées", Animateur: "Interarmées" };
 
-  function Plateau(lignesInit) {
-    this.l = LARGEUR;
+  function Plateau(lignesInit, largeur) {
+    this.l = largeur || LARGEUR;
     this.h = lignesInit;
     this.occ = [];
     for (var i = 0; i < this.l * this.h; i++) this.occ.push(null);
@@ -365,7 +369,8 @@
 
     // Constitution des groupes.
     var groupes = {};
-    ORDRE_GROUPES.forEach(function (g) { groupes[g] = { rigides: [], secables: [] }; });
+    var enZones = !!options.zones;
+    ORDRE_GROUPES.concat(ORDRE_ZONES).forEach(function (g) { groupes[g] = groupes[g] || { rigides: [], secables: [] }; });
     function groupe(nom) { return groupes[nom] || groupes["Interarmées"]; }
     pions.forEach(function (p) {
       if (!estDansSocle(p, annee, params) || retires[p.id]) return;
@@ -386,7 +391,7 @@
       if (enveloppeDe(l, params)) return; // dans l'enveloppe de son pôle : seul l'excédent est posé
       var arm = armeeDeLigne(l, idx);
       var st = statutDe(l);
-      var dest = st ? "Attente" : arm;
+      var dest = enZones ? (ENTITE_DU_ROLE[l.role] || arm) : st ? "Attente" : arm;
       var fin = financementDe(l, params);
       var marques = { part: partFrancaise(l, idx, params, annee), financement: fin.mode !== "national" ? fin.mode : null, financementActif: financementActif(l, params),
         defection: defectionDe(l, params), contrainte: contrainteAcquise(l.id, params), contrainteDemandee: !!(contrainteDe(l.id, params) && !contrainteAcquise(l.id, params)) };
@@ -410,17 +415,14 @@
       var n = Math.ceil(et.depassement / CASE);
       if (n > 0) {
         var arm = (idx[e.pion] || {}).armee || "Interarmées";
-        groupe(arm).secables.push({ cases: n, armee: arm, nature: "libre", libelle: "Excédent enveloppe " + e.nom + " (" + e.role + ")", role: e.role, ligne: null, enveloppe: e.id, statut: null });
+        groupe(enZones ? (ENTITE_DU_ROLE[e.role] || arm) : arm).secables.push({ cases: n, armee: arm, nature: "libre", libelle: "Excédent enveloppe " + e.nom + " (" + e.role + ")", role: e.role, ligne: null, enveloppe: e.id, statut: null });
       }
     });
 
     var cellules = []; // cases isolées : DORESE et montants sécables
-    ORDRE_GROUPES.forEach(function (nomG) {
+    var zones = [];
+    function placerGroupe(plateau, nomG, r0, rMin) {
       var g = groupes[nomG];
-      if (!g.rigides.length && !g.secables.length) return;
-      // La zone « Attente » commence sous tout le reste, pour rester à part.
-      var r0 = nomG === "Attente" ? plateau.apresDerniereLigne() + 1 : plateau.premiereLigneLibre(); // une ligne vide pour le titre de la zone
-      var rMin = nomG === "Attente" ? r0 : 0;
       g.rigides.sort(function (a, b) { return (b.w * b.h + b.dorese) - (a.w * a.h + a.dorese) || b.w - a.w; });
       g.rigides.forEach(function (it) {
         var id = pieces.length;
@@ -478,9 +480,49 @@
             marques: it.marques || null, allie: n >= francaises, enveloppe: it.enveloppe || null });
         }
       });
-    });
+    }
+
+    if (!enZones) {
+      ORDRE_GROUPES.forEach(function (nomG) {
+        var g = groupes[nomG];
+        if (!g.rigides.length && !g.secables.length) return;
+        // La zone « Attente » commence sous tout le reste, pour rester à part (une ligne vide pour son titre).
+        var r0 = nomG === "Attente" ? plateau.apresDerniereLigne() + 1 : plateau.premiereLigneLibre();
+        placerGroupe(plateau, nomG, r0, nomG === "Attente" ? r0 : 0);
+      });
+    } else {
+      // Chaque entité est posée sur sa propre petite table, de largeur adaptée à son volume,
+      // puis les blocs sont imbriqués sur la grande table, en haut à gauche d'abord.
+      var global = new Plateau(1);
+      ORDRE_ZONES.forEach(function (nomG) {
+        var g = groupes[nomG];
+        if (!g.rigides.length && !g.secables.length) return;
+        var cases = 0, minW = 1;
+        g.rigides.forEach(function (it) { cases += it.w * it.h + it.dorese; minW = Math.max(minW, Math.min(it.w, it.h) + Math.ceil(it.dorese / Math.max(it.w, it.h))); });
+        g.secables.forEach(function (it) { cases += it.cases; });
+        var w = Math.min(LARGEUR - 1, Math.max(minW, Math.max(...g.rigides.map(function (it) { return Math.max(it.w, it.h); }).concat([1])), Math.ceil(Math.sqrt(cases * 1.6)), 6));
+        var local = new Plateau(1, w);
+        var p0 = pieces.length, c0 = cellules.length;
+        placerGroupe(local, nomG, 0, 0);
+        var h = local.apresDerniereLigne();
+        // Emplacement du bloc (titre + contenu + une case d'écart) : première place libre.
+        var W = Math.min(LARGEUR, w + 1), H = h + 2, pos = null;
+        for (var r = 0; !pos; r++) {
+          if (r + H > global.h) global.agrandir(r + H - global.h);
+          for (var c = 0; c + w <= LARGEUR && !pos; c++) if (global.tient(r, c, Math.min(W, LARGEUR - c), H)) pos = { r: r, c: c };
+        }
+        global.marquer(pos.r, pos.c, Math.min(W, LARGEUR - pos.c), H, nomG);
+        for (var k = p0; k < pieces.length; k++) { pieces[k].r += pos.r + 1; pieces[k].c += pos.c; }
+        for (var k2 = c0; k2 < cellules.length; k2++) { cellules[k2].r += pos.r + 1; cellules[k2].c += pos.c; }
+        var occ = local.occ.filter(function (x) { return x !== null; }).length;
+        zones.push({ nom: nomG, r: pos.r, c: pos.c, w: w, h: h + 1, cases: occ });
+      });
+      plateau = { h: global.apresDerniereLigne(), occ: [] };
+      zones.forEach(function (z) { for (var i = 0; i < z.cases; i++) plateau.occ.push(1); });
+    }
 
     return {
+      zones: zones,
       largeur: LARGEUR,
       hauteur: Math.max(plateau.h, Math.ceil(tableCases / LARGEUR)),
       table: tableCases,
@@ -856,6 +898,89 @@
     return res;
   }
 
+  // ---------- Avis des acteurs ----------
+  // params.avis[idLigne][role + ":" + nature] = { role, nature, valeur, texte, le }
+  // nature : « avis » (tous), « industriel » (DGA), « soutenabilite » (MEFR, SGA).
+  var NATURES_AVIS = {
+    avis: { nom: "Avis", valeurs: { favorable: "Favorable", reserve: "Réservé", defavorable: "Défavorable" } },
+    industriel: { nom: "Avis industriel", roles: ["DGA"], valeurs: { favorable: "Favorable", report: "Report de cadence", mutualisation: "Mutualisation", alternative: "Alternative", refus: "Refus industriel" } },
+    soutenabilite: { nom: "Soutenabilité", roles: ["MEFR", "SGA"], valeurs: { soutenable: "Soutenable", fragile: "Fragile", insoutenable: "Insoutenable" } }
+  };
+  var AVIS_NEGATIFS = { defavorable: true, refus: true, insoutenable: true };
+  var AVIS_POSITIFS = { favorable: true, soutenable: true };
+  function avisDe(ligne, params) {
+    var a = (((params || {}).avis || {})[ligne.id]) || {};
+    return Object.keys(a).map(function (k) { return a[k]; }).filter(function (x) { return x && NATURES_AVIS[x.nature] && x.valeur; });
+  }
+
+  // ---------- Souveraineté ----------
+  // Ce qu'on partage quand un programme est mutualisé (part alliée, UE ou hors UE) ou financé par l'UE.
+  var ZONES = { ue: "partenaires UE", hors_ue: "partenaires hors UE", mixte: "partenaires UE et hors UE" };
+  var PAYS_UE = /allemagne|italie|espagne|pologne|roumanie|balte|estonie|lettonie|lituanie|belgique|pays-bas|grèce|suède|finlande|portugal|autriche|tchèque|danemark|europ|\bue\b|esa\b/i;
+  var PAYS_HORS_UE = /royaume-uni|états-unis|etats-unis|norvège|otan|canada|turquie|japon|corée|australie|inde|émirats|djibouti/i;
+  function zoneProbable(texte) {
+    var t = String(texte || ""), u = PAYS_UE.test(t), h = PAYS_HORS_UE.test(t);
+    return u && h ? "mixte" : h ? "hors_ue" : u ? "ue" : null;
+  }
+  // Pour une ligne : niveau ('national'|'partage'|'finance_ue'), part de la décision gardée par la France, zone.
+  function souveraineteDe(ligne, params) {
+    var f = financementDe(ligne, params);
+    if (f.mode === "national") return { niveau: "national", part: 100, zone: null, envisage: false, libelle: "Souveraineté pleine" };
+    var actif = financementActif(ligne, params);
+    if (f.mode === "mutualise") {
+      var z = f.zone || zoneProbable(f.partenaires) || "ue";
+      return { niveau: "partage", part: Math.max(0, Math.min(100, Number(f.part) || 0)), zone: z, envisage: !actif,
+        libelle: "Programme partagé avec des " + ZONES[z] + " : la France garde " + (Number(f.part) || 0) + " % de la décision" };
+    }
+    return { niveau: "finance_ue", part: 100, zone: "ue", envisage: !actif,
+      libelle: (f.mode === "pret" ? "Prêt UE" : "Subvention UE") + " : programme national, dépendance financière à l'UE" };
+  }
+  // Synthèse par année (montages actifs seulement) : montants bruts selon la souveraineté.
+  function syntheseSouverainete(pions, lignes, params) {
+    var idx = indexPions(pions);
+    var res = {};
+    ANNEES.forEach(function (a) { res[a] = { envisage: 0, national: 0, partage_ue: 0, partage_hors_ue: 0, allie_ue: 0, allie_hors_ue: 0, finance_ue: 0, total: 0, indice: 100 }; });
+    lignes.forEach(function (l) {
+      if (arbitrageDe(l, params).statut === "renonce") return;
+      var sv = souveraineteDe(l, params), f = financements(l, idx, params);
+      ANNEES.forEach(function (a) {
+        var x = f[a], r = res[a];
+        if (x.brut <= 0) return;
+        r.total += x.brut;
+        if (sv.envisage) r.envisage += x.brut;
+        if (sv.niveau === "national" || sv.envisage) r.national += x.brut;
+        else if (sv.niveau === "finance_ue") { r.finance_ue += x.subvention + x.emprunt; r.national += x.brut - x.subvention - x.emprunt; }
+        else if (sv.zone === "hors_ue") { r.partage_hors_ue += x.brut; r.allie_hors_ue += x.allie; }
+        else { r.partage_ue += x.brut; r.allie_ue += x.allie; }
+      });
+    });
+    ANNEES.forEach(function (a) { var r = res[a]; r.indice = r.total ? Math.round(100 * r.national / r.total) : 100; });
+    return res;
+  }
+
+  // ---------- Points chauds : là où il faut arbitrer ----------
+  // Avis divergents ou négatifs, alerte de fiche, ligne sous la ligne de flottaison, priorité contestée.
+  function pointsChauds(pions, lignes, params, catalogue, annee) {
+    var res = {};
+    function ajouter(id, raison) { (res[id] = res[id] || []).indexOf(raison) === -1 && res[id].push(raison); }
+    lignes.forEach(function (l) {
+      if (arbitrageDe(l, params).statut === "renonce") return;
+      var av = avisDe(l, params);
+      var neg = av.filter(function (x) { return AVIS_NEGATIFS[x.valeur]; }), pos = av.filter(function (x) { return AVIS_POSITIFS[x.valeur]; });
+      if (neg.length && pos.length) ajouter(l.id, "avis divergents");
+      else if (neg.length) ajouter(l.id, "avis défavorable (" + neg.map(function (x) { return x.role; }).join(", ") + ")");
+      var pr = prioriteDe(l, params);
+      if (pr.propositions.some(function (x) { return x.p !== pr.valeur; })) ajouter(l.id, "priorité contestée");
+      if (defectionDe(l, params)) ajouter(l.id, "défection d'un allié");
+      var c = contrainteDe(l.id, params);
+      if (c && c.etat === "demandee") ajouter(l.id, "contrainte politique demandée");
+    });
+    alertes(pions, lignes, params, catalogue).forEach(function (a) { if (a.ligne && a.niveau === "alerte") ajouter(a.ligne, "alerte de fiche " + a.regle); });
+    var eff = lignesEnTrajectoire(lignes, params);
+    flottaison(pions, eff, params, annee).sous.forEach(function (it) { if (it.ligne) ajouter(it.ligne.id, "sous la ligne de flottaison"); });
+    return res;
+  }
+
   // ---------- Échanges : export d'une partie, comparaison de deux trajectoires ----------
   // Un même format pour le modèle 2032 arbitré et pour une trajectoire 2027-2032 : assez riche pour
   // reconstruire une trajectoire hors de l'outil, puis la réimporter et la comparer.
@@ -895,6 +1020,7 @@
         entree: entree, annees: annees, total: Object.keys(annees).reduce(function (t, a) { return t + annees[a].cout; }, 0),
         hors_lpm: (r.hors || 0) + (e.horsLpm || 0),
         delai_fiche: o ? o.delai || null : null, mise_en_service: o ? miseEnService(o, entree && entree <= fin ? entree : ANNEE_DECISION) : null,
+        avis: avisDe(l, pp), souverainete: souveraineteDe(l, pp),
         justification: l.justification || "",
         alertes: al.filter(function (x) { return x.ligne === l.id; }).map(function (x) { return { regle: x.regle, niveau: x.niveau, message: x.message }; })
       };
@@ -1031,6 +1157,13 @@
     lignesEnTrajectoire: lignesEnTrajectoire,
     etalerAuto: etalerAuto,
     alertes: alertes,
+    NATURES_AVIS: NATURES_AVIS,
+    avisDe: avisDe,
+    ZONES: ZONES,
+    zoneProbable: zoneProbable,
+    souveraineteDe: souveraineteDe,
+    syntheseSouverainete: syntheseSouverainete,
+    pointsChauds: pointsChauds,
     FORMAT_ECHANGE: FORMAT_ECHANGE,
     exporterPartie: exporterPartie,
     lireEchange: lireEchange,

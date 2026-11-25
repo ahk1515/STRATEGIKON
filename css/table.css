@@ -380,3 +380,13 @@ button.jeton-option { color: #222; }
 .zone-entite-titre { position: relative; z-index: 2; pointer-events: none; display: flex; align-items: center; padding-left: 3px; min-width: 0; }
 .zone-entite-titre span { background: var(--c); color: #fff; font-size: .68rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: .1rem .45rem; border-radius: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .chaud-raisons.force { border-left-color: var(--alerte); background: rgba(179, 38, 30, .08); }
+
+/* Nom des demandes en cases : étiquette posée sur la rangée de cases, les clics passent au travers. */
+.etiquette-ligne { position: relative; z-index: 3; pointer-events: none; align-self: start; margin: 2px 2px 0; padding: 0 3px;
+  background: color-mix(in srgb, var(--bande) 88%, #fff); color: #111; border-radius: 2px; line-height: 1.25;
+  font: 700 .58rem/1.25 "Source Sans 3", system-ui, sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+  display: flex; gap: 3px; align-items: baseline; }
+.etiquette-ligne b { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.etiquette-ligne small { font-weight: 600; opacity: .75; flex: none; }
+.etiquette-courte small { display: none; }
+@media (max-width: 640px) { .etiquette-ligne { font-size: .5rem; } }

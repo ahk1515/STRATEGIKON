@@ -518,6 +518,24 @@
         onclick: x.enveloppe ? function () { etat.volet = "enveloppes"; rendre(true); } : x.ligne && x.nature !== "dorese" ? choisir(x) : x.ligne ? choisir({ ligne: x.ligne, pion: cible.pion }) : choisir(cible) },
         [ic, drap ? el("span", { classe: "drapeau drapeau-pion" }) : null, alerteCase]));
     });
+    // Nom des demandes en cases (options, pions sur mesure) : une étiquette sur la plus longue
+    // rangée de cases contiguës de la ligne, pour qu'on lise ce qui est posé.
+    var parLigne = {};
+    t.cellules.forEach(function (x) { if (x.ligne && x.nature === "libre") (parLigne[x.ligne] = parLigne[x.ligne] || []).push(x); });
+    Object.keys(parLigne).forEach(function (id) {
+      var cs = parLigne[id], meilleur = null;
+      cs.forEach(function (x) {
+        var long = 1;
+        while (cs.some(function (y) { return y.r === x.r && y.c === x.c + long; })) long++;
+        var debut = !cs.some(function (y) { return y.r === x.r && y.c === x.c - 1; });
+        if (debut && (!meilleur || long > meilleur.w)) meilleur = { r: x.r, c: x.c, w: long };
+      });
+      if (!meilleur) return;
+      var x0 = cs[0];
+      pl.appendChild(el("span", { classe: "etiquette-ligne" + (meilleur.w < 3 ? " etiquette-courte" : ""), "aria-hidden": "true",
+        style: "grid-row:" + (meilleur.r + 1) + ";grid-column:" + (meilleur.c + 1) + " / span " + meilleur.w + ";--bande:" + couleur(x0.armee) },
+        [el("b", { texte: court(x0.libelle) }), x0.role ? el("small", { texte: x0.role }) : null]));
+    });
     etat.neuf = null;
 
     var hors = $("hors-table");

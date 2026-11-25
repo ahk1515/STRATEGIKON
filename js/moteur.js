@@ -297,9 +297,9 @@
   // « Attente » : les pions ajoutés qui n'ont pas encore été arbitrés, posés côte à côte après le socle.
   var ORDRE_GROUPES = ["Fixes", "Interarmées", "Terre", "Marine", "Air et Espace", "Attente"];
   // Table « en paquets » : chaque entité forme un bloc compact, les blocs s'imbriquent sur la table.
-  var ORDRE_ZONES = ["Terre", "Marine", "Air et Espace", "Interarmées", "DGA", "International", "Soutien et cabinet", "Fixes"];
+  var ORDRE_ZONES = ["Terre", "Marine", "Air et Espace", "Interarmées", "DGA", "International", "SGA", "MEFR", "MINARM", "Fixes"];
   var ENTITE_DU_ROLE = { EMAT: "Terre", EMM: "Marine", EMAAE: "Air et Espace", DGA: "DGA", DGRIS: "International", MEAE: "International",
-    SGA: "Soutien et cabinet", MEFR: "Soutien et cabinet", MINARM: "Soutien et cabinet", COCA: "Interarmées", "SC-Plans": "Interarmées", CEMA: "Interarmées", Animateur: "Interarmées" };
+    SGA: "SGA", MEFR: "MEFR", MINARM: "MINARM", COCA: "Interarmées", "SC-Plans": "Interarmées", CEMA: "Interarmées", Animateur: "Interarmées" };
 
   function Plateau(lignesInit, largeur) {
     this.l = largeur || LARGEUR;

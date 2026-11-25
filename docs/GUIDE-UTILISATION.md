@@ -111,7 +111,9 @@ Sous la carte d'accueil, une note indique le mode :
   | Interarmées | COCA, SC-Plans, CEMA, Animateur |
   | DGA | DGA |
   | International | DGRIS, MEAE |
-  | Soutien et cabinet | SGA, MEFR, MINARM |
+  | SGA | SGA |
+  | MEFR | MEFR |
+  | MINARM | MINARM |
   | Fixes | dépenses fixes du socle |
 
   Le paquet de votre entité est mis en valeur.

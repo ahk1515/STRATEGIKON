@@ -383,7 +383,7 @@ button.jeton-option { color: #222; }
 
 /* Nom des demandes en cases : étiquette posée sur la rangée de cases, les clics passent au travers. */
 .etiquette-ligne { position: relative; z-index: 3; pointer-events: none; align-self: start; margin: 2px 2px 0; padding: 0 3px;
-  background: color-mix(in srgb, var(--bande) 88%, #fff); color: #111; border-radius: 2px; line-height: 1.25;
+  background: color-mix(in srgb, var(--bande) 30%, #fff); color: #111; border-left: 3px solid var(--bande); border-radius: 2px; line-height: 1.25;
   font: 700 .58rem/1.25 "Source Sans 3", system-ui, sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
   display: flex; gap: 3px; align-items: baseline; }
 .etiquette-ligne b { overflow: hidden; text-overflow: ellipsis; min-width: 0; }

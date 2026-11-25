@@ -47,7 +47,7 @@
     if (m >= 1000) return signe + (m / 1000).toLocaleString("fr-FR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " Md€";
     return signe + m.toLocaleString("fr-FR") + " M€";
   }
-  function couleurZone(z) { return { "DGA": "#6d52a8", "International": "#2a7f8f", "Soutien et cabinet": "#7a6a4f", "Fixes": "var(--gris)" }[z] || couleur(z); }
+  function couleurZone(z) { return { "DGA": "#6d52a8", "International": "#2a7f8f", "SGA": "#7a6a4f", "MEFR": "#2f6b4f", "MINARM": "#8a2d3b", "Fixes": "var(--gris)" }[z] || couleur(z); }
   function couleur(a) { return { "Terre": "var(--terre)", "Marine": "var(--marine)", "Air et Espace": "var(--air)", "Interarmées": "var(--inter)" }[a] || "var(--inter)"; }
   function nouvelId() { return window.crypto && crypto.randomUUID ? crypto.randomUUID() : "l-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
   function role(code) { return M.ROLES.filter(function (r) { return r.code === code; })[0] || M.ROLES[0]; }
@@ -375,6 +375,9 @@
       ? M.placerAnnee(PIONS, lignes.filter(function (l) { return CHAUDS[l.id]; }), p, etat.annee, function () { return false; }, { apresArbitrage: etat.vue === "arbitrage" })
       : M.placerAnnee(PIONS, lignes, p, etat.annee, null, { apresArbitrage: etat.vue === "arbitrage", zones: true });
     var paquets = t.zones && t.zones.length > 0;
+    // En paquets, les demandes d'un acteur hors armées prennent la couleur de son paquet.
+    var ACTEURS = { DGA: 1, International: 1, SGA: 1, MEFR: 1, MINARM: 1 };
+    function teinte(x) { return paquets && ACTEURS[x.groupe] ? couleurZone(x.groupe) : couleur(x.armee); }
     if (filtre) {
       var bas = 0;
       t.pieces.forEach(function (x) { bas = Math.max(bas, x.r + x.h); });
@@ -410,7 +413,7 @@
     }
     // Table en paquets : un cadre et un titre par entité.
     (t.zones || []).forEach(function (z) {
-      var mien = z.nom === ({ EMAT: "Terre", EMM: "Marine", EMAAE: "Air et Espace", DGA: "DGA", DGRIS: "International", MEAE: "International", SGA: "Soutien et cabinet", MEFR: "Soutien et cabinet", MINARM: "Soutien et cabinet" }[etat.role]);
+      var mien = z.nom === ({ EMAT: "Terre", EMM: "Marine", EMAAE: "Air et Espace", DGA: "DGA", DGRIS: "International", MEAE: "International", SGA: "SGA", MEFR: "MEFR", MINARM: "MINARM" }[etat.role]);
       pl.appendChild(el("div", { classe: "zone-entite" + (mien ? " zone-mienne" : ""), style: "grid-row:" + (z.r + 1) + " / " + (z.r + z.h + 1) + ";grid-column:" + (z.c + 1) + " / " + (z.c + z.w + 1) + ";--c:" + couleurZone(z.nom) }));
       pl.appendChild(el("div", { classe: "zone-entite-titre", style: "grid-row:" + (z.r + 1) + ";grid-column:" + (z.c + 1) + " / " + (z.c + z.w + 1) + ";--c:" + couleurZone(z.nom) }, [el("span", { texte: z.nom + " · " + md(z.cases * M.CASE) })]));
     });
@@ -443,7 +446,7 @@
     var F = window.STRAT_FIGURATIFS;
     function court(nom) { return nom.replace(/^Capacité /, "").replace(/^Brigade /, "Bde ").replace(/^\+ Capacité /, "+ "); }
     t.pieces.forEach(function (x) {
-      var bande = x.groupe === "Fixes" ? "var(--gris-carte)" : x.nature === "violet" ? "var(--violet)" : x.nature === "orange" ? "var(--orange-carte)" : couleur(x.armee);
+      var bande = x.groupe === "Fixes" ? "var(--gris-carte)" : x.nature === "violet" ? "var(--violet)" : x.nature === "orange" ? "var(--orange-carte)" : teinte(x);
       var cl = ["pion", "pion-clic", "fig"];
       var aire = x.w * x.h, petit = Math.min(x.w, x.h) === 1 && Math.max(x.w, x.h) <= 3;
       cl.push(x.w >= x.h ? "fig-h" : "fig-v");
@@ -514,7 +517,7 @@
       var nom = masque(x) ? (x.nature === "dorese" ? "DORESE" : "Demande " + x.armee) : x.libelle;
       var ic = x.nature === "dorese" ? F.svg(F.DORESE[x.type]) : F.svg(masque(x) ? "document" : (F.pictoDe(x.libelle) || "document"));
       var titre = nom + (x.role ? " · " + x.role : "") + (x.ligne && CHAUDS[x.ligne] ? " · à arbitrer : " + CHAUDS[x.ligne].join(", ") : "") + (x.allie ? " · part alliée (ne compte pas pour la France)" : "") + (x.enveloppe ? " · cliquez pour voir l'enveloppe" : "");
-      pl.appendChild(el("button", { type: "button", classe: cl.join(" "), title: titre, style: "grid-row:" + (x.r + 1) + ";grid-column:" + (x.c + 1) + ";--bande:" + couleur(x.armee),
+      pl.appendChild(el("button", { type: "button", classe: cl.join(" "), title: titre, style: "grid-row:" + (x.r + 1) + ";grid-column:" + (x.c + 1) + ";--bande:" + teinte(x),
         onclick: x.enveloppe ? function () { etat.volet = "enveloppes"; rendre(true); } : x.ligne && x.nature !== "dorese" ? choisir(x) : x.ligne ? choisir({ ligne: x.ligne, pion: cible.pion }) : choisir(cible) },
         [ic, drap ? el("span", { classe: "drapeau drapeau-pion" }) : null, alerteCase]));
     });
@@ -533,7 +536,7 @@
       if (!meilleur) return;
       var x0 = cs[0];
       pl.appendChild(el("span", { classe: "etiquette-ligne" + (meilleur.w < 3 ? " etiquette-courte" : ""), "aria-hidden": "true",
-        style: "grid-row:" + (meilleur.r + 1) + ";grid-column:" + (meilleur.c + 1) + " / span " + meilleur.w + ";--bande:" + couleur(x0.armee) },
+        style: "grid-row:" + (meilleur.r + 1) + ";grid-column:" + (meilleur.c + 1) + " / span " + meilleur.w + ";--bande:" + teinte(x0) },
         [el("b", { texte: court(x0.libelle) }), x0.role ? el("small", { texte: x0.role }) : null]));
     });
     etat.neuf = null;

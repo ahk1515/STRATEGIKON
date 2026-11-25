@@ -497,7 +497,12 @@ Objectif : récupérer le modèle 2032 arbitré, construire hors de l'outil une 
 1. **Modèle 2032 arbitré** : le nombre de lignes et celles encore en attente. **JSON** (fichier complet : socle, pions, DORESE, priorités, contraintes, financements, avis, souveraineté, décisions du CEMA) ou **CSV (tableur)**.
 2. **Trajectoire des joueurs** : les années 2027-2032 telles que construites. JSON ou CSV.
 3. **Trajectoire de référence** : importer un fichier JSON au même format (`strategikon-echange`, version 1, type `trajectoire`). Elle reste **dans ce navigateur seulement**, invisible des joueurs. *Remplacer* ou *Retirer la référence*. Un mauvais fichier affiche une erreur.
+3 bis. **Voir la référence sur la table** (bouton du bloc 3, ou bascule *Joueurs / Référence* sous les étapes, en haut à gauche) : la table et les jauges affichent la trajectoire de référence, année par année, avec les mêmes visuels (plafonds, années d'entrée, décisions et montages du fichier). C'est une **lecture seule** : rien n'est écrit dans la partie et tout geste est refusé avec un message. Un cadre doré et la mention « RÉFÉRENCE · lecture seule » le signalent. *Joueurs* revient à la table de la partie en gardant l'année et le filtre.
 4. **Comparaison** : tableau par année (joueurs, référence, écart) ; nombre de lignes entrées plus tôt ou plus tard chez les joueurs ; reports après 2032 ; renoncements ; alertes franchies. **Afficher les deux trajectoires côte à côte** ouvre une vue plein écran : jauges par année des deux côtés, puis chaque ligne avec ses deux bandes, triée par écart d'entrée, avec les différences annotées. *Fermer* pour revenir.
+
+Dans la vue côte à côte : un choix d'acteur filtre les lignes ; **Choix annuels par acteur** donne, par rôle et par année, les Md€ payés chez les joueurs et dans la référence (rouge : les joueurs dépensent plus ; vert : moins) ; **Ce qui entre chaque année** liste, année par année, les lignes qui entrent chez les joueurs et dans la référence.
+
+**Filtre par acteur sur la table** (rôles qui voient toute la table : Animateur, CEMA, etc.) : la liste « Tous les acteurs » à droite des bascules ne garde que les demandes d'un rôle et les pions de son armée, pour suivre sa progression d'une année à l'autre, chez les joueurs comme sur la référence.
 
 Les fichiers sont nommés `strategikon-<partie>-<type>-<date>-<heure>.json|csv`.
 

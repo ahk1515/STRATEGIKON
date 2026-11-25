@@ -59,6 +59,36 @@
   // Table commune : chacun voit toutes les demandes brutes, avec leur porteur.
   function visible(l) { return true; }
   function params() { return (etat.partie && etat.partie.params && etat.partie.params.plafonds) ? etat.partie.params : M.parametresParDefaut(); }
+  // Référence sur la table : on remplace, en lecture seule, les lignes et paramètres affichés par ceux du fichier.
+  var VUE_REF = null;
+  function lectureSeule() {
+    if (!VUE_REF) return false;
+    toast("Vous regardez la référence : rien n'est modifiable. Revenez aux joueurs pour agir.");
+    return true;
+  }
+  function voirReference(on) {
+    if (on && !VUE_REF) {
+      var ref = chargerReference();
+      if (!ref) { toast("Importez d'abord une trajectoire de référence (onglet Échanges)."); return; }
+      var r = M.partieDepuisEchange(ref, params());
+      VUE_REF = { lignes: etat.lignes, params: etat.partie.params, ref: ref };
+      etat.lignes = r.lignes; etat.partie.params = r.params;
+      etat.phase = "trajectoire";
+      etat.selection = null;
+      rendre(true);
+    } else if (!on && VUE_REF) {
+      var g = VUE_REF; VUE_REF = null;
+      etat.lignes = g.lignes; etat.partie.params = g.params; etat.phase = "trajectoire";
+      etat.selection = null;
+      rendre(true); recharger(true);
+    }
+  }
+  // Filtre par acteur (rôles qui voient toute la table) : les demandes d'un rôle et les pions de son armée.
+  function pionDuRole(p, r) {
+    if (!p || p.type === "gris" || p.type === "orange") return false;
+    var a = role(r).armee;
+    return a !== "Interarmées" && p.armee === a;
+  }
   // Pions de la partie : ceux de la base, avec les noms et coûts modifiés par l'animateur.
   var SIG_PIONS = "";
   function majPions() {
@@ -193,7 +223,7 @@
 
   // ---------- Données ----------
   function recharger(forcer) {
-    if (!etat.partie) return Promise.resolve();
+    if (!etat.partie || VUE_REF) return Promise.resolve();
     var nom = etat.partie.nom;
     return S.lireEtat(nom, etat.mdp).then(function (e) {
       if (!etat.partie || etat.partie.nom !== nom) return;
@@ -207,6 +237,7 @@
     }).catch(function (e) { toast(e.message); });
   }
   function enregistrer(l) {
+    if (lectureSeule()) return;
     clearTimeout(enAttente[l.id]);
     enAttente[l.id] = setTimeout(function () {
       S.ecrireLigne(etat.partie.nom, etat.mdp, l).then(function () { delete enAttente[l.id]; })
@@ -214,12 +245,14 @@
     }, 350);
   }
   function supprimer(l) {
+    if (lectureSeule()) return;
     clearTimeout(enAttente[l.id]); delete enAttente[l.id];
     etat.lignes = etat.lignes.filter(function (x) { return x.id !== l.id; });
     S.supprimerLigne(etat.partie.nom, etat.mdp, l.id).catch(function (e) { toast(e.message); });
   }
   var fileParams = Promise.resolve();
   function modifierParams(fn) {
+    if (lectureSeule()) return Promise.resolve();
     fileParams = fileParams.then(function () {
       return S.lireEtat(etat.partie.nom, etat.mdp).then(function (e) {
         var p = e.partie.params && e.partie.params.plafonds ? e.partie.params : M.parametresParDefaut();
@@ -352,6 +385,12 @@
         memoriser(); rendre(true);
       } }, [el("b", { texte: x[1] }), x[2]]));
     });
+    if (etat.role === "Animateur" && (VUE_REF || chargerReference())) {
+      g.appendChild(el("div", { classe: "bascule bascule-ref", role: "group", "aria-label": "Trajectoire affichée" }, [
+        el("button", { type: "button", "aria-pressed": VUE_REF ? "false" : "true", id: "voir-joueurs", onclick: function () { voirReference(false); } }, ["Joueurs"]),
+        el("button", { type: "button", "aria-pressed": VUE_REF ? "true" : "false", id: "voir-reference", onclick: function () { voirReference(true); } }, ["Référence"])]));
+    }
+    document.body.classList.toggle("en-reference", !!VUE_REF);
   }
 
   function rendreJauges() {
@@ -393,8 +432,11 @@
     var sousLigne = {};
     flot.sous.forEach(function (it) { if (it.ligne) sousLigne[it.ligne.id] = true; if (it.enveloppe) sousLigne["env:" + it.enveloppe.id] = true; });
     // Filtres : « Ma demande » (mes pions seuls) ; « Où faut-il arbitrer ? » (les points chauds seuls) ; tables compactes.
-    var filtre = etat.filtreTable !== "tout";
-    var t = etat.filtreTable === "mien"
+    var rf = vueComplete() ? etat.roleFiltre : "";
+    var filtre = etat.filtreTable !== "tout" || !!rf;
+    var t = rf
+      ? M.placerAnnee(PIONS, lignes.filter(function (l) { return l.role === rf; }), p, etat.annee, function (x) { return pionDuRole(x, rf); }, { apresArbitrage: etat.vue === "arbitrage" })
+      : etat.filtreTable === "mien"
       ? M.placerAnnee(PIONS, lignes.filter(function (l) { return l.role === etat.role; }), p, etat.annee, function (x) { return pionAMoi(x); }, { apresArbitrage: etat.vue === "arbitrage" })
       : etat.filtreTable === "chaud"
       ? M.placerAnnee(PIONS, lignes.filter(function (l) { return CHAUDS[l.id]; }), p, etat.annee, function () { return false; }, { apresArbitrage: etat.vue === "arbitrage" })
@@ -411,17 +453,30 @@
     }
     document.querySelectorAll(".bascule button[data-vue]").forEach(function (b) { b.setAttribute("aria-pressed", b.getAttribute("data-vue") === etat.vue ? "true" : "false"); });
     document.querySelectorAll(".bascule button[data-filtre]").forEach(function (b) { b.setAttribute("aria-pressed", b.getAttribute("data-filtre") === etat.filtreTable ? "true" : "false"); });
+    var selR = $("filtre-role");
+    if (!selR) {
+      selR = el("select", { id: "filtre-role", "aria-label": "Acteur affiché" });
+      selR.addEventListener("change", function () { etat.roleFiltre = selR.value; rendre(false); });
+      document.querySelector(".bascules").appendChild(selR);
+    }
+    vider(selR);
+    selR.hidden = !vueComplete();
+    selR.appendChild(el("option", { value: "", texte: "Tous les acteurs" }));
+    var presents = {}; etat.lignes.forEach(function (l) { presents[l.role] = true; });
+    M.ROLES.forEach(function (r) { if (presents[r.code]) selR.appendChild(el("option", { value: r.code, texte: r.code })); });
+    if (rf && !presents[rf]) selR.appendChild(el("option", { value: rf, texte: rf }));
+    selR.value = rf || "";
     var nChauds = Object.keys(CHAUDS).length;
     var bChaud = document.querySelector('.bascule button[data-filtre="chaud"]');
     if (bChaud) bChaud.textContent = "Où faut-il arbitrer ?" + (nChauds ? " (" + nChauds + ")" : "");
 
     var rel = $("table-releve");
     vider(rel);
-    [filtre ? [(etat.filtreTable === "chaud" ? "À arbitrer " : "Ma demande ") + etat.annee, md(t.occupees * M.CASE) + " · " + t.occupees + " cases", ""] : ["Table " + etat.annee, t.occupees + " / " + t.plafond + " cases", ""], ["Montant total", md(syn.total), ""], ["Plafond", md(syn.plafond), ""],
+    [filtre ? [(rf ? rf + " (socle de son armée + demandes) " : etat.filtreTable === "chaud" ? "À arbitrer " : "Ma demande ") + etat.annee, md(t.occupees * M.CASE) + " · " + t.occupees + " cases", ""] : ["Table " + etat.annee, t.occupees + " / " + t.plafond + " cases", ""], ["Montant total", md(syn.total), ""], ["Plafond", md(syn.plafond), ""],
       [syn.marge >= 0 ? "Marge" : "Dépassement", md(Math.abs(syn.marge)), syn.marge >= 0 ? "pos" : "neg"]].forEach(function (x) {
       rel.appendChild(el("div", { classe: "releve" }, [el("small", { texte: x[0] }), el("b", { classe: x[2], texte: x[1] })]));
     });
-    $("consigne").textContent = (enCible() ? "Étape 1 · modèle 2032. " : "Étape 2 · trajectoire " + etat.annee + ". ") + (arbitre()
+    $("consigne").textContent = (VUE_REF ? "Trajectoire de référence (" + (VUE_REF.ref.partie || "fichier importé") + "), lecture seule, " + etat.annee + ". Bouton « Joueurs » en haut pour revenir. " : enCible() ? "Étape 1 · modèle 2032. " : "Étape 2 · trajectoire " + etat.annee + ". ") + (rf ? "Seules les demandes de " + rf + " et les pions de son armée. " : "") + (arbitre()
       ? "Table commune : toutes les demandes, avec leur porteur et les avis de chacun. Les points chauds s'allument ; « Où faut-il arbitrer ? » ne garde qu'eux. Cliquez sur un pion pour voir ses avis et trancher."
       : etat.filtreTable === "chaud" ? "Seuls les points chauds : avis divergents, alertes des fiches, demandes sous la ligne de flottaison. Cliquez sur un pion pour donner votre avis."
       : filtre ? "Vos pions seuls, regroupés. Cliquez sur un pion pour le modifier, sur une case vide pour en poser un nouveau."
@@ -1757,7 +1812,7 @@
     var d = new Date(), z = function (n) { return String(n).padStart(2, "0"); };
     return "strategikon-" + (etat.partie.nom || "partie").replace(/[^\w-]+/g, "-") + "-" + type + "-" + d.getFullYear() + z(d.getMonth() + 1) + z(d.getDate()) + "-" + z(d.getHours()) + z(d.getMinutes()) + "." + ext;
   }
-  function exporter(type) { return M.exporterPartie(PIONS, etat.lignes, params(), CATALOGUE, type, etat.partie.nom); }
+  function exporter(type) { return M.exporterPartie(PIONS, VUE_REF ? VUE_REF.lignes : etat.lignes, VUE_REF ? VUE_REF.params : params(), CATALOGUE, type, etat.partie.nom); }
   function boutonsExport(type) {
     return el("div", { classe: "export-boutons" }, [
       el("button", { type: "button", classe: "btn-laiton", texte: "JSON", title: "Fichier complet, à me transmettre", onclick: function () { telecharger(nomFichier(type, "json"), JSON.stringify(exporter(type), null, 1), "application/json"); toast("Export " + (type === "trajectoire" ? "de la trajectoire" : "du modèle 2032") + " téléchargé"); } }),
@@ -1808,6 +1863,7 @@
     boite.appendChild(btn);
   }
   function chargerModelePartie(m, btn) {
+    if (lectureSeule()) { btn.disabled = false; return Promise.resolve(); }
     var nom = etat.partie.nom, mdp = etat.mdp, k = 0;
     var suite = Promise.resolve();
     m.lignes.forEach(function (l) {
@@ -1819,9 +1875,10 @@
       .catch(function (e) { btn.disabled = false; btn.textContent = "Réessayer"; toast("Chargement interrompu (" + k + " / " + m.lignes.length + ") : " + e.message); });
   }
   function voletEchanges(v) {
-    var p = params();
+    var p = VUE_REF ? VUE_REF.params : params();
     v.appendChild(el("h2", { classe: "volet-titre", texte: "Échanges et comparaison" }));
-    var cibles = etat.lignes.filter(function (l) { return l.cible; });
+    if (VUE_REF) v.appendChild(el("p", { classe: "aide", texte: "Vous regardez la référence sur la table. Les chiffres ci-dessous restent ceux des joueurs." }));
+    var cibles = (VUE_REF ? VUE_REF.lignes : etat.lignes).filter(function (l) { return l.cible; });
     var attente = cibles.filter(function (l) { return M.arbitrageDe(l, p).statut === "attente"; }).length;
     v.appendChild(el("section", { classe: "bloc-conception" }, [el("h3", { texte: "1 · Modèle 2032 arbitré" }),
       el("p", { classe: "aide", texte: cibles.length + " ligne(s) au modèle 2032" + (attente ? ", dont " + attente + " encore en attente du CEMA." : ", toutes arbitrées.") + " Le fichier contient le socle, les pions, DORESE, priorités, contraintes politiques, financements et décisions du CEMA." }),
@@ -1841,13 +1898,14 @@
         var o = M.lireEchange(t);
         try { localStorage.setItem(cleReference(), t); } catch (e) { /* gardée pour la séance seulement */ }
         o._partie = etat.partie.nom; REFERENCE = o;
-        toast("Trajectoire de référence importée"); rendreVolet();
+        toast("Trajectoire de référence importée"); rendre(true);
       }).catch(function (e) { err.textContent = e.message; });
     });
     var imp = el("section", { classe: "bloc-conception" }, [el("h3", { texte: "3 · Trajectoire de référence" }),
       el("p", { classe: "aide", texte: ref ? "Importée : " + (ref.partie || "sans nom") + ", exportée le " + new Date(ref.exporte_le).toLocaleString("fr-FR") + ". Elle reste dans ce navigateur, invisible des joueurs." : "Importez le fichier JSON de la trajectoire construite hors de l'outil. Elle reste dans ce navigateur, invisible des joueurs." }),
       el("label", { classe: "champ" }, [ref ? "Remplacer" : "Fichier JSON", fichier]), err]);
-    if (ref) imp.appendChild(el("button", { type: "button", classe: "btn-lien", texte: "Retirer la référence", onclick: function () { try { localStorage.removeItem(cleReference()); } catch (e) { /* rien */ } REFERENCE = null; rendreVolet(); } }));
+    if (ref) imp.appendChild(el("button", { type: "button", classe: "btn-laiton", id: "btn-voir-ref", texte: VUE_REF ? "Revenir à la table des joueurs" : "Voir la référence sur la table", onclick: function () { voirReference(!VUE_REF); } }));
+    if (ref) imp.appendChild(el("button", { type: "button", classe: "btn-lien", texte: "Retirer la référence", onclick: function () { voirReference(false); try { localStorage.removeItem(cleReference()); } catch (e) { /* rien */ } REFERENCE = null; rendre(true); } }));
     v.appendChild(imp);
     if (!ref) return;
     var cmp = M.comparerTrajectoires(exporter("trajectoire"), ref);
@@ -1875,8 +1933,49 @@
     ])]);
   }
   // Vue plein écran : les deux trajectoires 2027-2032 côte à côte, ligne par ligne.
-  function ouvrirComparaison(cmp, ref) {
+  // Par acteur et par année : ce que chacun paie et ce qui entre, chez les joueurs et dans la référence.
+  function coutLigneAn(l, a) { return l && l.decision.statut !== "renonce" && l.annees[a] ? l.annees[a].cout || 0 : 0; }
+  function tableauActeurs(cmp, roleVu) {
+    var roles = [];
+    cmp.lignes.forEach(function (x) { if (roles.indexOf(x.role) === -1) roles.push(x.role); });
+    roles.sort(function (a, b) { return M.ROLES.map(function (r) { return r.code; }).indexOf(a) - M.ROLES.map(function (r) { return r.code; }).indexOf(b); });
+    var t = el("table", { classe: "mini-tableau tableau-acteurs" });
+    t.appendChild(el("thead", null, [el("tr", null, [el("th", { texte: "Md€ · joueurs / référence" })].concat(M.ANNEES.map(function (a) { return el("th", { classe: "num", texte: String(a) }); })))]));
+    var tb = el("tbody");
+    roles.forEach(function (r) {
+      var ls = cmp.lignes.filter(function (x) { return x.role === r; });
+      tb.appendChild(el("tr", null, [el("td", { texte: r })].concat(M.ANNEES.map(function (a) {
+        var j = 0, f = 0;
+        ls.forEach(function (x) { j += coutLigneAn(x.joueurs, a); f += coutLigneAn(x.reference, a); });
+        var d = j - f;
+        return el("td", { classe: "num" + (d > 0 ? " neg" : d < 0 ? " pos" : ""), title: d ? (d > 0 ? "joueurs au-dessus de " : "joueurs en dessous de ") + n1(Math.abs(d)) + " Md€" : "identique", texte: n1(j) + " / " + n1(f) });
+      }))));
+    });
+    t.appendChild(tb);
+    // Entrées de chaque année : ce que les joueurs et la référence font entrer.
+    var ent = el("table", { classe: "mini-tableau tableau-entrees" });
+    ent.appendChild(el("thead", null, [el("tr", null, [el("th", { texte: "Entre en" }), el("th", { texte: "Joueurs" }), el("th", { texte: "Référence" })])]));
+    var eb = el("tbody");
+    M.ANNEES.concat([M.APRES_LPM]).forEach(function (a) {
+      function liste(cote) {
+        return cmp.lignes.filter(function (x) { return x[cote] && x["entree_" + (cote === "joueurs" ? "joueurs" : "reference")] === a && !x["renonce_" + (cote === "joueurs" ? "joueurs" : "reference")]; })
+          .map(function (x) { return x.libelle + (roleVu ? "" : " (" + x.role + ")"); });
+      }
+      var j = liste("joueurs"), f = liste("reference");
+      if (!j.length && !f.length) return;
+      eb.appendChild(el("tr", null, [el("td", { texte: a === M.APRES_LPM ? "après 2032" : String(a) }), el("td", { texte: j.join(" · ") || "—" }), el("td", { texte: f.join(" · ") || "—" })]));
+    });
+    ent.appendChild(eb);
+    return el("div", null, [el("div", { classe: "cmp-defile" }, [t]), el("h4", { texte: "Ce qui entre chaque année" }), el("div", { classe: "cmp-defile" }, [ent])]);
+  }
+  function ouvrirComparaison(cmp, ref, roleVu) {
     var ancien = $("comparaison"); if (ancien) ancien.remove();
+    roleVu = roleVu || "";
+    var tousRoles = {}; cmp.lignes.forEach(function (x) { tousRoles[x.role] = true; });
+    var choixRole = el("select", { id: "cmp-role", "aria-label": "Acteur" }, [el("option", { value: "", texte: "Tous les acteurs" })].concat(M.ROLES.filter(function (r) { return tousRoles[r.code]; }).map(function (r) { return el("option", { value: r.code, texte: r.code }); })));
+    choixRole.value = roleVu;
+    choixRole.addEventListener("change", function () { ouvrirComparaison(cmp, ref, choixRole.value); });
+    cmp = { annees: cmp.annees, resume: cmp.resume, lignes: cmp.lignes.filter(function (x) { return !roleVu || x.role === roleVu; }), _tout: cmp._tout || cmp };
     function bande(l) {
       return el("div", { classe: "traj-bande" }, M.ANNEES.map(function (a) {
         var c = l && l.decision.statut !== "renonce" && l.annees[a] ? l.annees[a].cout : 0;
@@ -1913,7 +2012,9 @@
         el("div", { classe: "comparaison-tete" }, [el("h2", { classe: "volet-titre", texte: "Trajectoires 2027-2032 : joueurs et référence" }),
           el("button", { type: "button", classe: "btn-contour", texte: "Fermer", onclick: function () { boite.remove(); } })]),
         el("p", { classe: "aide", texte: "Montants payés par la France, en Md€, après arbitrage. Référence : " + (ref.partie || "fichier importé") + "." }),
-        resumeComparaison(cmp), tete, annees, el("h3", { texte: "Ligne par ligne" }), entete].concat(corps))]);
+        resumeComparaison(cmp), tete, annees,
+        el("h3", { texte: "Choix annuels par acteur" }), el("label", { classe: "champ champ-ligne" }, ["Acteur", choixRole]), tableauActeurs(cmp, roleVu),
+        el("h3", { texte: "Ligne par ligne" + (roleVu ? " · " + roleVu : "") }), entete].concat(corps))]);
     document.body.appendChild(boite);
   }
 

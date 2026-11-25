@@ -436,3 +436,17 @@ button.jeton-option { color: #222; }
 .pion-reglage small, .pion-reglage .btn-lien { grid-column: 2 / 4; color: var(--texte-doux, #666); }
 .pion-reglage-arm { font-size: .75rem; color: var(--texte-doux, #666); }
 .pion-modifie { border-left-color: var(--laiton, #b08d3c); background: rgba(176, 141, 60, .08); }
+
+/* Trajectoire de référence affichée sur la table (lecture seule) */
+.bascule-ref { margin-left: .8rem; align-self: center; }
+body.en-reference .zone-table { box-shadow: inset 0 0 0 3px var(--laiton, #b08d3c); }
+body.en-reference #consigne { background: rgba(176, 141, 60, .12); border-left: 4px solid var(--laiton, #b08d3c); padding: .35rem .6rem; font-weight: 600; }
+body.en-reference .zone-table-tete::before { content: "RÉFÉRENCE · lecture seule"; display: block; font-size: .75rem; letter-spacing: .08em; font-weight: 700; color: var(--laiton, #b08d3c); margin-bottom: .3rem; width: 100%; }
+#filtre-role { align-self: center; font-size: .85rem; padding: .3rem .4rem; max-width: 12rem; }
+.tableau-acteurs td, .tableau-acteurs th { white-space: nowrap; font-size: .82rem; }
+.comparaison .tableau-acteurs, .comparaison .tableau-entrees { width: 100%; max-width: none; margin-bottom: .8rem; }
+.tableau-entrees td:first-child { white-space: nowrap; width: 6rem; }
+.tableau-entrees td + td { width: 47%; }
+.tableau-entrees td { font-size: .8rem; vertical-align: top; }
+.champ-ligne { display: flex; gap: .5rem; align-items: center; margin: .3rem 0 .5rem; }
+.cmp-defile { overflow-x: auto; max-width: 100%; }

@@ -1209,6 +1209,24 @@
     tb.addEventListener("input", majEffectifs);
     tb.addEventListener("change", majEffectifs);
     f.appendChild(tb);
+    // Plateaux à conquérir de cette partie : enregistrés tout de suite (ils changent les colonnes du tableau).
+    f.appendChild(el("h3", { texte: "Plateaux hors table à conquérir (cette partie)" }));
+    var boiteC = el("div", { classe: "enveloppes-reglage" });
+    conqs.forEach(function (c) {
+      var nomC = el("input", { value: c.nom, "aria-label": "Nom du plateau", maxlength: 40 });
+      var mtC = el("input", { type: "number", min: 0, step: 100, value: c.montant, "aria-label": "Budget du plateau en M€" });
+      function sauverC() { modifierParams(function (pp) { (pp.conquetes || []).forEach(function (x) { if (x.id === c.id) { x.nom = nomC.value.trim() || x.nom; x.montant = Math.max(0, Number(mtC.value) || 0); } }); }); }
+      nomC.addEventListener("change", sauverC); mtC.addEventListener("change", sauverC);
+      boiteC.appendChild(el("div", { classe: "env-ligne" }, [nomC, mtC, el("button", { type: "button", classe: "btn-lien", texte: "Retirer", onclick: function () { modifierParams(function (pp) { pp.conquetes = (pp.conquetes || []).filter(function (x) { return x.id !== c.id; }); }); } })]));
+    });
+    if (!conqs.length) boiteC.appendChild(el("p", { classe: "vide", texte: "Aucun plateau à conquérir dans cette partie." }));
+    boiteC.appendChild(el("button", { type: "button", classe: "btn-contour", texte: "Ajouter un plateau", onclick: function () {
+      modifierParams(function (pp) { pp.conquetes = pp.conquetes || []; pp.conquetes.push({ id: "cq-" + Date.now().toString(36), nom: "Nouveau plateau", montant: 1000, annees: [] }); });
+    } }));
+    if (!conqs.length) boiteC.appendChild(el("button", { type: "button", classe: "btn-lien", texte: "Reprendre le relevé de la table 2032 (C'est la guerre 8,6 Md€, C'est pas la guerre 3,1 Md€)", onclick: function () {
+      modifierParams(function (pp) { pp.conquetes = M.CONQUETES_RELEVE_2032.map(function (x) { return { id: x.id, nom: x.nom, montant: x.montant, annees: [] }; }); });
+    } }));
+    f.appendChild(boiteC);
     var presets = el("div", { classe: "presets" }, [el("small", { texte: "Inflation MEFR-03 dès" })]);
     var dPreset = el("select", { "aria-label": "Inflation à partir de" });
     M.ANNEES.forEach(function (a) { dPreset.appendChild(el("option", { value: a, texte: String(a) })); });

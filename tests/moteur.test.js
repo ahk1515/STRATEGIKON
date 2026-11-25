@@ -324,7 +324,7 @@ test("budget piloté : inflation et carburants par année, conquêtes hors table
   assert.strictEqual(M.flottaison(PIONS, [], p, 2031).base, 39900 + 300);
   const t = M.placerAnnee(PIONS, [], p, 2031, null, { zones: true });
   assert.strictEqual(t.cellules.filter((x) => x.carburant).length, 3);
-  assert.strictEqual(M.conquetesDe(pp()).length, 2);
+  assert.strictEqual(M.conquetesDe(pp()).length, 0); // propres à chaque partie : aucune par défaut
   assert.strictEqual(M.conquisDe(pp(), 2032), 0);
   const g = generales([], p);
   assert.ok(g.includes("MEFR-03") && g.includes("MEFR-02"));

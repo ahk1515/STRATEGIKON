@@ -55,14 +55,15 @@
     energie: { nom: "Choc énergétique", montant: 2800 },
     otan_russie: { nom: "Guerre OTAN-Russie", montant: 4900 }
   };
-  // Plateaux hors table à conquérir (relevé de la table 2032) : budget en plus, année par année.
-  var CONQUETES_DEFAUT = [
+  // Plateaux hors table à conquérir : propres à chaque partie (params.conquetes), aucun par défaut.
+  // Relevé de la table 2032 de la maquette du 25/11, proposé à l'animateur comme point de départ.
+  var CONQUETES_RELEVE_2032 = [
     { id: "guerre", nom: "C'est la guerre", montant: 8600 },
     { id: "paix", nom: "C'est pas la guerre", montant: 3100 }
   ];
   function conquetesDe(params) {
     var c = (params || {}).conquetes;
-    return (c && c.length ? c : CONQUETES_DEFAUT).map(function (x) { return { id: x.id, nom: x.nom, montant: Number(x.montant) || 0, annees: (x.annees || []).map(Number) }; });
+    return (c || []).map(function (x) { return { id: x.id, nom: x.nom, montant: Number(x.montant) || 0, annees: (x.annees || []).map(Number) }; });
   }
   function conquisDe(params, annee) {
     return conquetesDe(params).reduce(function (t, x) { return t + (x.annees.indexOf(annee) !== -1 ? x.montant : 0); }, 0);
@@ -1383,7 +1384,7 @@
     echangeEnCsv: echangeEnCsv,
     miseEnService: miseEnService,
     SCENARIOS_INFLATION: SCENARIOS_INFLATION,
-    CONQUETES_DEFAUT: CONQUETES_DEFAUT,
+    CONQUETES_RELEVE_2032: CONQUETES_RELEVE_2032,
     conquetesDe: conquetesDe,
     conquisDe: conquisDe,
     carburantsDe: carburantsDe,
